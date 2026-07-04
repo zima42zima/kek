@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cave-900 text-bone-100 font-mono;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(240, 169, 78, 0.05), transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(138, 154, 110, 0.05), transparent 40%);
+    min-height: 100vh;
+  }
+
+  h1, h2, h3 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .cave-card {
+    @apply bg-cave-800 border border-dashed border-cave-700 rounded-cave p-6;
+  }
+
+  .btn-ember {
+    @apply bg-ember-500 hover:bg-ember-400 text-cave-950 font-display font-semibold
+           py-2.5 px-5 rounded-cave transition-colors duration-150;
+  }
+
+  .btn-ghost {
+    @apply border border-dashed border-cave-700 hover:border-ember-500
+           text-bone-100 font-mono py-2.5 px-5 rounded-cave transition-colors duration-150;
+  }
+
+  .input-cave {
+    @apply w-full bg-cave-950 border border-dashed border-cave-700 rounded-cave
+           px-4 py-2.5 text-bone-100 placeholder-bone-300/40 font-mono
+           focus:outline-none focus:border-ember-500 transition-colors duration-150;
+  }
+
+  /* the ember dot: a small flicker used as a presence/signature motif */
+  .ember-dot {
+    @apply inline-block w-2 h-2 rounded-full bg-ember-400;
+    animation: flicker 2.4s ease-in-out infinite;
+  }
+
+  @keyframes flicker {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px 1px rgba(240, 169, 78, 0.6); }
+    50% { opacity: 0.5; box-shadow: 0 0 2px 0px rgba(240, 169, 78, 0.3); }
+  }
+}
