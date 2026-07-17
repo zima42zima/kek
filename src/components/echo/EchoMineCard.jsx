@@ -85,6 +85,7 @@ export default function EchoMineCard({
   onView,
   onEdit,
   onDelete,
+  onUnsave,
   onAuraChange,
 }) {
   const isSaved = variant === 'saved'
@@ -107,10 +108,12 @@ export default function EchoMineCard({
   const menu = (
     <EchoOwnerMenu
       mine={!isSaved && echo.mine}
+      saved={isSaved}
       onView={() => onView?.(echo)}
       onShowOnMap={onShowOnMap ? () => onShowOnMap?.(echo) : undefined}
       onEdit={() => onEdit?.(echo)}
       onDelete={() => onDelete?.(echo.id)}
+      onUnsave={isSaved ? () => onUnsave?.(echo) : undefined}
     />
   )
 

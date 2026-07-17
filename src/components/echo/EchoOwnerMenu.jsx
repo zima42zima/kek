@@ -49,7 +49,7 @@ function useMenuPosition(open, anchorRef, menuRef) {
   return style
 }
 
-export default function EchoOwnerMenu({ mine, onView, onShowOnMap, onEdit, onDelete }) {
+export default function EchoOwnerMenu({ mine, saved, onView, onShowOnMap, onEdit, onDelete, onUnsave }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
   const menuRef = useRef(null)
@@ -108,6 +108,16 @@ export default function EchoOwnerMenu({ mine, onView, onShowOnMap, onEdit, onDel
           className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 hover:bg-black/5 dark:hover:bg-white/10"
         >
           Show on map
+        </button>
+      ) : null}
+      {saved && !mine && onUnsave ? (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => { close(); onUnsave?.() }}
+          className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 text-red-600 dark:text-red-400 hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          Remove from collection
         </button>
       ) : null}
       {mine ? (

@@ -102,3 +102,7 @@ export function echoMapNavTarget(echo) {
     exact: false,
   }
 }
+
+export function sortByDistance(echoes, userPos) {
+  return [...echoes].sort((a, b) => echoDistanceM(a, userPos) - echoDistanceM(b, userPos))
+}

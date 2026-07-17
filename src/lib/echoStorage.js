@@ -196,6 +196,13 @@ export function addToEchoCollection(userId, echo) {
   return next
 }
 
+export function removeFromEchoCollection(userId, echoId) {
+  if (!userId || !echoId) return loadEchoCollection(userId)
+  const next = loadEchoCollection(userId).filter((e) => e.id !== echoId)
+  saveEchoCollection(userId, next)
+  return next
+}
+
 export function listProfileEchoes(ownerId) {
   if (!ownerId) return []
   const mine = loadEchoes(ownerId).filter(

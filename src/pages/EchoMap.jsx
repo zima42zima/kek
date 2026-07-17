@@ -44,6 +44,7 @@ import {
   loadEchoCollection,
   migrateLegacySavedEchoes,
   addToEchoCollection,
+  removeFromEchoCollection,
   saveEchoCollection,
   blobToDataUrl,
   loadWorldEchoes,
@@ -261,12 +262,19 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
           avatarUrl: profile?.avatarUrl ?? e.avatarUrl,
         })
       })
+      const localCollection = loadEchoCollection(userId)
+      const savedById = new Map(localCollection.map((s) => [s.id, s]))
       nearby.forEach((e) => {
         if (e.ownerId === userId) return
         if (!canDiscoverEcho(e, frenGraph)) return
-        byId.set(e.id, { ...e, mine: false })
+        const savedEntry = savedById.get(e.id)
+        byId.set(e.id, {
+          ...e,
+          mine: false,
+          saved: Boolean(savedEntry),
+          savedAt: savedEntry?.savedAt,
+        })
       })
-      const localCollection = loadEchoCollection(userId)
       const merged = [...byId.values()]
       localCollection.forEach((saved) => {
         if (!byId.has(saved.id)) merged.push({ ...saved, mine: false, saved: true })
@@ -923,6 +931,16 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
     )))
   }
 
+  function unsaveEcho(id) {
+    if (!userId || !id) return
+    const next = removeFromEchoCollection(userId, id)
+    setSavedCollection(next)
+    setEchoes((prev) => prev.map((e) => (
+      e.id === id ? { ...e, saved: false, savedAt: undefined } : e
+    )))
+    if (openId === id) setOpenId(null)
+  }
+
   useEffect(() => {
     if (!backendReady || !userId || tab !== 'collection') return undefined
     const stale = savedCollection.filter(
@@ -1302,6 +1320,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
                   onShowOnMap={showEchoOnMap}
                   onNavigateWorld={showEchoOnMap}
                   onView={(e) => setOpenId(e.id)}
+                  onUnsave={(e) => unsaveEcho(e.id)}
                   onAuraChange={applyAuraChange}
                 />
               ))}
@@ -1367,6 +1386,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
           onRangeEchoChange={openRangeEcho}
           onAuraChange={applyAuraChange}
           onSave={saveEcho}
+          onUnsave={unsaveEcho}
           onNavigateToPlace={(echo) => navigateEchoPlace(echo, { closeModal: true })}
           onClose={() => setOpenId(null)}
           onOpenProfile={onOpenProfile}
