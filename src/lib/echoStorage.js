@@ -181,7 +181,7 @@ export function migrateLegacySavedEchoes(userId) {
 
 export function addToEchoCollection(userId, echo) {
   if (!userId || !echo?.id || echo.mine) return loadEchoCollection(userId)
-  const collectionPreviewUrl = echo.kind === 'image' && echo.mediaUrl
+  const inlinePreview = echo.mediaUrl?.startsWith('data:') || echo.mediaUrl?.startsWith('blob:')
     ? echo.mediaUrl
     : null
   const entry = {
@@ -189,7 +189,11 @@ export function addToEchoCollection(userId, echo) {
     mine: false,
     saved: true,
     savedAt: Date.now(),
-    collectionPreviewUrl,
+    mediaPath: echo.mediaPath || null,
+    coverPath: echo.coverPath || null,
+    // Signed URLs expire — refresh from mediaPath on Collection tab; keep inline data URLs only.
+    collectionPreviewUrl: inlinePreview,
+    mediaUrl: inlinePreview || null,
   }
   const next = [entry, ...loadEchoCollection(userId).filter((e) => e.id !== echo.id)]
   saveEchoCollection(userId, next)

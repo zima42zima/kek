@@ -1,13 +1,14 @@
+import { useEffect, useState } from 'react'
 import EchoIcon from './EchoIcon'
 import { HeadphonesIcon } from '../icons/UiIcons'
 
 /** Preview URL for a collection entry — the frame the user actually saw (meme = full image). */
 export function echoWatchedPreviewUrl(echo) {
   if (!echo) return null
-  if (echo.collectionPreviewUrl) return echo.collectionPreviewUrl
-  if (echo.kind === 'image') return echo.mediaUrl || null
-  // video/audio preview rules TBD
-  return null
+  if (echo.kind === 'image') {
+    return echo.mediaUrl || echo.collectionPreviewUrl || null
+  }
+  return echo.collectionPreviewUrl || echo.coverUrl || null
 }
 
 export function echoPreviewSrc(echo, { ownerPreview = false, watchedPreview = false } = {}) {
@@ -28,7 +29,12 @@ export default function EchoPreviewMedia({
   watchedPreview = false,
   className = '',
 }) {
-  const thumb = echoPreviewSrc(echo, { ownerPreview, watchedPreview })
+  const [broken, setBroken] = useState(false)
+  const thumb = !broken ? echoPreviewSrc(echo, { ownerPreview, watchedPreview }) : null
+
+  useEffect(() => {
+    setBroken(false)
+  }, [echo?.id, echo?.mediaUrl, echo?.collectionPreviewUrl])
 
   if (thumb) {
     return (
@@ -36,6 +42,7 @@ export default function EchoPreviewMedia({
         src={thumb}
         alt=""
         className={`w-full h-full object-cover ${className}`}
+        onError={() => setBroken(true)}
       />
     )
   }

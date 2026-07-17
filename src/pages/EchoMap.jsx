@@ -89,7 +89,7 @@ function mergeWithWorld(mineEchoes, userId) {
   return [...byId.values()]
 }
 
-export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
+export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEchoFocus }) {
   const { user, profile } = useAuth()
   const { pushLocal } = useNotifications()
   const userId = user?.id ?? null
@@ -208,6 +208,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
   const seededRef = useRef(false)
   const watchRef = useRef(null)
   const lastScanPosRef = useRef(null)
+  const consumedFocusRef = useRef(null)
   const userPosRef = useRef(userPos)
   userPosRef.current = userPos
 
@@ -246,12 +247,20 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
   const refreshServerEchoes = useCallback(async () => {
     if (!userId || !backendReady) return
     try {
-      const [mine, nearby] = await Promise.all([
-        listMyEchoes(userId),
-        userPos
-          ? listEchoesNear(userPos.lat, userPos.lon, ECHO_CITY_RADIUS_M, userId)
-          : Promise.resolve([]),
-      ])
+      const mine = await listMyEchoes(userId)
+      let nearby = []
+      if (userPos) {
+        try {
+          nearby = await listEchoesNear(
+            userPos.lat,
+            userPos.lon,
+            Math.max(searchRadiusM, ECHO_CITY_RADIUS_M),
+            userId,
+          )
+        } catch (err) {
+          console.error('Could not load nearby echoes:', err?.message || err)
+        }
+      }
       const byId = new Map()
       mine.forEach((e) => {
         byId.set(e.id, {
@@ -275,14 +284,45 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
           savedAt: savedEntry?.savedAt,
         })
       })
+      // Same-browser dev fallback — local world pool from other accounts.
+      loadWorldEchoes().forEach((e) => {
+        if (e.ownerId === userId || byId.has(e.id)) return
+        if (!canDiscoverEcho(e, frenGraph)) return
+        const savedEntry = savedById.get(e.id)
+        byId.set(e.id, {
+          ...e,
+          mine: false,
+          saved: Boolean(savedEntry),
+          savedAt: savedEntry?.savedAt,
+        })
+      })
       const merged = [...byId.values()]
       localCollection.forEach((saved) => {
         if (!byId.has(saved.id)) merged.push({ ...saved, mine: false, saved: true })
       })
       const withUrls = await attachMediaUrls(merged)
       setEchoes(withUrls)
-    } catch { /* keep last list */ }
+    } catch (err) {
+      console.error('Echo refresh failed:', err?.message || err)
+    }
   }, [userId, backendReady, userPos, frenGraph, profile, searchRadiusM])
+
+  const mergeRemoteEcho = useCallback(async (echoId) => {
+    if (!userId || !backendReady || !echoId) return
+    try {
+      const fetched = await getEchoById(echoId, userId)
+      if (!fetched || fetched.ownerId === userId || !canDiscoverEcho(fetched, frenGraph)) return
+      const [withUrl] = await attachMediaUrls([{ ...fetched, mine: false }])
+      setEchoes((prev) => {
+        if (prev.some((e) => e.id === echoId)) {
+          return prev.map((e) => (e.id === echoId ? { ...e, ...withUrl, mine: false } : e))
+        }
+        return [...prev, withUrl]
+      })
+    } catch {
+      refreshServerEchoes()
+    }
+  }, [userId, backendReady, frenGraph, refreshServerEchoes])
 
   useEffect(() => {
     let cancelled = false
@@ -367,7 +407,12 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
   }, [userId, echoes.length, backendReady])
 
   useEffect(() => {
-    if (!focusEchoId) return undefined
+    if (!focusEchoId) {
+      consumedFocusRef.current = null
+      return undefined
+    }
+    if (consumedFocusRef.current === focusEchoId) return undefined
+
     let cancelled = false
 
     async function openFocused() {
@@ -390,6 +435,9 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
       }
 
       if (!echo || cancelled) return
+
+      consumedFocusRef.current = focusEchoId
+      onClearEchoFocus?.()
       setTab(echo.mine ? 'mine' : 'map')
       setOpenId(focusEchoId)
       if (!echo.mine && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)) {
@@ -404,7 +452,12 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
 
     openFocused()
     return () => { cancelled = true }
-  }, [focusEchoId, echoes, browseEchoes, backendReady, userId, frenGraph])
+  }, [focusEchoId, echoes, browseEchoes, backendReady, userId, frenGraph, onClearEchoFocus])
+
+  function closeOpenEcho() {
+    setOpenId(null)
+    if (focusEchoId) onClearEchoFocus?.()
+  }
 
   async function seedFromPosition(p, { approx = false } = {}) {
     setUserPos(p)
@@ -446,6 +499,12 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
       setStatus('denied')
     }
   }
+
+  // Request location when opening the map so nearby echoes can load.
+  useEffect(() => {
+    if (tab !== 'map' || status !== 'idle') return
+    locate().catch(() => {})
+  }, [tab, status])
 
   // Low-accuracy refresh while the map tab is open — not continuous high-accuracy tracking.
   useEffect(() => {
@@ -564,6 +623,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
           const row = payload.new
           if (!row || row.hidden || row.visibility === 'private') return
           if (row.owner_id === userId) return
+          mergeRemoteEcho(row.id)
           refreshServerEchoes()
         },
       )
@@ -573,7 +633,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
       window.removeEventListener('frens:notifications-refreshed', onNotificationsRefreshed)
       supabase.removeChannel(channel)
     }
-  }, [backendReady, userId, refreshServerEchoes])
+  }, [backendReady, userId, refreshServerEchoes, mergeRemoteEcho])
 
   // Physically close — discover & open notification.
   useEffect(() => {
@@ -702,15 +762,18 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
       .map((entry) => {
         const live = liveEchoes.find((e) => e.id === entry.id)
           || browseEchoes.find((e) => e.id === entry.id)
-        return live
-          ? {
-              ...live,
-              saved: true,
-              savedAt: entry.savedAt ?? live.savedAt,
-              collectionPreviewUrl: entry.collectionPreviewUrl ?? live.collectionPreviewUrl,
-              mine: false,
-            }
-          : { ...entry, saved: true, mine: false }
+        if (!live) return { ...entry, saved: true, mine: false }
+        return {
+          ...live,
+          saved: true,
+          savedAt: entry.savedAt ?? live.savedAt,
+          mediaPath: entry.mediaPath || live.mediaPath,
+          mediaUrl: entry.mediaUrl || live.mediaUrl,
+          collectionPreviewUrl: entry.collectionPreviewUrl || entry.mediaUrl || live.mediaUrl,
+          coverPath: entry.coverPath || live.coverPath,
+          coverUrl: entry.coverUrl || live.coverUrl,
+          mine: false,
+        }
       })
       .filter((e) => !e.mine)
       .sort((a, b) => (b.savedAt ?? b.createdAt ?? 0) - (a.savedAt ?? a.createdAt ?? 0))
@@ -915,7 +978,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
       removeFromWorldPool(id)
     }
     setEchoes((prev) => prev.filter((e) => e.id !== id))
-    setOpenId(null)
+    closeOpenEcho()
     setEditEcho(null)
   }
 
@@ -938,33 +1001,57 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
     setEchoes((prev) => prev.map((e) => (
       e.id === id ? { ...e, saved: false, savedAt: undefined } : e
     )))
-    if (openId === id) setOpenId(null)
+    if (openId === id) closeOpenEcho()
   }
 
   useEffect(() => {
     if (!backendReady || !userId || tab !== 'collection') return undefined
-    const stale = savedCollection.filter(
-      (e) => e.kind === 'image' && e.mediaPath && !e.collectionPreviewUrl,
-    )
-    if (stale.length === 0) return undefined
+    if (savedCollection.length === 0) return undefined
 
     let cancelled = false
     ;(async () => {
       let changed = false
       const next = await Promise.all(savedCollection.map(async (entry) => {
-        if (entry.kind !== 'image' || !entry.mediaPath || entry.collectionPreviewUrl) return entry
+        let row = entry
+        if (row.kind === 'image' && !row.mediaPath) {
+          try {
+            const fetched = await getEchoById(row.id, userId)
+            if (fetched?.mediaPath) {
+              row = {
+                ...row,
+                mediaPath: fetched.mediaPath,
+                coverPath: fetched.coverPath || row.coverPath,
+                kind: fetched.kind || row.kind,
+              }
+            }
+          } catch { /* ignore */ }
+        }
+        if (row.kind !== 'image' || !row.mediaPath) return row
         try {
-          const url = await getEchoMediaUrl(entry.mediaPath)
+          const url = await getEchoMediaUrl(row.mediaPath)
+          if (!url) return row
+          if (url === row.collectionPreviewUrl && url === row.mediaUrl) return row
           changed = true
-          return { ...entry, mediaUrl: url, collectionPreviewUrl: url }
+          return { ...row, mediaUrl: url, collectionPreviewUrl: url }
         } catch {
-          return entry
+          if (!row.collectionPreviewUrl && !row.mediaUrl) return row
+          changed = true
+          return { ...row, mediaUrl: null, collectionPreviewUrl: null }
         }
       }))
-      if (!cancelled && changed) {
-        setSavedCollection(next)
-        saveEchoCollection(userId, next)
-      }
+      if (cancelled || !changed) return
+      setSavedCollection(next)
+      saveEchoCollection(userId, next)
+      setEchoes((prev) => prev.map((e) => {
+        const refreshed = next.find((n) => n.id === e.id)
+        if (!refreshed?.mediaUrl) return e
+        return {
+          ...e,
+          mediaUrl: refreshed.mediaUrl,
+          collectionPreviewUrl: refreshed.collectionPreviewUrl,
+          mediaPath: refreshed.mediaPath || e.mediaPath,
+        }
+      }))
     })()
     return () => { cancelled = true }
   }, [backendReady, userId, tab, savedCollection])
@@ -972,6 +1059,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
   useEffect(() => {
     if (!openId || !backendReady) return
     const echo = echoes.find((e) => e.id === openId)
+      || displayCollection.find((e) => e.id === openId)
+      || browseEchoes.find((e) => e.id === openId)
     if (!echo) return
     const needsMedia = echo.mediaPath && !echo.mediaUrl
     const needsCover = echo.coverPath && !echo.coverUrl
@@ -986,8 +1075,14 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
       }
       if (Object.keys(updates).length === 0) return
       setEchoes((prev) => prev.map((e) => (e.id === openId ? { ...e, ...updates } : e)))
+      setSavedCollection((prev) => {
+        if (!prev.some((e) => e.id === openId)) return prev
+        const next = prev.map((e) => (e.id === openId ? { ...e, ...updates } : e))
+        saveEchoCollection(userId, next)
+        return next
+      })
     })()
-  }, [openId, backendReady, echoes])
+  }, [openId, backendReady, echoes, displayCollection, browseEchoes, userId])
 
   function updateEchoSettings(id, patch) {
     setEchoes((prev) => prev.map((e) => {
@@ -1004,7 +1099,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
   function navigateEchoPlace(echo, { closeModal = false } = {}) {
     const target = echoMapNavTarget(echo)
     if (!target) return
-    if (closeModal) setOpenId(null)
+    if (closeModal) closeOpenEcho()
     setTab('map')
     handleSearchPlace({
       lat: target.lat,
@@ -1388,7 +1483,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
           onSave={saveEcho}
           onUnsave={unsaveEcho}
           onNavigateToPlace={(echo) => navigateEchoPlace(echo, { closeModal: true })}
-          onClose={() => setOpenId(null)}
+          onClose={closeOpenEcho}
           onOpenProfile={onOpenProfile}
           onAddComment={addComment}
           onToggleComments={toggleComments}
