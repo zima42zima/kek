@@ -1,0 +1,1169 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { useNotifications } from '../context/NotificationsContext'
+import EchoMapView from '../components/echo/EchoMapView'
+import CreateEchoModal from '../components/echo/CreateEchoModal'
+import EchoIntroModal from '../components/echo/EchoIntroModal'
+import EchoView from '../components/echo/EchoView'
+import EchoIcon from '../components/echo/EchoIcon'
+import { LocationIcon, MapIcon } from '../components/icons/UiIcons'
+import EchoRangeGallery from '../components/echo/EchoRangeGallery'
+import EchoCollectionCard from '../components/echo/EchoCollectionCard'
+import EchoMineCard from '../components/echo/EchoMineCard'
+import EchoMineToolbar from '../components/echo/EchoMineToolbar'
+import EchoEditModal from '../components/echo/EchoEditModal'
+import EchoSearchRadiusSelect from '../components/echo/EchoRangeSelect'
+import EchoMapSearch, { EchoMapModeTabs } from '../components/echo/EchoMapSearch'
+import EchoPlacesPanel, { groupEchoesByPlace } from '../components/echo/EchoPlacesPanel'
+import {
+  ECHO_INTRO_KEY,
+  ECHO_VIDEO_MAX_SEC,
+  ECHO_CITY_RADIUS_M,
+  ECHO_PIN_OFFSET_MAX_M,
+  ECHO_HINT_FUZZ_RADIUS_M,
+  ECHO_CITY_HINT_FUZZ_RADIUS_M,
+  ECHO_CITY_HINT_ZONE_RADIUS_M,
+  ECHO_PUBLIC_VISIBILITIES,
+  ECHO_DEFAULT_DISCOVER_RADIUS_M,
+  ECHO_POSITION_REFRESH_MS,
+  ECHO_MOVE_THRESHOLD_M,
+  ECHO_MINE_VIEW_KEY,
+} from '../lib/echoConstants'
+import {
+  loadEchoes,
+  saveEchoes,
+  loadDiscovered,
+  saveDiscovered,
+  loadHinted,
+  saveHinted,
+  loadEchoAura,
+  saveEchoAura,
+  loadEchoHistory,
+  recordEchoHistory,
+  blobToDataUrl,
+  loadWorldEchoes,
+  publishToWorldPool,
+  removeFromWorldPool,
+  loadSearchRadius,
+  saveSearchRadius,
+} from '../lib/echoStorage'
+import {
+  isInDiscoverRange,
+  isEchoScannable,
+  isCityDiscoverRadius,
+  sortByDistance,
+  formatRangeM,
+} from '../lib/echoRange'
+import { listFollowing, getProfileCard } from '../lib/social'
+import { distanceMeters, blurCoord, randomOffsetInRadius, fuzzHintCoord, reverseGeocode, approxLocationByIp } from '../lib/geo'
+import { canHintEcho, canDiscoverEcho, canShowEchoPin, canBrowseGlobally } from '../lib/echoPrivacy'
+import {
+  echoesInstalled,
+  uploadEchoMedia,
+  getEchoMediaUrl,
+  attachMediaUrls,
+  publishEcho as publishEchoRemote,
+  listMyEchoes,
+  listEchoesNear,
+  listEchoesInBbox,
+  deleteEcho as deleteEchoRemote,
+} from '../lib/echoes'
+
+function mergeWithWorld(mineEchoes, userId) {
+  const world = loadWorldEchoes().filter((e) => e.ownerId !== userId)
+  const byId = new Map()
+  mineEchoes.forEach((e) => byId.set(e.id, { ...e, mine: true }))
+  world.forEach((e) => {
+    if (!byId.has(e.id)) {
+      byId.set(e.id, { ...e, mine: false, saved: Boolean(e.saved) })
+    }
+  })
+  return [...byId.values()]
+}
+
+export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
+  const { user, profile } = useAuth()
+  const { pushLocal } = useNotifications()
+  const userId = user?.id ?? null
+
+  const [status, setStatus] = useState('idle')
+  const [userPos, setUserPos] = useState(null)
+  const [cityLabel, setCityLabel] = useState('your region')
+  const [tab, setTab] = useState('map')
+  const [echoes, setEchoes] = useState([])
+  const [backendReady, setBackendReady] = useState(false)
+  const [echoesLoading, setEchoesLoading] = useState(true)
+  const [discovered, setDiscovered] = useState(() => loadDiscovered(userId))
+  const [hinted, setHinted] = useState(() => loadHinted(userId))
+  const [auraMap, setAuraMap] = useState(() => loadEchoAura(userId))
+  const [history, setHistory] = useState(() => loadEchoHistory(userId))
+  const [followingIds, setFollowingIds] = useState(() => new Set())
+  const [showCreate, setShowCreate] = useState(false)
+  const [showIntro, setShowIntro] = useState(() => {
+    try {
+      return !localStorage.getItem(ECHO_INTRO_KEY)
+    } catch {
+      return true
+    }
+  })
+  const [openId, setOpenId] = useState(null)
+  const [editEcho, setEditEcho] = useState(null)
+  const [sortBy, setSortBy] = useState('newest')
+  const [mineView, setMineView] = useState(() => {
+    try {
+      return localStorage.getItem(ECHO_MINE_VIEW_KEY) === 'list' ? 'list' : 'board'
+    } catch {
+      return 'board'
+    }
+  })
+  const [mineKindFilter, setMineKindFilter] = useState('all')
+  const [searchRadiusM, setSearchRadiusM] = useState(() => loadSearchRadius())
+  const [mapMode, setMapMode] = useState('near')
+  const [browseEchoes, setBrowseEchoes] = useState([])
+  const [explorePlace, setExplorePlace] = useState(null)
+  const [exploreCenter, setExploreCenter] = useState({ lat: 20, lon: 0 })
+  const refreshBrowseEchoes = useCallback(async (bounds) => {
+    if (!backendReady || !bounds) return
+    try {
+      const rows = await listEchoesInBbox({
+        south: bounds.south,
+        west: bounds.west,
+        north: bounds.north,
+        east: bounds.east,
+      }, userId)
+      const withUrls = await attachMediaUrls(rows.map((e) => ({ ...e, mine: e.ownerId === userId })))
+      setBrowseEchoes(withUrls)
+    } catch { /* keep last browse list */ }
+  }, [backendReady, userId])
+
+  const handleViewportChange = useCallback((viewport) => {
+    if (mapMode !== 'explore') return
+    setExploreCenter(viewport.center)
+    refreshBrowseEchoes(viewport.bounds)
+  }, [mapMode, refreshBrowseEchoes])
+
+  function handleSearchPlace(place) {
+    if (!place?.lat || !place?.lon) return
+    setMapMode('explore')
+    setExplorePlace(place)
+    setExploreCenter({ lat: place.lat, lon: place.lon })
+  }
+
+  function handleClearExplorePlace() {
+    setExplorePlace(null)
+  }
+
+  function handleMapModeChange(mode) {
+    setMapMode(mode)
+  }
+
+  function handleOpenEcho(id, flyTarget) {
+    if (flyTarget?.lat != null) {
+      handleSearchPlace({
+        lat: flyTarget.lat,
+        lon: flyTarget.lon,
+        label: flyTarget.label,
+      })
+      return
+    }
+    if (!id) return
+    const echo = echoes.find((e) => e.id === id) || browseEchoes.find((e) => e.id === id)
+    if (!echo) return
+    if (canBrowseGlobally(echo) || echo.mine) {
+      setDiscovered((prev) => new Set([...prev, id]))
+    }
+    setOpenId(id)
+  }
+
+  const mapCenter = useMemo(() => {
+    if (mapMode === 'explore') {
+      if (explorePlace) return { lat: explorePlace.lat, lon: explorePlace.lon }
+      return exploreCenter
+    }
+    return userPos ? blurCoord(userPos) : (explorePlace || exploreCenter)
+  }, [mapMode, exploreCenter, explorePlace, userPos])
+
+  const mapZoom = mapMode === 'explore' ? (explorePlace?.zoom ?? 12) : 14
+
+  const mapInstanceKey = useMemo(() => {
+    if (mapMode !== 'explore') return 'near'
+    if (!explorePlace) return 'explore-browse'
+    return explorePlace.id
+      || `${explorePlace.lat.toFixed(5)}-${explorePlace.lon.toFixed(5)}`
+  }, [mapMode, explorePlace])
+  const [rangeScanTick, setRangeScanTick] = useState(0)
+  const seededRef = useRef(false)
+  const watchRef = useRef(null)
+  const lastScanPosRef = useRef(null)
+  const userPosRef = useRef(userPos)
+  userPosRef.current = userPos
+
+  const refreshPosition = useCallback(({ highAccuracy = false } = {}) => new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) {
+      reject(new Error('no geolocation'))
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const p = { lat: pos.coords.latitude, lon: pos.coords.longitude }
+        seedFromPosition(p)
+        resolve(p)
+      },
+      reject,
+      {
+        enableHighAccuracy: highAccuracy,
+        timeout: highAccuracy ? 12000 : 10000,
+        maximumAge: highAccuracy ? 0 : 45000,
+      },
+    )
+  }), [])
+
+  const profileForComments = useMemo(() => ({
+    userId,
+    frenName: profile?.frenName || 'you',
+    avatarType: profile?.avatarType || 'frog',
+    avatarUrl: profile?.avatarUrl || null,
+  }), [userId, profile])
+
+  const refreshServerEchoes = useCallback(async () => {
+    if (!userId || !backendReady) return
+    try {
+      const [mine, nearby] = await Promise.all([
+        listMyEchoes(userId),
+        userPos
+          ? listEchoesNear(userPos.lat, userPos.lon, ECHO_CITY_RADIUS_M, userId)
+          : Promise.resolve([]),
+      ])
+      const byId = new Map()
+      mine.forEach((e) => {
+        byId.set(e.id, {
+          ...e,
+          mine: true,
+          authorName: profile?.frenName?.trim() || e.authorName,
+          avatarType: profile?.avatarType || e.avatarType,
+          avatarUrl: profile?.avatarUrl ?? e.avatarUrl,
+        })
+      })
+      nearby.forEach((e) => {
+        if (e.ownerId === userId) return
+        if (!canDiscoverEcho(e, { followingIds })) return
+        byId.set(e.id, { ...e, mine: false })
+      })
+      const localSaved = loadEchoes(userId).filter((e) => e.saved)
+      const merged = [...byId.values()]
+      localSaved.forEach((saved) => {
+        if (!byId.has(saved.id)) merged.push({ ...saved, mine: false, saved: true })
+      })
+      const withUrls = await attachMediaUrls(merged)
+      setEchoes(withUrls)
+    } catch { /* keep last list */ }
+  }, [userId, backendReady, userPos, followingIds, profile, searchRadiusM])
+
+  useEffect(() => {
+    let cancelled = false
+    echoesInstalled().then((ok) => {
+      if (!cancelled) setBackendReady(ok)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    if (!userId) {
+      setEchoes([])
+      setEchoesLoading(false)
+      return
+    }
+    setDiscovered(loadDiscovered(userId))
+    setHinted(loadHinted(userId))
+    setAuraMap(loadEchoAura(userId))
+    setHistory(loadEchoHistory(userId))
+
+    if (backendReady) {
+      setEchoesLoading(true)
+      refreshServerEchoes().finally(() => setEchoesLoading(false))
+      return
+    }
+    setEchoes(mergeWithWorld(loadEchoes(userId), userId))
+    setEchoesLoading(false)
+  }, [userId, backendReady, refreshServerEchoes])
+
+  useEffect(() => {
+    if (!userId || backendReady) return
+    saveEchoes(userId, echoes.filter((e) => e.mine))
+  }, [echoes, userId, backendReady])
+
+  useEffect(() => {
+    saveDiscovered(userId, discovered)
+  }, [discovered, userId])
+
+  useEffect(() => {
+    saveHinted(userId, hinted)
+  }, [hinted, userId])
+
+  useEffect(() => {
+    saveEchoAura(userId, auraMap)
+  }, [auraMap, userId])
+
+  useEffect(() => {
+    if (!userId) return
+    listFollowing(userId)
+      .then((list) => setFollowingIds(new Set(list.map((p) => p.userId))))
+      .catch(() => {})
+  }, [userId])
+
+  // Refresh author handles from profiles for world echoes (local mode only).
+  useEffect(() => {
+    if (!userId || backendReady) return
+    const owners = [...new Set(
+      echoes.filter((e) => !e.mine && e.ownerId).map((e) => e.ownerId),
+    )]
+    if (owners.length === 0) return
+
+    let cancelled = false
+    ;(async () => {
+      const updates = {}
+      for (const oid of owners) {
+        try {
+          const card = await getProfileCard(oid)
+          if (card?.frenName) updates[oid] = card.frenName
+        } catch { /* ignore */ }
+      }
+      if (cancelled || Object.keys(updates).length === 0) return
+      setEchoes((prev) => prev.map((e) => (
+        updates[e.ownerId] ? { ...e, authorName: updates[e.ownerId] } : e
+      )))
+    })()
+
+    return () => { cancelled = true }
+  }, [userId, echoes.length, backendReady])
+
+  useEffect(() => {
+    if (!focusEchoId) return
+    const echo = echoes.find((e) => e.id === focusEchoId)
+    if (echo) {
+      setTab(echo.mine ? 'mine' : 'map')
+      setOpenId(focusEchoId)
+      if (!echo.mine && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)) {
+        setDiscovered((prev) => new Set([...prev, focusEchoId]))
+      }
+    }
+  }, [focusEchoId, echoes])
+
+  async function seedFromPosition(p, { approx = false } = {}) {
+    setUserPos(p)
+    setStatus('located')
+    if (!seededRef.current) {
+      seededRef.current = true
+      try {
+        const city = await reverseGeocode(p.lat, p.lon)
+        setCityLabel(approx ? `${city} (approx · dev)` : city)
+      } catch {
+        setCityLabel(approx ? 'your region (approx · dev)' : 'your region')
+      }
+    }
+  }
+
+  async function locate() {
+    if (!window.isSecureContext) {
+      if (import.meta.env.DEV) {
+        setStatus('locating')
+        try {
+          const p = await approxLocationByIp()
+          await seedFromPosition({ lat: p.lat, lon: p.lon }, { approx: true })
+        } catch {
+          await seedFromPosition({ lat: 37.7749, lon: -122.4194 }, { approx: true })
+        }
+        return
+      }
+      setStatus('insecure')
+      return
+    }
+    if (!('geolocation' in navigator)) {
+      setStatus('denied')
+      return
+    }
+    setStatus('locating')
+    try {
+      await refreshPosition({ highAccuracy: false })
+    } catch {
+      setStatus('denied')
+    }
+  }
+
+  // Low-accuracy refresh while the map tab is open — not continuous high-accuracy tracking.
+  useEffect(() => {
+    if (tab !== 'map' || status !== 'located' || !window.isSecureContext) return undefined
+    if (!('geolocation' in navigator)) return undefined
+
+    watchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        seedFromPosition({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 },
+    )
+
+    return () => {
+      if (watchRef.current != null) {
+        navigator.geolocation.clearWatch(watchRef.current)
+        watchRef.current = null
+      }
+    }
+  }, [tab, status])
+
+  // Every 10s, refresh in-range gallery when the user has moved.
+  useEffect(() => {
+    if (tab !== 'map' || status !== 'located') return undefined
+
+    const tick = () => {
+      const pos = userPosRef.current
+      if (!pos) return
+      const prev = lastScanPosRef.current
+      if (prev && distanceMeters(prev, pos) < ECHO_MOVE_THRESHOLD_M) return
+      lastScanPosRef.current = pos
+      setRangeScanTick((n) => n + 1)
+      refreshPosition({ highAccuracy: false }).catch(() => {})
+      if (backendReady) refreshServerEchoes()
+    }
+
+    if (userPosRef.current && !lastScanPosRef.current) {
+      lastScanPosRef.current = userPosRef.current
+    }
+    const id = setInterval(tick, ECHO_POSITION_REFRESH_MS)
+    return () => clearInterval(id)
+  }, [tab, status, backendReady, refreshServerEchoes, refreshPosition])
+
+  function handleSearchRadiusChange(meters) {
+    setSearchRadiusM(meters)
+    saveSearchRadius(meters)
+  }
+
+  const resolveActorName = useCallback(async (echo) => {
+    if (echo.ownerId && echo.ownerId !== userId) {
+      try {
+        const card = await getProfileCard(echo.ownerId)
+        if (card?.frenName) return card.frenName
+      } catch { /* ignore */ }
+    }
+    return echo.authorName || 'a fren'
+  }, [userId])
+
+  // Followed fren left echo in your city — notify once (bat flies, not yet close).
+  useEffect(() => {
+    if (!userPos || followingIds.size === 0) return
+
+    const newlyHinted = echoes.filter(
+      (e) =>
+        canHintEcho(e, { followingIds }) &&
+        followingIds.has(e.ownerId) &&
+        !hinted.has(e.id) &&
+        distanceMeters(userPos, { lat: e.lat, lon: e.lon }) <= ECHO_CITY_RADIUS_M,
+    )
+    if (newlyHinted.length === 0) return
+
+    setHinted((prev) => {
+      const next = new Set(prev)
+      newlyHinted.forEach((e) => next.add(e.id))
+      return next
+    })
+
+    newlyHinted.forEach(async (e) => {
+      const name = await resolveActorName(e)
+      pushLocal({
+        type: 'echo_follow',
+        echoId: e.id,
+        actorId: e.ownerId,
+        actorName: name,
+        actorAvatarType: e.avatarType,
+        actorAvatarUrl: e.avatarUrl,
+        cityLabel,
+        dedupeKey: `echo-follow:${e.id}`,
+      })
+    })
+  }, [userPos, echoes, hinted, followingIds, pushLocal, cityLabel, resolveActorName])
+
+  // Physically close — discover & open notification.
+  useEffect(() => {
+    if (!userPos) return
+
+    const newlyDiscovered = echoes.filter(
+      (e) =>
+        canDiscoverEcho(e, { followingIds }) &&
+        !discovered.has(e.id) &&
+        isInDiscoverRange(e, userPos) &&
+        isEchoScannable(e, userPos, searchRadiusM) &&
+        !isCityDiscoverRadius(e),
+    )
+    if (newlyDiscovered.length === 0) return
+
+    setDiscovered((prev) => {
+      const next = new Set(prev)
+      newlyDiscovered.forEach((e) => next.add(e.id))
+      return next
+    })
+
+    newlyDiscovered.forEach(async (e) => {
+      const name = await resolveActorName(e)
+      pushLocal({
+        type: 'echo',
+        echoId: e.id,
+        actorId: e.ownerId,
+        actorName: name,
+        actorAvatarType: e.avatarType,
+        actorAvatarUrl: e.avatarUrl,
+        dedupeKey: `echo-discover:${e.id}`,
+      })
+    })
+  }, [userPos, echoes, discovered, pushLocal, resolveActorName])
+
+  const liveEchoes = echoes
+
+  const mapEchoes = useMemo(
+    () => liveEchoes.filter((e) => canShowEchoPin(e, { discovered })),
+    [liveEchoes, discovered],
+  )
+
+  const batHints = useMemo(() => {
+    if (!userPos) return []
+    return liveEchoes
+      .filter((e) => {
+        if (!canHintEcho(e, { followingIds })) return false
+        if (discovered.has(e.id)) return false
+        if (!isEchoScannable(e, userPos, searchRadiusM)) return false
+        if (isCityDiscoverRadius(e)) return true
+        return !isInDiscoverRange(e, userPos)
+      })
+      .map((e) => {
+        const cityWide = isCityDiscoverRadius(e)
+        const fuzzRadiusM = cityWide ? ECHO_CITY_HINT_FUZZ_RADIUS_M : ECHO_HINT_FUZZ_RADIUS_M
+        const fuzzy = fuzzHintCoord(e.id, { lat: e.lat, lon: e.lon }, fuzzRadiusM)
+        return {
+          id: e.id,
+          lat: fuzzy.lat,
+          lon: fuzzy.lon,
+          zoneRadiusM: cityWide ? ECHO_CITY_HINT_ZONE_RADIUS_M : ECHO_HINT_ZONE_RADIUS_M,
+          cityWide,
+          global: canBrowseGlobally(e),
+        }
+      })
+  }, [liveEchoes, discovered, userPos, followingIds, searchRadiusM])
+
+  const inRangeEchoes = useMemo(() => {
+    if (!userPos) return []
+    return sortByDistance(
+      liveEchoes.filter(
+        (e) =>
+          canDiscoverEcho(e, { followingIds }) &&
+          isEchoScannable(e, userPos, searchRadiusM) &&
+          isInDiscoverRange(e, userPos),
+      ),
+      userPos,
+    )
+  }, [liveEchoes, userPos, followingIds, searchRadiusM, rangeScanTick])
+
+  const nearbyForPlaces = useMemo(() => {
+    if (!userPos) return []
+    return sortByDistance(
+      liveEchoes.filter(
+        (e) =>
+          canDiscoverEcho(e, { followingIds }) &&
+          isEchoScannable(e, userPos, searchRadiusM),
+      ),
+      userPos,
+    )
+  }, [liveEchoes, userPos, followingIds, searchRadiusM, rangeScanTick])
+
+  const placeGroups = useMemo(
+    () => groupEchoesByPlace(nearbyForPlaces),
+    [nearbyForPlaces],
+  )
+
+  const mapHidden = showCreate || !!openId || showIntro
+
+  const myCollection = useMemo(() => {
+    const list = liveEchoes.filter((e) => e.mine || e.saved)
+    const sorted = [...list]
+    if (sortBy === 'oldest') sorted.sort((a, b) => a.createdAt - b.createdAt)
+    else if (sortBy === 'kind') sorted.sort((a, b) => a.kind.localeCompare(b.kind))
+    else sorted.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+    return sorted
+  }, [liveEchoes, sortBy])
+
+  const mineKindCounts = useMemo(() => {
+    const counts = { all: myCollection.length, image: 0, video: 0, audio: 0 }
+    myCollection.forEach((e) => {
+      if (e.kind === 'image') counts.image += 1
+      else if (e.kind === 'video') counts.video += 1
+      else if (e.kind === 'audio') counts.audio += 1
+    })
+    return counts
+  }, [myCollection])
+
+  const filteredMyCollection = useMemo(() => {
+    if (mineKindFilter === 'all') return myCollection
+    return myCollection.filter((e) => e.kind === mineKindFilter)
+  }, [myCollection, mineKindFilter])
+
+  function handleMineViewChange(view) {
+    setMineView(view)
+    try {
+      localStorage.setItem(ECHO_MINE_VIEW_KEY, view)
+    } catch { /* ignore */ }
+  }
+
+  const heardCollection = useMemo(() => history.map((h) => {
+    const echo = echoes.find((e) => e.id === h.echoId)
+      || browseEchoes.find((e) => e.id === h.echoId)
+    return {
+      heardAt: h.listenedAt,
+      echo: echo || {
+        id: h.echoId,
+        kind: h.kind,
+        authorName: h.authorName,
+        ownerId: h.ownerId,
+        label: '',
+        visibility: 'world',
+        mine: false,
+      },
+    }
+  }), [history, echoes, browseEchoes])
+
+  function openCreateFlow() {
+    if (!window.isSecureContext && !import.meta.env.DEV) {
+      locate()
+      return
+    }
+    setShowCreate(true)
+    if (!userPos) locate().catch(() => {})
+    refreshPosition({ highAccuracy: true }).catch(() => {})
+  }
+
+  function dismissIntro(startCreate = false) {
+    try {
+      localStorage.setItem(ECHO_INTRO_KEY, '1')
+    } catch { /* ignore */ }
+    setShowIntro(false)
+    if (startCreate) openCreateFlow()
+  }
+
+  async function publishEcho({
+    kind, mediaUrl, mediaBlob, coverUrl, coverBlob,
+    visibility, allowComments, voiceFilter, senseFilter, spatial, pinPosition,
+    discoverRadiusM, placeLabel, browseGlobally, expiresAt,
+  }) {
+    const handle = profile?.frenName?.trim() || 'you'
+    const spot = pinPosition
+      || (spatial?.position
+        ? { lat: spatial.position.lat, lon: spatial.position.lon }
+        : userPos
+          ? randomOffsetInRadius(userPos, ECHO_PIN_OFFSET_MAX_M)
+          : { lat: 0, lon: 0 })
+    const vis = visibility ?? 'world'
+    const discoverR = ECHO_PUBLIC_VISIBILITIES.has(vis)
+      ? (discoverRadiusM ?? ECHO_DEFAULT_DISCOVER_RADIUS_M)
+      : null
+
+    if (backendReady && mediaBlob && userId) {
+      try {
+        const mediaPath = await uploadEchoMedia(mediaBlob)
+        const coverPath = coverBlob ? await uploadEchoMedia(coverBlob) : null
+        const id = await publishEchoRemote({
+          kind,
+          visibility: vis,
+          mediaPath,
+          coverPath,
+          lat: spot.lat,
+          lon: spot.lon,
+          voiceFilter: kind === 'audio' ? (voiceFilter ?? 'normal') : null,
+          senseFilter: kind === 'video' ? (senseFilter ?? 'clear') : null,
+          allowComments,
+          shareOnProfile: ECHO_PUBLIC_VISIBILITIES.has(vis),
+          label: '',
+          cityLabel,
+          placeLabel: placeLabel || null,
+          browseGlobally: Boolean(browseGlobally),
+          expiresAt: expiresAt || null,
+          discoverRadiusM: discoverR,
+        })
+        const resolvedUrl = await getEchoMediaUrl(mediaPath)
+        const resolvedCover = coverPath ? await getEchoMediaUrl(coverPath) : null
+        const echo = {
+          id,
+          kind,
+          mediaUrl: resolvedUrl,
+          mediaPath,
+          coverUrl: resolvedCover || coverUrl || null,
+          coverPath,
+          ownerId: userId,
+          authorName: handle,
+          avatarType: profile?.avatarType || 'frog',
+          avatarUrl: profile?.avatarUrl || null,
+          lat: spot.lat,
+          lon: spot.lon,
+          visibility: vis,
+          shareOnProfile: ECHO_PUBLIC_VISIBILITIES.has(vis),
+          allowComments: Boolean(allowComments),
+          voiceFilter: kind === 'audio' ? (voiceFilter ?? 'normal') : null,
+          senseFilter: kind === 'video' ? (senseFilter ?? 'clear') : null,
+          spatial: spatial ?? null,
+          discoverRadiusM: discoverR,
+          placeLabel: placeLabel || null,
+          browseGlobally: Boolean(browseGlobally),
+          expiresAt: expiresAt ? new Date(expiresAt).getTime() : null,
+          auraCount: 0,
+          comments: [],
+          createdAt: Date.now(),
+          mine: true,
+          saved: false,
+          label: '',
+        }
+        setEchoes((prev) => [echo, ...prev])
+        setShowCreate(false)
+        dismissIntro(false)
+        return
+      } catch (err) {
+        console.error('Echo publish failed:', err)
+        const raw = err?.message || 'Could not publish echo'
+        if (kind === 'image' && /kind|check|invalid/i.test(raw)) {
+          throw new Error('Meme echoes need supabase-patch-echoes-images.sql run in Supabase SQL Editor.')
+        }
+        throw new Error(raw)
+      }
+    }
+
+    const storedUrl = mediaBlob ? await blobToDataUrl(mediaBlob) : mediaUrl
+    const storedCover = coverBlob ? await blobToDataUrl(coverBlob) : coverUrl
+    const echo = {
+      id: `echo-${Date.now()}`,
+      kind,
+      mediaUrl: storedUrl,
+      coverUrl: storedCover || null,
+      ownerId: userId ?? 'me',
+      authorName: handle,
+      avatarType: profile?.avatarType || 'frog',
+      avatarUrl: profile?.avatarUrl || null,
+      lat: spot.lat,
+      lon: spot.lon,
+      visibility: vis,
+      shareOnProfile: ECHO_PUBLIC_VISIBILITIES.has(vis),
+      allowComments: Boolean(allowComments),
+      voiceFilter: kind === 'audio' ? (voiceFilter ?? 'normal') : null,
+      senseFilter: kind === 'video' ? (senseFilter ?? 'clear') : null,
+      spatial: spatial ?? null,
+      discoverRadiusM: discoverR,
+      placeLabel: placeLabel || null,
+      browseGlobally: Boolean(browseGlobally),
+      expiresAt: expiresAt ? new Date(expiresAt).getTime() : null,
+      auraCount: 0,
+      comments: [],
+      createdAt: Date.now(),
+      mine: true,
+      saved: false,
+      label: '',
+    }
+    setEchoes((prev) => [echo, ...prev])
+    if (!backendReady && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)) publishToWorldPool(echo)
+    setShowCreate(false)
+    dismissIntro(false)
+  }
+
+  async function deleteEcho(id) {
+    if (backendReady) {
+      try {
+        await deleteEchoRemote(id)
+      } catch (err) {
+        console.error('Echo delete failed:', err)
+      }
+    } else {
+      removeFromWorldPool(id)
+    }
+    setEchoes((prev) => prev.filter((e) => e.id !== id))
+    setOpenId(null)
+    setEditEcho(null)
+  }
+
+  function saveEcho(id) {
+    setEchoes((prev) => prev.map((e) => (e.id === id ? { ...e, saved: true, createdAt: e.createdAt ?? Date.now() } : e)))
+  }
+
+  useEffect(() => {
+    if (!openId || !backendReady) return
+    const echo = echoes.find((e) => e.id === openId)
+    if (!echo) return
+    const needsMedia = echo.mediaPath && !echo.mediaUrl
+    const needsCover = echo.coverPath && !echo.coverUrl
+    if (!needsMedia && !needsCover) return
+    ;(async () => {
+      const updates = {}
+      if (needsMedia) {
+        try { updates.mediaUrl = await getEchoMediaUrl(echo.mediaPath) } catch { /* */ }
+      }
+      if (needsCover) {
+        try { updates.coverUrl = await getEchoMediaUrl(echo.coverPath) } catch { /* */ }
+      }
+      if (Object.keys(updates).length === 0) return
+      setEchoes((prev) => prev.map((e) => (e.id === openId ? { ...e, ...updates } : e)))
+    })()
+  }, [openId, backendReady, echoes])
+
+  function updateEchoSettings(id, patch) {
+    setEchoes((prev) => prev.map((e) => {
+      if (e.id !== id) return e
+      const updated = { ...e, ...patch }
+      if (!backendReady) {
+        if (ECHO_PUBLIC_VISIBILITIES.has(updated.visibility)) publishToWorldPool(updated)
+        else removeFromWorldPool(id)
+      }
+      return updated
+    }))
+  }
+
+  function showEchoOnMap(echo) {
+    setTab('map')
+    setMapMode('near')
+    setFlyTo({
+      lat: echo.lat,
+      lon: echo.lon,
+      zoom: 14,
+      key: Date.now(),
+    })
+  }
+
+  function applyAuraChange(echoId, { auraCount, iGaveAura }) {
+    if (!backendReady) {
+      setAuraMap((prev) => {
+        const next = { ...prev }
+        if (iGaveAura) next[echoId] = true
+        else delete next[echoId]
+        return next
+      })
+    }
+    setEchoes((prev) => prev.map((e) => (
+      e.id === echoId ? { ...e, auraCount, iGaveAura } : e
+    )))
+  }
+
+  function toggleComments(echoId, enabled) {
+    setEchoes((prev) => prev.map((e) => (e.id === echoId ? { ...e, allowComments: enabled } : e)))
+    const echo = echoes.find((e) => e.id === echoId)
+    if (!backendReady && echo?.visibility && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)) {
+      publishToWorldPool({ ...echo, allowComments: enabled })
+    }
+  }
+
+  function addComment(echoId, comment) {
+    setEchoes((prev) => prev.map((e) => {
+      if (e.id !== echoId) return e
+      const comments = [...(e.comments ?? []), comment]
+      const updated = { ...e, comments }
+      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) publishToWorldPool(updated)
+      return updated
+    }))
+  }
+
+  function handleReviewed(echo) {
+    const next = recordEchoHistory(userId, {
+      echoId: echo.id,
+      kind: echo.kind,
+      authorName: echo.authorName,
+      ownerId: echo.ownerId,
+    })
+    setHistory(next)
+  }
+
+  const openEcho = echoes.find((e) => e.id === openId)
+    || browseEchoes.find((e) => e.id === openId)
+    || null
+  const openEchoNearby = openEcho && userPos
+    ? isInDiscoverRange(openEcho, userPos)
+    : false
+  const openRangeEchoes = useMemo(() => {
+    if (!openId || !inRangeEchoes.some((e) => e.id === openId)) return []
+    return inRangeEchoes
+  }, [openId, inRangeEchoes])
+
+  function openRangeEcho(id) {
+    setDiscovered((prev) => new Set([...prev, id]))
+    setOpenId(id)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="frens-title-xl leading-tight">Echo Map</h2>
+          <p className="text-xs frens-muted">
+            {cityLabel}
+            {' '}· search places · walk into range · 🌍 = browse from anywhere
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openCreateFlow}
+          className="frens-btn-primary px-3 py-2 text-sm rounded-full inline-flex items-center gap-1.5"
+          title={userPos ? 'Drop a meme spot' : 'Enable location first'}
+        >
+          <EchoIcon className="w-5 h-4" /> Meme
+        </button>
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        {['map', 'mine', 'history'].map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`text-xs px-3 py-1.5 rounded-full capitalize ${tab === t ? 'frens-btn-primary' : 'frens-btn-outline'}`}
+          >
+            {t === 'mine' ? `My Echoes (${myCollection.length})` : t === 'history' ? `Log (${history.length})` : 'Map'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'map' && (
+        <>
+          <EchoMapSearch
+            selectedPlace={explorePlace}
+            onSelectPlace={handleSearchPlace}
+            onClearPlace={handleClearExplorePlace}
+            backendReady={backendReady}
+          />
+
+          <EchoMapModeTabs
+            mode={mapMode}
+            onChange={handleMapModeChange}
+            hasLocation={status === 'located'}
+            explorePlace={explorePlace}
+          />
+
+          {mapMode === 'near' && status !== 'located' && !explorePlace ? (
+            <div className="border frens-border rounded-xl p-8 text-center">
+              <MapIcon className="w-10 h-10 mx-auto mb-2 opacity-70" />
+              <p className="text-sm frens-body-text mb-1">See echoes around you</p>
+              <p className="text-xs frens-muted mb-4">
+                Bats fly where frens left echoes — walk close to discover them. Or search a city above to explore.
+              </p>
+              <button type="button" onClick={locate} className="frens-btn-outline px-4 py-2 text-sm inline-flex items-center gap-1.5">
+                <LocationIcon className="w-4 h-4" />
+                {status === 'locating' ? 'Finding your region…' : 'Enable location'}
+              </button>
+              {status === 'denied' && (
+                <p className="text-xs frens-hint mt-3">
+                  Location was blocked. Allow it for this site in your browser, then tap again — or use Explore to search places.
+                </p>
+              )}
+              {status === 'insecure' && (
+                <p className="text-xs frens-hint mt-3">
+                  Location needs a secure connection. Open the app over https:// (or localhost).
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
+              {mapMode === 'near' && (
+                <EchoSearchRadiusSelect
+                  value={searchRadiusM}
+                  onChange={handleSearchRadiusChange}
+                  cityLabel={cityLabel}
+                />
+              )}
+              {mapMode === 'explore' && (
+                <p className="text-xs frens-muted px-1">
+                  {explorePlace
+                    ? `Map centered on ${explorePlace.label} — pan to look around. 🌍 = echoes you can open from anywhere.`
+                    : 'Search a city or pick from recent — then pan and zoom. 🌍 = viewable from anywhere.'}
+                </p>
+              )}
+              {!mapHidden ? (
+                <EchoMapView
+                  key={mapInstanceKey}
+                  visible={!mapHidden}
+                  center={mapCenter}
+                  zoom={mapZoom}
+                  mode={mapMode}
+                  userPos={userPos}
+                  echoes={mapEchoes}
+                  hints={mapMode === 'near' ? batHints : []}
+                  browseEchoes={mapMode === 'explore' ? browseEchoes : []}
+                  searchRadiusM={searchRadiusM}
+                  placePin={explorePlace}
+                  onOpenEcho={handleOpenEcho}
+                  onViewportChange={handleViewportChange}
+                />
+              ) : (
+                <div className="w-full h-96 rounded-xl border frens-border bg-[#d8dde8]" aria-hidden />
+              )}
+              {!mapHidden && mapMode === 'explore' && explorePlace && (
+                <p className="text-xs frens-muted px-1 text-center">
+                  {browseEchoes.length > 0
+                    ? `${browseEchoes.length} world echo${browseEchoes.length === 1 ? '' : 's'} in this view`
+                    : 'No world echoes here yet — drop one with 🌍 Browsable from anywhere'}
+                </p>
+              )}
+              {!mapHidden && mapMode === 'near' && (
+                <div className="flex items-center justify-between text-xs frens-muted px-1">
+                  <span className="inline-flex items-center gap-1">
+                    <EchoIcon className="w-4 h-3" /> scanning {formatRangeM(searchRadiusM)}
+                  </span>
+                  {inRangeEchoes.length > 0 && (
+                    <span className="frens-muted">
+                      {inRangeEchoes.length} in range now
+                    </span>
+                  )}
+                </div>
+              )}
+              {!mapHidden && mapMode === 'near' && inRangeEchoes.length > 0 && (
+                <EchoRangeGallery
+                  echoes={inRangeEchoes}
+                  userPos={userPos}
+                  onOpenEcho={openRangeEcho}
+                />
+              )}
+              {!mapHidden && mapMode === 'near' && placeGroups.length > 0 && (
+                <EchoPlacesPanel
+                  cityLabel={cityLabel}
+                  placeGroups={placeGroups}
+                  onOpenEcho={handleOpenEcho}
+                />
+              )}
+              {!mapHidden && mapMode === 'explore' && !explorePlace && browseEchoes.length === 0 && (
+                <p className="text-xs frens-muted text-center py-2">
+                  Search a place above to fly the map there.
+                </p>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {tab === 'mine' && (
+        <div className="space-y-3">
+          <EchoMineToolbar
+            kindFilter={mineKindFilter}
+            onKindFilterChange={setMineKindFilter}
+            view={mineView}
+            onViewChange={handleMineViewChange}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            counts={mineKindCounts}
+          />
+
+          {myCollection.length === 0 ? (
+            <div className="border frens-border rounded-xl p-8 text-center">
+              <p className="text-sm frens-muted inline-flex items-center gap-1 justify-center">
+                No echoes yet — tap <EchoIcon className="w-4 h-3" /> Meme to leave audio or a short video.
+              </p>
+            </div>
+          ) : filteredMyCollection.length === 0 ? (
+            <div className="border frens-border rounded-xl p-8 text-center">
+              <p className="text-sm frens-muted">No echoes match this filter.</p>
+            </div>
+          ) : (
+            <div className={
+              mineView === 'board'
+                ? 'grid grid-cols-2 gap-3'
+                : 'flex flex-col gap-2'
+            }>
+              {filteredMyCollection.map((echo) => (
+                echo.mine ? (
+                  <EchoMineCard
+                    key={echo.id}
+                    echo={echo}
+                    layout={mineView}
+                    onShowOnMap={showEchoOnMap}
+                    onView={(e) => setOpenId(e.id)}
+                    onEdit={(e) => setEditEcho(e)}
+                    onDelete={deleteEcho}
+                  />
+                ) : (
+                  <div
+                    key={echo.id}
+                    className={mineView === 'board' ? 'col-span-2' : undefined}
+                  >
+                    <EchoCollectionCard
+                      echo={echo}
+                      ownerPreview={false}
+                      auraMap={auraMap}
+                      backendReady={backendReady}
+                      onShowOnMap={showEchoOnMap}
+                      onView={(e) => setOpenId(e.id)}
+                      onEdit={(e) => setEditEcho(e)}
+                      onDelete={deleteEcho}
+                      onAuraChange={applyAuraChange}
+                    />
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'history' && (
+        <div className="space-y-2">
+          {heardCollection.length === 0 ? (
+            <div className="border frens-border rounded-xl p-8 text-center">
+              <p className="text-sm frens-muted">Echoes you open — meme, video, or audio — show up here.</p>
+            </div>
+          ) : (
+            heardCollection.map(({ echo, heardAt }) => (
+              <EchoCollectionCard
+                key={`${echo.id}-${heardAt}`}
+                echo={echo}
+                variant="log"
+                heardAt={heardAt}
+                auraMap={auraMap}
+                backendReady={backendReady}
+                onView={(e) => setOpenId(e.id)}
+                onAuraChange={applyAuraChange}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {showIntro && (
+        <EchoIntroModal
+          onClose={() => dismissIntro(false)}
+          onStart={() => dismissIntro(true)}
+        />
+      )}
+      {showCreate && (
+        <CreateEchoModal
+          userPos={userPos}
+          onPublish={publishEcho}
+          onClose={() => setShowCreate(false)}
+        />
+      )}
+      {editEcho && (
+        <EchoEditModal
+          echo={editEcho}
+          onSave={(patch) => updateEchoSettings(editEcho.id, patch)}
+          onDelete={deleteEcho}
+          onClose={() => setEditEcho(null)}
+        />
+      )}
+      {openEcho && (
+        <EchoView
+          echo={openEcho}
+          mine={openEcho.mine}
+          profile={profileForComments}
+          auraCount={openEcho.auraCount ?? 0}
+          iGaveAura={openEcho.iGaveAura ?? Boolean(auraMap[openEcho.id])}
+          spatialNearby={openEchoNearby}
+          useRemoteAura={backendReady}
+          rangeEchoes={openRangeEchoes}
+          onRangeEchoChange={openRangeEcho}
+          onAuraChange={applyAuraChange}
+          onSave={saveEcho}
+          onDelete={deleteEcho}
+          onClose={() => setOpenId(null)}
+          onOpenProfile={onOpenProfile}
+          onAddComment={addComment}
+          onToggleComments={toggleComments}
+          onReviewed={handleReviewed}
+        />
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,6 @@
+-- DEPRECATED: file too large for Supabase SQL Editor paste.
+-- Use these instead (one at a time):
+--   supabase-patch-echo-browse-2a-publish.sql
+--   supabase-patch-echo-browse-2b-explore.sql
+--   supabase-patch-echo-browse-2c-near.sql
+--   supabase-patch-echo-browse-2d-mine.sql

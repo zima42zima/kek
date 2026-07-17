@@ -1,0 +1,10 @@
+-- Echo Map browse patch — run these IN ORDER in Supabase SQL Editor.
+-- Copy each file from disk (NOT from chat). Run one file per query.
+--
+-- 1. supabase-patch-echo-browse-1-columns.sql
+-- 2. supabase-patch-echo-browse-2a-publish.sql
+-- 3. supabase-patch-echo-browse-2b-explore.sql
+-- 4. supabase-patch-echo-browse-2c-near.sql
+-- 5. supabase-patch-echo-browse-2d-mine.sql
+--
+-- Requires: supabase-patch-echo-range.sql
