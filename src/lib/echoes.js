@@ -209,6 +209,17 @@ export async function listEchoesNear(lat, lon, radiusM = ECHO_CITY_RADIUS_M, use
   return (data ?? []).map((row) => mapNearRow(row, userId))
 }
 
+export async function getEchoById(echoId, userId) {
+  const { data, error } = await supabase.rpc('get_echo', { p_echo_id: echoId })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) return null
+  return mapTableRow(row, userId)
+}
+
 export async function listEchoesInBbox({ south, west, north, east, limit = 150 }, userId) {
   const { data, error } = await supabase.rpc('list_echoes_in_bbox', {
     p_south: south,

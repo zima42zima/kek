@@ -1,7 +1,20 @@
 import EchoIcon from './EchoIcon'
 import { HeadphonesIcon } from '../icons/UiIcons'
 
-export function echoPreviewSrc(echo, { ownerPreview = false } = {}) {
+/** Preview URL for a collection entry — the frame the user actually saw (meme = full image). */
+export function echoWatchedPreviewUrl(echo) {
+  if (!echo) return null
+  if (echo.collectionPreviewUrl) return echo.collectionPreviewUrl
+  if (echo.kind === 'image') return echo.mediaUrl || null
+  // video/audio preview rules TBD
+  return null
+}
+
+export function echoPreviewSrc(echo, { ownerPreview = false, watchedPreview = false } = {}) {
+  if (watchedPreview) {
+    const watched = echoWatchedPreviewUrl(echo)
+    if (watched) return watched
+  }
   if (!ownerPreview && !echo.mine) return echo.coverUrl || null
   if (echo.kind === 'image' && echo.mediaUrl) return echo.mediaUrl
   if (echo.coverUrl) return echo.coverUrl
@@ -9,8 +22,13 @@ export function echoPreviewSrc(echo, { ownerPreview = false } = {}) {
   return null
 }
 
-export default function EchoPreviewMedia({ echo, ownerPreview = false, className = '' }) {
-  const thumb = echoPreviewSrc(echo, { ownerPreview })
+export default function EchoPreviewMedia({
+  echo,
+  ownerPreview = false,
+  watchedPreview = false,
+  className = '',
+}) {
+  const thumb = echoPreviewSrc(echo, { ownerPreview, watchedPreview })
 
   if (thumb) {
     return (

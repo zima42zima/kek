@@ -6,6 +6,7 @@ const DISCOVERED_KEY = (userId) => `frens-echo-discovered-v1-${userId || 'anon'}
 const HINTED_KEY = (userId) => `frens-echo-hinted-v1-${userId || 'anon'}`
 const AURA_KEY = (userId) => `frens-echo-aura-v1-${userId || 'anon'}`
 const HISTORY_KEY = (userId) => `frens-echo-history-v1-${userId || 'anon'}`
+const COLLECTION_KEY = (userId) => `frens-echo-collection-v1-${userId || 'anon'}`
 const WORLD_KEY = 'frens-world-echoes-v1'
 
 export function loadSearchRadius() {
@@ -133,6 +134,66 @@ export function recordEchoHistory(userId, entry) {
   history.unshift({ ...entry, listenedAt: Date.now() })
   saveEchoHistory(userId, history)
   return history
+}
+
+export function loadEchoCollection(userId) {
+  try {
+    const raw = localStorage.getItem(COLLECTION_KEY(userId))
+    const arr = raw ? JSON.parse(raw) : []
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+export function saveEchoCollection(userId, entries) {
+  try {
+    localStorage.setItem(COLLECTION_KEY(userId), JSON.stringify(entries.slice(0, 200)))
+  } catch { /* quota */ }
+}
+
+/** Move legacy saved echoes (stored in mine blob) into the collection store. */
+export function migrateLegacySavedEchoes(userId) {
+  if (!userId) return []
+  const existing = loadEchoCollection(userId)
+  const legacySaved = loadEchoes(userId).filter((e) => e.saved && !e.mine)
+  if (legacySaved.length === 0) return existing
+
+  const byId = new Map(existing.map((e) => [e.id, e]))
+  legacySaved.forEach((e) => {
+    if (!byId.has(e.id)) {
+      byId.set(e.id, {
+        ...e,
+        mine: false,
+        saved: true,
+        savedAt: e.savedAt ?? e.createdAt ?? Date.now(),
+        collectionPreviewUrl: e.collectionPreviewUrl ?? (e.kind === 'image' ? e.mediaUrl : null),
+      })
+    }
+  })
+  const merged = [...byId.values()].sort(
+    (a, b) => (b.savedAt ?? 0) - (a.savedAt ?? 0),
+  )
+  saveEchoCollection(userId, merged)
+  saveEchoes(userId, loadEchoes(userId).filter((e) => e.mine))
+  return merged
+}
+
+export function addToEchoCollection(userId, echo) {
+  if (!userId || !echo?.id || echo.mine) return loadEchoCollection(userId)
+  const collectionPreviewUrl = echo.kind === 'image' && echo.mediaUrl
+    ? echo.mediaUrl
+    : null
+  const entry = {
+    ...echo,
+    mine: false,
+    saved: true,
+    savedAt: Date.now(),
+    collectionPreviewUrl,
+  }
+  const next = [entry, ...loadEchoCollection(userId).filter((e) => e.id !== echo.id)]
+  saveEchoCollection(userId, next)
+  return next
 }
 
 export function listProfileEchoes(ownerId) {

@@ -107,5 +107,7 @@ export function isNotificationClickable(n) {
   if (n.type === 'echo' && n.echoId) return true
   if (n.type === 'echo_follow' && n.echoId) return true
   if (n.type === 'echo_aura' && n.echoId) return true
+  if (n.type === 'echo_published' && n.echoId) return true
+  if (n.type === 'echo_friends' && n.echoId) return true
   return false
 }

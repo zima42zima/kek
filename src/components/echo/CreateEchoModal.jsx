@@ -50,7 +50,7 @@ function SafetyNotice({ visibility }) {
       </p>
       <p className="text-[11px] frens-muted mt-1">
         We scatter your pin up to {ECHO_PIN_OFFSET_MAX_M}m. Nobody sees the exact spot — only an approximate area until they walk into your chosen range.
-        {visibility === 'friends' ? ' Only frens you follow can discover it.' : ''}
+        {visibility === 'friends' ? ' Only frens can discover it.' : ''}
       </p>
     </div>
   )
@@ -349,6 +349,9 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
               className="frens-input mt-1 text-sm w-full"
               maxLength={80}
             />
+            <p className="text-[11px] frens-muted mt-1">
+              Name a café or landmark and pick 420m range — frens can jump right to that spot on the map.
+            </p>
           </label>
           {userPos && pinPosition ? (
             <EchoPinPlacer

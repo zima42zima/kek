@@ -60,13 +60,35 @@ export function EchoKindLabel({ kind, short = false, className = '' }) {
   )
 }
 
-export function EchoVisibilityLabel({ visibility, className = '' }) {
-  return (
-    <span className={`inline-flex items-center gap-1 leading-none ${className}`}>
+export function EchoVisibilityLabel({ visibility, onWorldClick, className = '' }) {
+  const inner = (
+    <>
       <span className="inline-flex items-center justify-center w-3 h-3 shrink-0">
         <EchoVisibilityIcon visibility={visibility} className={META_ICON} />
       </span>
       <span>{echoVisibilityText(visibility)}</span>
+    </>
+  )
+
+  if (visibility === 'world' && onWorldClick) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onWorldClick()
+        }}
+        className={`inline-flex items-center gap-1 leading-none frens-action hover:underline ${className}`}
+        title="Show on map"
+      >
+        {inner}
+      </button>
+    )
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1 leading-none ${className}`}>
+      {inner}
     </span>
   )
 }
@@ -86,6 +108,7 @@ export function EchoMetaLine({
   spatial,
   sense,
   discoverRadiusM = null,
+  onWorldClick = null,
   className = '',
 }) {
   const showDiscover =
@@ -97,7 +120,7 @@ export function EchoMetaLine({
     >
       <EchoKindLabel kind={kind} short />
       <MetaDot />
-      <EchoVisibilityLabel visibility={visibility} />
+      <EchoVisibilityLabel visibility={visibility} onWorldClick={onWorldClick} />
       {spatial ? (
         <>
           <MetaDot />

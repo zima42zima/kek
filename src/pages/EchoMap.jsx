@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { useNotifications } from '../context/NotificationsContext'
 import EchoMapView from '../components/echo/EchoMapView'
@@ -40,6 +41,10 @@ import {
   saveEchoAura,
   loadEchoHistory,
   recordEchoHistory,
+  loadEchoCollection,
+  migrateLegacySavedEchoes,
+  addToEchoCollection,
+  saveEchoCollection,
   blobToDataUrl,
   loadWorldEchoes,
   publishToWorldPool,
@@ -53,8 +58,9 @@ import {
   isCityDiscoverRadius,
   sortByDistance,
   formatRangeM,
+  echoMapNavTarget,
 } from '../lib/echoRange'
-import { listFollowing, getProfileCard } from '../lib/social'
+import { listFollowing, listFollowers, getProfileCard } from '../lib/social'
 import { distanceMeters, blurCoord, randomOffsetInRadius, fuzzHintCoord, reverseGeocode, approxLocationByIp } from '../lib/geo'
 import { canHintEcho, canDiscoverEcho, canShowEchoPin, canBrowseGlobally } from '../lib/echoPrivacy'
 import {
@@ -66,6 +72,7 @@ import {
   listMyEchoes,
   listEchoesNear,
   listEchoesInBbox,
+  getEchoById,
   deleteEcho as deleteEchoRemote,
 } from '../lib/echoes'
 
@@ -97,7 +104,11 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
   const [hinted, setHinted] = useState(() => loadHinted(userId))
   const [auraMap, setAuraMap] = useState(() => loadEchoAura(userId))
   const [history, setHistory] = useState(() => loadEchoHistory(userId))
+  const [savedCollection, setSavedCollection] = useState(() => (
+    userId ? migrateLegacySavedEchoes(userId) : []
+  ))
   const [followingIds, setFollowingIds] = useState(() => new Set())
+  const [followerIds, setFollowerIds] = useState(() => new Set())
   const [showCreate, setShowCreate] = useState(false)
   const [showIntro, setShowIntro] = useState(() => {
     try {
@@ -117,6 +128,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
     }
   })
   const [mineKindFilter, setMineKindFilter] = useState('all')
+  const [collectionKindFilter, setCollectionKindFilter] = useState('all')
   const [searchRadiusM, setSearchRadiusM] = useState(() => loadSearchRadius())
   const [mapMode, setMapMode] = useState('near')
   const [browseEchoes, setBrowseEchoes] = useState([])
@@ -225,6 +237,11 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
     avatarUrl: profile?.avatarUrl || null,
   }), [userId, profile])
 
+  const frenGraph = useMemo(
+    () => ({ followingIds, followerIds }),
+    [followingIds, followerIds],
+  )
+
   const refreshServerEchoes = useCallback(async () => {
     if (!userId || !backendReady) return
     try {
@@ -246,18 +263,18 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
       })
       nearby.forEach((e) => {
         if (e.ownerId === userId) return
-        if (!canDiscoverEcho(e, { followingIds })) return
+        if (!canDiscoverEcho(e, frenGraph)) return
         byId.set(e.id, { ...e, mine: false })
       })
-      const localSaved = loadEchoes(userId).filter((e) => e.saved)
+      const localCollection = loadEchoCollection(userId)
       const merged = [...byId.values()]
-      localSaved.forEach((saved) => {
+      localCollection.forEach((saved) => {
         if (!byId.has(saved.id)) merged.push({ ...saved, mine: false, saved: true })
       })
       const withUrls = await attachMediaUrls(merged)
       setEchoes(withUrls)
     } catch { /* keep last list */ }
-  }, [userId, backendReady, userPos, followingIds, profile, searchRadiusM])
+  }, [userId, backendReady, userPos, frenGraph, profile, searchRadiusM])
 
   useEffect(() => {
     let cancelled = false
@@ -277,6 +294,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
     setHinted(loadHinted(userId))
     setAuraMap(loadEchoAura(userId))
     setHistory(loadEchoHistory(userId))
+    setSavedCollection(migrateLegacySavedEchoes(userId))
 
     if (backendReady) {
       setEchoesLoading(true)
@@ -309,6 +327,9 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
     listFollowing(userId)
       .then((list) => setFollowingIds(new Set(list.map((p) => p.userId))))
       .catch(() => {})
+    listFollowers(userId)
+      .then((list) => setFollowerIds(new Set(list.map((p) => p.userId))))
+      .catch(() => {})
   }, [userId])
 
   // Refresh author handles from profiles for world echoes (local mode only).
@@ -338,16 +359,44 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
   }, [userId, echoes.length, backendReady])
 
   useEffect(() => {
-    if (!focusEchoId) return
-    const echo = echoes.find((e) => e.id === focusEchoId)
-    if (echo) {
+    if (!focusEchoId) return undefined
+    let cancelled = false
+
+    async function openFocused() {
+      let echo = echoes.find((e) => e.id === focusEchoId)
+        || browseEchoes.find((e) => e.id === focusEchoId)
+
+      if (!echo && backendReady && userId) {
+        try {
+          const fetched = await getEchoById(focusEchoId, userId)
+          if (fetched && canDiscoverEcho(fetched, frenGraph)) {
+            const [withUrl] = await attachMediaUrls([{ ...fetched, mine: false }])
+            echo = withUrl
+            if (!cancelled) {
+              setEchoes((prev) => (
+                prev.some((e) => e.id === focusEchoId) ? prev : [...prev, echo]
+              ))
+            }
+          }
+        } catch { /* ignore */ }
+      }
+
+      if (!echo || cancelled) return
       setTab(echo.mine ? 'mine' : 'map')
       setOpenId(focusEchoId)
       if (!echo.mine && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)) {
         setDiscovered((prev) => new Set([...prev, focusEchoId]))
+        setHinted((prev) => new Set([...prev, focusEchoId]))
+      }
+      if (echo.lat != null && echo.lon != null) {
+        setMapMode('near')
+        setExplorePlace(null)
       }
     }
-  }, [focusEchoId, echoes])
+
+    openFocused()
+    return () => { cancelled = true }
+  }, [focusEchoId, echoes, browseEchoes, backendReady, userId, frenGraph])
 
   async function seedFromPosition(p, { approx = false } = {}) {
     setUserPos(p)
@@ -448,14 +497,14 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
     return echo.authorName || 'a fren'
   }, [userId])
 
-  // Followed fren left echo in your city — notify once (bat flies, not yet close).
+  // Followed fren left echo in your city — local hint when backend notifications unavailable.
   useEffect(() => {
-    if (!userPos || followingIds.size === 0) return
+    if (!userPos || backendReady) return
 
     const newlyHinted = echoes.filter(
       (e) =>
-        canHintEcho(e, { followingIds }) &&
-        followingIds.has(e.ownerId) &&
+        canHintEcho(e, frenGraph) &&
+        (followingIds.has(e.ownerId) || followerIds.has(e.ownerId)) &&
         !hinted.has(e.id) &&
         distanceMeters(userPos, { lat: e.lat, lon: e.lon }) <= ECHO_CITY_RADIUS_M,
     )
@@ -480,7 +529,43 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
         dedupeKey: `echo-follow:${e.id}`,
       })
     })
-  }, [userPos, echoes, hinted, followingIds, pushLocal, cityLabel, resolveActorName])
+  }, [userPos, echoes, hinted, frenGraph, followingIds, followerIds, pushLocal, cityLabel, resolveActorName, backendReady])
+
+  // Realtime + notification refresh — pick up new echoes from other frens.
+  useEffect(() => {
+    if (!backendReady || !userId) return undefined
+
+    function onNotificationsRefreshed(e) {
+      const rows = e.detail?.rows
+      if (!rows?.some((n) => (
+        n.type === 'echo_published'
+        || n.type === 'echo_friends'
+        || n.type === 'echo_follow'
+      ))) return
+      refreshServerEchoes()
+    }
+
+    window.addEventListener('frens:notifications-refreshed', onNotificationsRefreshed)
+
+    const channel = supabase
+      .channel(`echo-map:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'echoes' },
+        (payload) => {
+          const row = payload.new
+          if (!row || row.hidden || row.visibility === 'private') return
+          if (row.owner_id === userId) return
+          refreshServerEchoes()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      window.removeEventListener('frens:notifications-refreshed', onNotificationsRefreshed)
+      supabase.removeChannel(channel)
+    }
+  }, [backendReady, userId, refreshServerEchoes])
 
   // Physically close — discover & open notification.
   useEffect(() => {
@@ -488,7 +573,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
 
     const newlyDiscovered = echoes.filter(
       (e) =>
-        canDiscoverEcho(e, { followingIds }) &&
+        canDiscoverEcho(e, frenGraph) &&
         !discovered.has(e.id) &&
         isInDiscoverRange(e, userPos) &&
         isEchoScannable(e, userPos, searchRadiusM) &&
@@ -514,7 +599,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
         dedupeKey: `echo-discover:${e.id}`,
       })
     })
-  }, [userPos, echoes, discovered, pushLocal, resolveActorName])
+  }, [userPos, echoes, discovered, frenGraph, pushLocal, resolveActorName])
 
   const liveEchoes = echoes
 
@@ -527,7 +612,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
     if (!userPos) return []
     return liveEchoes
       .filter((e) => {
-        if (!canHintEcho(e, { followingIds })) return false
+        if (!canHintEcho(e, frenGraph)) return false
         if (discovered.has(e.id)) return false
         if (!isEchoScannable(e, userPos, searchRadiusM)) return false
         if (isCityDiscoverRadius(e)) return true
@@ -546,32 +631,32 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
           global: canBrowseGlobally(e),
         }
       })
-  }, [liveEchoes, discovered, userPos, followingIds, searchRadiusM])
+  }, [liveEchoes, discovered, userPos, frenGraph, searchRadiusM])
 
   const inRangeEchoes = useMemo(() => {
     if (!userPos) return []
     return sortByDistance(
       liveEchoes.filter(
         (e) =>
-          canDiscoverEcho(e, { followingIds }) &&
+          canDiscoverEcho(e, frenGraph) &&
           isEchoScannable(e, userPos, searchRadiusM) &&
           isInDiscoverRange(e, userPos),
       ),
       userPos,
     )
-  }, [liveEchoes, userPos, followingIds, searchRadiusM, rangeScanTick])
+  }, [liveEchoes, userPos, frenGraph, searchRadiusM, rangeScanTick])
 
   const nearbyForPlaces = useMemo(() => {
     if (!userPos) return []
     return sortByDistance(
       liveEchoes.filter(
         (e) =>
-          canDiscoverEcho(e, { followingIds }) &&
+          canDiscoverEcho(e, frenGraph) &&
           isEchoScannable(e, userPos, searchRadiusM),
       ),
       userPos,
     )
-  }, [liveEchoes, userPos, followingIds, searchRadiusM, rangeScanTick])
+  }, [liveEchoes, userPos, frenGraph, searchRadiusM, rangeScanTick])
 
   const placeGroups = useMemo(
     () => groupEchoesByPlace(nearbyForPlaces),
@@ -580,8 +665,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
 
   const mapHidden = showCreate || !!openId || showIntro
 
-  const myCollection = useMemo(() => {
-    const list = liveEchoes.filter((e) => e.mine || e.saved)
+  const myEchoes = useMemo(() => {
+    const list = liveEchoes.filter((e) => e.mine)
     const sorted = [...list]
     if (sortBy === 'oldest') sorted.sort((a, b) => a.createdAt - b.createdAt)
     else if (sortBy === 'kind') sorted.sort((a, b) => a.kind.localeCompare(b.kind))
@@ -590,19 +675,63 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
   }, [liveEchoes, sortBy])
 
   const mineKindCounts = useMemo(() => {
-    const counts = { all: myCollection.length, image: 0, video: 0, audio: 0 }
-    myCollection.forEach((e) => {
+    const counts = { all: myEchoes.length, image: 0, video: 0, audio: 0 }
+    myEchoes.forEach((e) => {
       if (e.kind === 'image') counts.image += 1
       else if (e.kind === 'video') counts.video += 1
       else if (e.kind === 'audio') counts.audio += 1
     })
     return counts
-  }, [myCollection])
+  }, [myEchoes])
 
-  const filteredMyCollection = useMemo(() => {
-    if (mineKindFilter === 'all') return myCollection
-    return myCollection.filter((e) => e.kind === mineKindFilter)
-  }, [myCollection, mineKindFilter])
+  const filteredMyEchoes = useMemo(() => {
+    if (mineKindFilter === 'all') return myEchoes
+    return myEchoes.filter((e) => e.kind === mineKindFilter)
+  }, [myEchoes, mineKindFilter])
+
+  const displayCollection = useMemo(() => {
+    return savedCollection
+      .map((entry) => {
+        const live = liveEchoes.find((e) => e.id === entry.id)
+          || browseEchoes.find((e) => e.id === entry.id)
+        return live
+          ? {
+              ...live,
+              saved: true,
+              savedAt: entry.savedAt ?? live.savedAt,
+              collectionPreviewUrl: entry.collectionPreviewUrl ?? live.collectionPreviewUrl,
+              mine: false,
+            }
+          : { ...entry, saved: true, mine: false }
+      })
+      .filter((e) => !e.mine)
+      .sort((a, b) => (b.savedAt ?? b.createdAt ?? 0) - (a.savedAt ?? a.createdAt ?? 0))
+  }, [savedCollection, liveEchoes, browseEchoes])
+
+  const collectionKindCounts = useMemo(() => {
+    const counts = { all: displayCollection.length, image: 0, video: 0, audio: 0 }
+    displayCollection.forEach((e) => {
+      if (e.kind === 'image') counts.image += 1
+      else if (e.kind === 'video') counts.video += 1
+      else if (e.kind === 'audio') counts.audio += 1
+    })
+    return counts
+  }, [displayCollection])
+
+  const filteredCollection = useMemo(() => {
+    const list = collectionKindFilter === 'all'
+      ? displayCollection
+      : displayCollection.filter((e) => e.kind === collectionKindFilter)
+    const sorted = [...list]
+    if (sortBy === 'oldest') {
+      sorted.sort((a, b) => (a.savedAt ?? a.createdAt ?? 0) - (b.savedAt ?? b.createdAt ?? 0))
+    } else if (sortBy === 'kind') {
+      sorted.sort((a, b) => a.kind.localeCompare(b.kind))
+    } else {
+      sorted.sort((a, b) => (b.savedAt ?? b.createdAt ?? 0) - (a.savedAt ?? a.createdAt ?? 0))
+    }
+    return sorted
+  }, [displayCollection, collectionKindFilter, sortBy])
 
   function handleMineViewChange(view) {
     setMineView(view)
@@ -783,8 +912,44 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
   }
 
   function saveEcho(id) {
-    setEchoes((prev) => prev.map((e) => (e.id === id ? { ...e, saved: true, createdAt: e.createdAt ?? Date.now() } : e)))
+    const echo = echoes.find((e) => e.id === id)
+      || browseEchoes.find((e) => e.id === id)
+      || displayCollection.find((e) => e.id === id)
+    if (!echo || echo.mine) return
+    const next = addToEchoCollection(userId, echo)
+    setSavedCollection(next)
+    setEchoes((prev) => prev.map((e) => (
+      e.id === id ? { ...e, saved: true, savedAt: Date.now() } : e
+    )))
   }
+
+  useEffect(() => {
+    if (!backendReady || !userId || tab !== 'collection') return undefined
+    const stale = savedCollection.filter(
+      (e) => e.kind === 'image' && e.mediaPath && !e.collectionPreviewUrl,
+    )
+    if (stale.length === 0) return undefined
+
+    let cancelled = false
+    ;(async () => {
+      let changed = false
+      const next = await Promise.all(savedCollection.map(async (entry) => {
+        if (entry.kind !== 'image' || !entry.mediaPath || entry.collectionPreviewUrl) return entry
+        try {
+          const url = await getEchoMediaUrl(entry.mediaPath)
+          changed = true
+          return { ...entry, mediaUrl: url, collectionPreviewUrl: url }
+        } catch {
+          return entry
+        }
+      }))
+      if (!cancelled && changed) {
+        setSavedCollection(next)
+        saveEchoCollection(userId, next)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [backendReady, userId, tab, savedCollection])
 
   useEffect(() => {
     if (!openId || !backendReady) return
@@ -818,15 +983,22 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
     }))
   }
 
-  function showEchoOnMap(echo) {
+  function navigateEchoPlace(echo, { closeModal = false } = {}) {
+    const target = echoMapNavTarget(echo)
+    if (!target) return
+    if (closeModal) setOpenId(null)
     setTab('map')
-    setMapMode('near')
-    setFlyTo({
-      lat: echo.lat,
-      lon: echo.lon,
-      zoom: 14,
-      key: Date.now(),
+    handleSearchPlace({
+      lat: target.lat,
+      lon: target.lon,
+      label: target.label,
+      zoom: target.zoom,
+      id: `echo-${echo.id}`,
     })
+  }
+
+  function showEchoOnMap(echo) {
+    navigateEchoPlace(echo)
   }
 
   function applyAuraChange(echoId, { auraCount, iGaveAura }) {
@@ -873,6 +1045,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
 
   const openEcho = echoes.find((e) => e.id === openId)
     || browseEchoes.find((e) => e.id === openId)
+    || displayCollection.find((e) => e.id === openId)
     || null
   const openEchoNearby = openEcho && userPos
     ? isInDiscoverRange(openEcho, userPos)
@@ -908,14 +1081,20 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {['map', 'mine', 'history'].map((t) => (
+        {['map', 'mine', 'collection', 'history'].map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
             className={`text-xs px-3 py-1.5 rounded-full capitalize ${tab === t ? 'frens-btn-primary' : 'frens-btn-outline'}`}
           >
-            {t === 'mine' ? `My Echoes (${myCollection.length})` : t === 'history' ? `Log (${history.length})` : 'Map'}
+            {t === 'mine'
+              ? `My Echoes (${myEchoes.length})`
+              : t === 'collection'
+                ? `Collection (${displayCollection.length})`
+                : t === 'history'
+                  ? `Log (${history.length})`
+                  : 'Map'}
           </button>
         ))}
       </div>
@@ -1046,15 +1225,16 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
             sortBy={sortBy}
             onSortChange={setSortBy}
             counts={mineKindCounts}
+            hint="Private labels · tap to open"
           />
 
-          {myCollection.length === 0 ? (
+          {myEchoes.length === 0 ? (
             <div className="border frens-border rounded-xl p-8 text-center">
               <p className="text-sm frens-muted inline-flex items-center gap-1 justify-center">
                 No echoes yet — tap <EchoIcon className="w-4 h-3" /> Meme to leave audio or a short video.
               </p>
             </div>
-          ) : filteredMyCollection.length === 0 ? (
+          ) : filteredMyEchoes.length === 0 ? (
             <div className="border frens-border rounded-xl p-8 text-center">
               <p className="text-sm frens-muted">No echoes match this filter.</p>
             </div>
@@ -1064,35 +1244,66 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
                 ? 'grid grid-cols-2 gap-3'
                 : 'flex flex-col gap-2'
             }>
-              {filteredMyCollection.map((echo) => (
-                echo.mine ? (
-                  <EchoMineCard
-                    key={echo.id}
-                    echo={echo}
-                    layout={mineView}
-                    onShowOnMap={showEchoOnMap}
-                    onView={(e) => setOpenId(e.id)}
-                    onEdit={(e) => setEditEcho(e)}
-                    onDelete={deleteEcho}
-                  />
-                ) : (
-                  <div
-                    key={echo.id}
-                    className={mineView === 'board' ? 'col-span-2' : undefined}
-                  >
-                    <EchoCollectionCard
-                      echo={echo}
-                      ownerPreview={false}
-                      auraMap={auraMap}
-                      backendReady={backendReady}
-                      onShowOnMap={showEchoOnMap}
-                      onView={(e) => setOpenId(e.id)}
-                      onEdit={(e) => setEditEcho(e)}
-                      onDelete={deleteEcho}
-                      onAuraChange={applyAuraChange}
-                    />
-                  </div>
-                )
+              {filteredMyEchoes.map((echo) => (
+                <EchoMineCard
+                  key={echo.id}
+                  echo={echo}
+                  layout={mineView}
+                  onShowOnMap={showEchoOnMap}
+                  onNavigateWorld={showEchoOnMap}
+                  onView={(e) => setOpenId(e.id)}
+                  onEdit={(e) => setEditEcho(e)}
+                  onDelete={deleteEcho}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'collection' && (
+        <div className="space-y-3">
+          <EchoMineToolbar
+            kindFilter={collectionKindFilter}
+            onKindFilterChange={setCollectionKindFilter}
+            view={mineView}
+            onViewChange={handleMineViewChange}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            counts={collectionKindCounts}
+            hint="Saved from frens · tap to open"
+          />
+
+          {displayCollection.length === 0 ? (
+            <div className="border frens-border rounded-xl p-8 text-center">
+              <p className="text-sm frens-muted">
+                Echoes you save from frens and discoveries show up here — open one on the map and tap Save to my collection.
+              </p>
+            </div>
+          ) : filteredCollection.length === 0 ? (
+            <div className="border frens-border rounded-xl p-8 text-center">
+              <p className="text-sm frens-muted">No echoes match this filter.</p>
+            </div>
+          ) : (
+            <div className={
+              mineView === 'board'
+                ? 'grid grid-cols-2 gap-3'
+                : 'flex flex-col gap-2'
+            }>
+              {filteredCollection.map((echo) => (
+                <EchoMineCard
+                  key={echo.id}
+                  echo={echo}
+                  variant="saved"
+                  layout={mineView}
+                  savedAt={echo.savedAt}
+                  auraMap={auraMap}
+                  backendReady={backendReady}
+                  onShowOnMap={showEchoOnMap}
+                  onNavigateWorld={showEchoOnMap}
+                  onView={(e) => setOpenId(e.id)}
+                  onAuraChange={applyAuraChange}
+                />
               ))}
             </div>
           )}
@@ -1156,7 +1367,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile }) {
           onRangeEchoChange={openRangeEcho}
           onAuraChange={applyAuraChange}
           onSave={saveEcho}
-          onDelete={deleteEcho}
+          onNavigateToPlace={(echo) => navigateEchoPlace(echo, { closeModal: true })}
           onClose={() => setOpenId(null)}
           onOpenProfile={onOpenProfile}
           onAddComment={addComment}

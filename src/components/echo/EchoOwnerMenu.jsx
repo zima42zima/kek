@@ -49,7 +49,7 @@ function useMenuPosition(open, anchorRef, menuRef) {
   return style
 }
 
-export default function EchoOwnerMenu({ mine, onView, onEdit, onDelete }) {
+export default function EchoOwnerMenu({ mine, onView, onShowOnMap, onEdit, onDelete }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
   const menuRef = useRef(null)
@@ -100,6 +100,16 @@ export default function EchoOwnerMenu({ mine, onView, onEdit, onDelete }) {
       >
         View full echo
       </button>
+      {onShowOnMap ? (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => { close(); onShowOnMap?.() }}
+          className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          Show on map
+        </button>
+      ) : null}
       {mine ? (
         <button
           type="button"

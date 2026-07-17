@@ -1,4 +1,4 @@
-import { distanceMeters } from './geo'
+import { distanceMeters, blurCoord } from './geo'
 import {
   ECHO_CITY_RADIUS_M,
   ECHO_DISCOVER_RADIUS_MIN_M,
@@ -72,6 +72,33 @@ export function isInSearchRange(echo, userPos, searchRadiusM) {
   return isEchoScannable(echo, userPos, searchRadiusM)
 }
 
-export function sortByDistance(echoes, userPos) {
-  return [...echoes].sort((a, b) => echoDistanceM(a, userPos) - echoDistanceM(b, userPos))
+/** Whether publisher pinned a named public venue at block-level (420m) range. */
+export function isNamedExactPlace(echo) {
+  return Boolean(echo?.placeLabel?.trim())
+    && echoDiscoverRadiusM(echo) <= ECHO_DISCOVER_RADIUS_MIN_M
+}
+
+/** Map target when tapping the world icon — city-level unless a named venue at 420m. */
+export function echoMapNavTarget(echo) {
+  if (!echo || echo.visibility !== 'world') return null
+  if (echo.lat == null || echo.lon == null) return null
+
+  if (isNamedExactPlace(echo)) {
+    return {
+      lat: echo.lat,
+      lon: echo.lon,
+      label: echo.placeLabel.trim(),
+      zoom: 17,
+      exact: true,
+    }
+  }
+
+  const { lat, lon } = blurCoord({ lat: echo.lat, lon: echo.lon })
+  return {
+    lat,
+    lon,
+    label: echo.cityLabel?.trim() || 'this city',
+    zoom: 12,
+    exact: false,
+  }
 }

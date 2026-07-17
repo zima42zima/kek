@@ -34,7 +34,7 @@ export default function EchoView({
   onAuraChange,
   useRemoteAura = true,
   onSave,
-  onDelete,
+  onNavigateToPlace,
   onClose,
   onOpenProfile,
   onAddComment,
@@ -114,8 +114,12 @@ export default function EchoView({
                 visibility={echo.visibility}
                 spatial={hasSpatial ? spatialTierLabel(echo.spatial.tier) : null}
                 sense={senseName || null}
+                onWorldClick={
+                  echo.visibility === 'world' && onNavigateToPlace
+                    ? () => onNavigateToPlace(echo)
+                    : null
+                }
               />
-              {' · stays until you delete'}
             </p>
           </div>
           {!mine && echo.ownerId && onOpenProfile && (
@@ -292,22 +296,22 @@ export default function EchoView({
           </div>
         )}
 
-        <div className="flex gap-2 mt-4">
-          {mine ? (
-            <button type="button" onClick={() => onDelete(echo.id)} className="frens-btn-outline flex-1 py-2.5 text-sm text-red-500 dark:text-red-400">
-              Delete echo
-            </button>
-          ) : (
+        {!mine && (
+          <div className="flex gap-2 mt-4">
             <button
               type="button"
               onClick={() => onSave(echo.id)}
-              disabled={echo.saved}
+              disabled={echo.saved || !reviewed}
               className="frens-btn-primary flex-1 py-2.5 text-sm disabled:opacity-40"
             >
-              {echo.saved ? 'Saved to collection ✓' : 'Save to my collection'}
+              {echo.saved
+                ? 'Saved to collection ✓'
+                : reviewed
+                  ? 'Save to my collection'
+                  : 'Watch first to save'}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </Modal>
 
       {spatialView ? (

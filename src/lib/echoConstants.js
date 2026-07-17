@@ -14,7 +14,7 @@ export const ECHO_PIN_OFFSET_MAX_M = ECHO_DISCOVER_RADIUS_MIN_M
 
 /** Preset ranges for search (map) and publish (discover radius). */
 export const ECHO_RANGE_PRESETS = [
-  { id: 'block', label: '420m', meters: 420, hint: 'One block — very local' },
+  { id: 'block', label: '420m', meters: 420, hint: 'One block — use with a place name to pin cafés & landmarks' },
   { id: 'walk', label: '800m', meters: 800, hint: 'Short walk' },
   { id: 'hood', label: '1.2km', meters: 1200, hint: 'Neighborhood' },
   { id: 'city', label: 'City', meters: 2500, hint: 'Whole city area' },

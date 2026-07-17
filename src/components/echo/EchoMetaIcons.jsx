@@ -12,6 +12,7 @@ export default function EchoMetaIcons({
   kind,
   visibility,
   discoverRadiusM = null,
+  onWorldClick = null,
   light = false,
   className = '',
 }) {
@@ -27,9 +28,23 @@ export default function EchoMetaIcons({
       <span title={echoKindText(kind, { short: true })} className="inline-flex">
         <EchoTypeIcon kind={kind} className={iconClass} />
       </span>
-      <span title={echoVisibilityText(visibility)} className="inline-flex">
-        <EchoVisibilityIcon visibility={visibility} className={iconClass} />
-      </span>
+      {visibility === 'world' && onWorldClick ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onWorldClick()
+          }}
+          title="Show on map"
+          className="inline-flex frens-action"
+        >
+          <EchoVisibilityIcon visibility={visibility} className={iconClass} />
+        </button>
+      ) : (
+        <span title={echoVisibilityText(visibility)} className="inline-flex">
+          <EchoVisibilityIcon visibility={visibility} className={iconClass} />
+        </span>
+      )}
       {showDiscover ? (
         <span title={`Discover within ${formatRangeM(discoverRadiusM)}`} className={rangeClass}>
           {formatRangeM(discoverRadiusM)}

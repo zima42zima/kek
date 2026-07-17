@@ -19,19 +19,24 @@ export default function EchoCollectionCard({
   auraMap,
   backendReady,
   onShowOnMap,
+  onNavigateWorld,
   onView,
   onEdit,
   onDelete,
   onAuraChange,
 }) {
   const isLog = variant === 'log'
-  const badge = isLog ? null : (echo.mine ? 'mine' : 'saved')
+  const isSaved = variant === 'saved'
+  const openOnTap = isLog || isSaved
+  const badge = isLog ? null : (isSaved ? null : (echo.mine ? 'mine' : 'saved'))
   const footerHint = isLog && heardAt
     ? `${logActionLabel(echo.kind)} · ${new Date(heardAt).toLocaleDateString()}`
-    : 'Tap to show on map'
+    : isSaved && heardAt
+      ? `saved · ${new Date(heardAt).toLocaleDateString()}`
+      : 'Tap to show on map'
 
   function handlePrimary() {
-    if (isLog) onView?.(echo)
+    if (openOnTap) onView?.(echo)
     else onShowOnMap?.(echo)
   }
 
@@ -43,7 +48,7 @@ export default function EchoCollectionCard({
         type="button"
         onClick={handlePrimary}
         className="shrink-0 w-[5.5rem] sm:w-[6.5rem] aspect-square rounded-l-xl bg-black/5 dark:bg-white/5 flex items-center justify-center overflow-hidden border-r frens-border"
-        aria-label={isLog ? `Open ${echo.label || 'echo'}` : `Show ${echo.label || 'echo'} on map`}
+        aria-label={openOnTap ? `Open ${echo.label || 'echo'}` : `Show ${echo.label || 'echo'} on map`}
       >
         <EchoPreviewMedia echo={echo} ownerPreview={ownerPreview} />
       </button>
@@ -73,6 +78,11 @@ export default function EchoCollectionCard({
             visibility={echo.visibility ?? 'world'}
             spatial={echo.spatial ? 'spatial' : null}
             discoverRadiusM={echo.discoverRadiusM}
+            onWorldClick={
+              echo.visibility === 'world' && onNavigateWorld
+                ? () => onNavigateWorld(echo)
+                : null
+            }
           />
         </div>
 
@@ -80,10 +90,11 @@ export default function EchoCollectionCard({
       </button>
 
       <div className="flex flex-col items-end justify-between p-2 shrink-0">
-        {variant === 'collection' ? (
+        {variant === 'collection' || variant === 'saved' ? (
           <EchoOwnerMenu
             mine={echo.mine}
             onView={() => onView?.(echo)}
+            onShowOnMap={onShowOnMap ? () => onShowOnMap?.(echo) : undefined}
             onEdit={() => onEdit?.(echo)}
             onDelete={() => onDelete?.(echo.id)}
           />
