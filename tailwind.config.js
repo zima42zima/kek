@@ -26,11 +26,18 @@ export default {
         },
       },
       fontFamily: {
-        mono: ['"Space Mono"', 'ui-monospace', 'monospace'],
-        display: ['"Fredoka"', 'ui-rounded', 'sans-serif'],
+        sans: ['"Open Sans"', 'system-ui', 'sans-serif'],
+        mono: ['"Open Sans"', 'system-ui', 'sans-serif'],
+        display: ['"Open Sans"', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         cave: '18px',
+      },
+      borderColor: {
+        frens: 'var(--frens-outline)',
+      },
+      divideColor: {
+        frens: 'var(--frens-outline)',
       },
     },
   },
