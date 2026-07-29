@@ -1,4 +1,4 @@
-# FRENS — Build & decision log
+# MISAO — Build & decision log
 
 Living notes for handoff (humans + AI). Last updated: July 2026.
 
@@ -115,7 +115,7 @@ Verify: `node scripts/check-supabase.mjs` (includes `list_feed_posts` + `list_ca
 
 ## Product summary (for other AI)
 
-FRENS: invite-only, human-first social pocket — anti-performative, no ads. Text + links + small groups + short location echoes; not Instagram. Cave = safe pocket; goal is real life. Stack: React + Supabase. Link-first hosting; FRENS hosts only compressed photos, short echoes, DMs/cave media. Compare usage/costs to **X/Facebook**, not Instagram.
+MISAO: invite-only, human-first social pocket — anti-performative, no ads. Text + links + small groups + short location echoes; not Instagram. Cave = safe pocket; goal is real life. Stack: React + Supabase. Link-first hosting; MISAO hosts only compressed photos, short echoes, DMs/cave media. Compare usage/costs to **X/Facebook**, not Instagram.
 
 ---
 

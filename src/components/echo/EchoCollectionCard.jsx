@@ -5,7 +5,9 @@ import EchoAuraButton, { EchoAuraCount } from './EchoAuraButton'
 import EchoOwnerMenu from './EchoOwnerMenu'
 import { EchoMetaLine } from './EchoMeta'
 
-function logActionLabel(kind) {
+function logActionLabel(kind, interaction) {
+  if (interaction === 'commented') return 'commented'
+  if (interaction === 'reacted') return 'reacted'
   if (kind === 'video') return 'watched'
   if (kind === 'image') return 'viewed'
   return 'listened'
@@ -15,6 +17,7 @@ export default function EchoCollectionCard({
   echo,
   variant = 'collection',
   heardAt = null,
+  logInteraction = null,
   ownerPreview = false,
   auraMap,
   backendReady,
@@ -30,7 +33,7 @@ export default function EchoCollectionCard({
   const openOnTap = isLog || isSaved
   const badge = isLog ? null : (isSaved ? null : (echo.mine ? 'mine' : 'saved'))
   const footerHint = isLog && heardAt
-    ? `${logActionLabel(echo.kind)} · ${new Date(heardAt).toLocaleDateString()}`
+    ? `${logActionLabel(echo.kind, logInteraction)} · ${new Date(heardAt).toLocaleDateString()}`
     : isSaved && heardAt
       ? `saved · ${new Date(heardAt).toLocaleDateString()}`
       : 'Tap to show on map'
@@ -50,7 +53,7 @@ export default function EchoCollectionCard({
         className="shrink-0 w-[5.5rem] sm:w-[6.5rem] aspect-square rounded-l-xl bg-black/5 dark:bg-white/5 flex items-center justify-center overflow-hidden border-r frens-border"
         aria-label={openOnTap ? `Open ${echo.label || 'echo'}` : `Show ${echo.label || 'echo'} on map`}
       >
-        <EchoPreviewMedia echo={echo} ownerPreview={ownerPreview} />
+        <EchoPreviewMedia echo={echo} ownerPreview={ownerPreview} watchedPreview={openOnTap} />
       </button>
 
       <button

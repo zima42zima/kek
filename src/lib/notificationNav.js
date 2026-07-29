@@ -99,7 +99,7 @@ export function consumeOpenGatherer() {
 export function isNotificationClickable(n) {
   if (!n) return false
   if (n.type === 'follow' && n.actorId) return true
-  if ((n.type === 'aura' || n.type === 'comment') && n.postId) return true
+  if ((n.type === 'aura' || n.type === 'comment' || n.type === 'post_reaction') && n.postId) return true
   if (n.type === 'dm' && n.conversationId) return true
   if ((n.type === 'rabbit_reply' || n.type === 'rabbit_follow') && n.rabbitTopicId) return true
   if (n.type === 'owl_letter') return true

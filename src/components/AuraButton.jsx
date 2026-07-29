@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { usePosts } from '../context/PostsContext'
 import AuraIcon, { AURA_COLORS, AURA_IDLE } from './AuraIcon'
+import { POST_ACTION_BTN, POST_ACTION_ICON, POST_ACTION_BADGE } from './icons/UiIcons'
+import PostActionTip from './PostActionTip'
 
 /** Give or remove aura on any feed post, anywhere in the app. */
 export default function AuraButton({ postId, auraCount = 0, iGaveAura = false, className = '' }) {
@@ -46,27 +48,39 @@ export default function AuraButton({ postId, auraCount = 0, iGaveAura = false, c
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      aria-pressed={displayGave}
-      title={displayGave ? 'Remove aura' : 'Give aura'}
-      className={`relative z-10 flex items-center gap-1.5 text-xs frens-action transition cursor-pointer touch-manipulation min-h-[36px] px-1 -mx-1 rounded-lg hover:bg-black/[0.04] dark:hover:bg-white/[0.06] ${
-        displayGave ? 'font-medium text-black dark:text-white' : 'frens-muted'
-      } ${className}`}
-    >
-      <AuraIcon color={iconColor} animate={animating} active={displayGave} />
-      <span className="pointer-events-none">Aura {displayCount}</span>
-    </button>
+    <PostActionTip label="aura">
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-pressed={displayGave}
+        aria-label={displayGave ? 'Remove aura' : 'Give aura'}
+        className={`${POST_ACTION_BTN} ${
+          displayGave ? 'ring-1 ring-black/15 dark:ring-white/25' : 'frens-muted'
+        } ${className}`}
+      >
+        <AuraIcon color={iconColor} animate={animating} active={displayGave} className={POST_ACTION_ICON} />
+        {displayCount > 0 ? (
+          <span className={POST_ACTION_BADGE}>
+            {displayCount}
+          </span>
+        ) : null}
+      </button>
+    </PostActionTip>
   )
 }
 
 /** Read-only aura count with icon (own posts). */
 export function AuraCount({ count = 0, className = '' }) {
   return (
-    <span className={`flex items-center gap-1.5 frens-muted text-xs ${className}`}>
-      <AuraIcon color={count > 0 ? AURA_COLORS[0] : AURA_IDLE} />
-      <span>Aura {count}</span>
-    </span>
+    <PostActionTip label="aura">
+      <span className={`relative ${POST_ACTION_BTN} frens-muted pointer-events-none ${className}`}>
+        <AuraIcon color={count > 0 ? AURA_COLORS[0] : AURA_IDLE} className={POST_ACTION_ICON} />
+        {count > 0 ? (
+          <span className={POST_ACTION_BADGE}>
+            {count}
+          </span>
+        ) : null}
+      </span>
+    </PostActionTip>
   )
 }

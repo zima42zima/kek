@@ -10,6 +10,7 @@ import { spatialTierLabel } from '../../lib/spatialEcho'
 import { senseFilterLabel, normalizeSenseFilter, lidarFilterLabel } from '../../lib/senseFilters'
 import { EchoMetaLine, EchoTypeIcon } from './EchoMeta'
 import { HeadphonesIcon, LocationIcon } from '../icons/UiIcons'
+import { getProfileCard } from '../../lib/social'
 
 const SWIPE_THRESHOLD_PX = 48
 
@@ -39,6 +40,8 @@ export default function EchoView({
   onClose,
   onOpenProfile,
   onAddComment,
+  onRemoveComment,
+  onToggleCommentReaction,
   onToggleComments,
   onReviewed,
 }) {
@@ -47,6 +50,7 @@ export default function EchoView({
   const touchStartX = useRef(null)
   const [reviewed, setReviewed] = useState(false)
   const [spatialView, setSpatialView] = useState(false)
+  const [authorCard, setAuthorCard] = useState(null)
 
   const rangeIndex = rangeEchoes.findIndex((e) => e.id === echo.id)
   const canRangeSwipe = rangeEchoes.length > 1 && rangeIndex >= 0
@@ -73,7 +77,20 @@ export default function EchoView({
   useEffect(() => {
     setReviewed(false)
     setSpatialView(false)
+    setAuthorCard(null)
   }, [echo.id])
+
+  useEffect(() => {
+    if (mine || !echo.ownerId) return undefined
+    let cancelled = false
+    ;(async () => {
+      try {
+        const card = await getProfileCard(echo.ownerId)
+        if (!cancelled) setAuthorCard(card)
+      } catch { /* ignore */ }
+    })()
+    return () => { cancelled = true }
+  }, [echo.ownerId, mine])
 
   function markReviewed() {
     if (reviewed) return
@@ -86,6 +103,30 @@ export default function EchoView({
     const next = rangeEchoes[rangeIndex + delta]
     if (next) onRangeEchoChange(next.id)
   }
+
+  useEffect(() => {
+    if (!canRangeSwipe || spatialView || !onRangeEchoChange) return undefined
+
+    function isTypingTarget(el) {
+      if (!el) return false
+      const tag = el.tagName?.toLowerCase()
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable
+    }
+
+    function onKey(e) {
+      if (isTypingTarget(e.target)) return
+      if (e.key === 'ArrowLeft' && hasPrev) {
+        e.preventDefault()
+        onRangeEchoChange(rangeEchoes[rangeIndex - 1].id)
+      } else if (e.key === 'ArrowRight' && hasNext) {
+        e.preventDefault()
+        onRangeEchoChange(rangeEchoes[rangeIndex + 1].id)
+      }
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [canRangeSwipe, spatialView, hasPrev, hasNext, rangeIndex, rangeEchoes, onRangeEchoChange])
 
   function handleTouchStart(e) {
     if (!canRangeSwipe) return
@@ -129,10 +170,23 @@ export default function EchoView({
               onClick={() => onOpenProfile(echo.ownerId)}
               className="text-xs frens-action shrink-0"
             >
-              @{echo.authorName}
+              profile
             </button>
           )}
         </div>
+
+        {!mine && (authorCard?.oneHumanThing || authorCard?.bio) ? (
+          <div className="mb-3 rounded-xl border frens-border bg-black/[0.03] dark:bg-white/[0.03] px-3 py-2.5">
+            {authorCard.oneHumanThing ? (
+              <p className="text-xs font-medium frens-body-text">{authorCard.oneHumanThing}</p>
+            ) : null}
+            {authorCard.bio ? (
+              <p className={`text-xs frens-muted ${authorCard.oneHumanThing ? 'mt-1' : ''} line-clamp-4`}>
+                {authorCard.bio}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {canSpatialView ? (
           <button
@@ -157,7 +211,7 @@ export default function EchoView({
         ) : null}
 
         <div
-          className="relative rounded-xl bg-black/30 overflow-hidden mb-3 touch-pan-y"
+          className={`relative rounded-xl bg-black/30 overflow-hidden mb-3 ${canRangeSwipe ? 'touch-pan-x' : 'touch-pan-y'}`}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -182,7 +236,7 @@ export default function EchoView({
                 ›
               </button>
               <p className="absolute top-2 left-1/2 -translate-x-1/2 z-10 text-[10px] px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">
-                {rangeIndex + 1} of {rangeEchoes.length} in range
+                {rangeIndex + 1} of {rangeEchoes.length} · swipe
               </p>
             </>
           )}
@@ -278,23 +332,22 @@ export default function EchoView({
         {!mine && (
           <EchoComments
             echo={echo}
-            profile={profile}
-            onAddComment={onAddComment}
             reviewed={reviewed}
+            onAddComment={onAddComment}
+            onRemoveComment={onRemoveComment}
+            onToggleCommentReaction={onToggleCommentReaction}
           />
         )}
 
         {mine && echo.allowComments && (echo.comments?.length > 0) && (
-          <div className="space-y-2 border-t frens-border pt-3 mt-3">
-            <p className="text-xs frens-label">Comments on your echo</p>
-            <ul className="space-y-2 max-h-36 overflow-y-auto">
-              {(echo.comments ?? []).map((c) => (
-                <li key={c.id} className="text-xs frens-body-text">
-                  <FrenHandle inline>{c.authorName}</FrenHandle> — {c.body}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <EchoComments
+            echo={echo}
+            reviewed
+            requireReviewed={false}
+            canCompose={false}
+            onRemoveComment={onRemoveComment}
+            onToggleCommentReaction={onToggleCommentReaction}
+          />
         )}
 
         {!mine && (

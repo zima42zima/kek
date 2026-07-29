@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Echo FX bake test</title>
+  <style>
+    body { font-family: system-ui; padding: 16px; background: #111; color: #eee; }
+    .pass { color: #6BC06B; }
+    .fail { color: #e0703a; }
+    pre { font-size: 11px; }
+  </style>
+</head>
+<body>
+  <h1>Echo FX bake test</h1>
+  <pre id="log">Running…</pre>
+  <script type="module">
+    import { applyGlitchFilter, GLITCH_FILTER_IDS } from '/src/lib/glitchFilters.js'
+    import { bakeGlitchFilterIntoVideo } from '/src/lib/echoVideoFx.js'
+
+    const log = document.getElementById('log')
+    const lines = []
+    const say = (msg, ok) => {
+      lines.push(`${ok ? '✓' : '✗'} ${msg}`)
+      log.textContent = lines.join('\n')
+    }
+
+    async function makeTestVideo(sec = 0.6) {
+      const w = 160
+      const h = 120
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      const stream = canvas.captureStream(30)
+      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+        ? 'video/webm;codecs=vp9,opus' : 'video/webm'
+      const rec = new MediaRecorder(stream, { mimeType: mime })
+      const chunks = []
+      rec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
+      const done = new Promise((r) => { rec.onstop = () => r(new Blob(chunks, { type: 'video/webm' })) })
+      rec.start(50)
+      const start = performance.now()
+      while (performance.now() - start < sec * 1000) {
+        const t = (performance.now() - start) / 1000
+        ctx.fillStyle = `hsl(${(t * 120) % 360}, 70%, 45%)`
+        ctx.fillRect(0, 0, w, h)
+        ctx.fillStyle = '#fff'
+        ctx.fillRect(20 + t * 40, 30, 30, 30)
+        await new Promise((r) => requestAnimationFrame(r))
+      }
+      rec.stop()
+      return done
+    }
+
+    async function frameHash(blob) {
+      const video = document.createElement('video')
+      video.src = URL.createObjectURL(blob)
+      video.muted = true
+      await new Promise((r) => { video.onloadedmetadata = r })
+      await video.play()
+      await new Promise((r) => requestAnimationFrame(r))
+      const c = document.createElement('canvas')
+      c.width = video.videoWidth
+      c.height = video.videoHeight
+      const ctx = c.getContext('2d')
+      ctx.drawImage(video, 0, 0)
+      const d = ctx.getImageData(0, 0, c.width, c.height).data
+      URL.revokeObjectURL(video.src)
+      let h = 0
+      for (let i = 0; i < d.length; i += 97) h = (h + d[i]) % 100000
+      return h
+    }
+
+    async function run() {
+      const raw = await makeTestVideo()
+      say(`raw blob ${raw.size} bytes`, raw.size > 100)
+      const rawHash = await frameHash(raw)
+
+      for (const id of GLITCH_FILTER_IDS) {
+        try {
+          const baked = await bakeGlitchFilterIntoVideo(raw, id, { knownDurationSec: 0.6 })
+          const bakedHash = await frameHash(baked)
+          const changed = bakedHash !== rawHash
+          const sized = baked.size > 100
+          say(`${id}: size=${baked.size} hash=${bakedHash} changed=${changed}`, sized && changed)
+        } catch (err) {
+          say(`${id}: ${err.message}`, false)
+        }
+      }
+      say('done', true)
+    }
+
+    run().catch((e) => say(String(e), false))
+  </script>
+</body>
+</html>

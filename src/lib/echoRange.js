@@ -106,3 +106,42 @@ export function echoMapNavTarget(echo) {
 export function sortByDistance(echoes, userPos) {
   return [...echoes].sort((a, b) => echoDistanceM(a, userPos) - echoDistanceM(b, userPos))
 }
+
+export function echoInSameCity(echo, cityLabel) {
+  if (!echo || !cityLabel || cityLabel === 'your region') return false
+  const city = (echo.cityLabel || '').trim().toLowerCase()
+  if (!city) return false
+  const head = String(cityLabel).split(',')[0].trim().toLowerCase()
+  if (!head) return false
+  return city.includes(head) || head.includes(city)
+}
+
+/** Whether an echo belongs to the place/city the map is centered on (explore mode). */
+export function echoMatchesExplorePlace(echo, place) {
+  if (!echo || echo.lat == null || echo.lon == null) return false
+  if (!place?.lat || !place?.lon) return true
+
+  const dist = distanceMeters(
+    { lat: place.lat, lon: place.lon },
+    { lat: echo.lat, lon: echo.lon },
+  )
+  if (dist <= ECHO_CITY_RADIUS_M) return true
+
+  const needle = (place.label || place.cityLabel || '').trim().toLowerCase()
+  if (!needle) return true
+  const head = needle.split(',')[0].trim()
+  const city = (echo.cityLabel || '').trim().toLowerCase()
+  const venue = (echo.placeLabel || '').trim().toLowerCase()
+  if (city && (needle.includes(city) || city.includes(head))) return true
+  if (venue && (needle.includes(venue) || venue.includes(head))) return true
+  return false
+}
+
+export function sortByDistanceFrom(echoes, anchor) {
+  if (!anchor?.lat || !anchor?.lon) return [...echoes]
+  return [...echoes].sort((a, b) => {
+    const da = distanceMeters(anchor, { lat: a.lat, lon: a.lon })
+    const db = distanceMeters(anchor, { lat: b.lat, lon: b.lon })
+    return da - db
+  })
+}

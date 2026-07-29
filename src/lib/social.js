@@ -56,9 +56,12 @@ export async function searchProfiles(query, { limit = 20 } = {}) {
   const q = (query || '').trim()
   let req = supabase
     .from('profiles')
-    .select('id, silly_name, avatar_type, avatar_url, bio')
+    .select('id, fren_handle, silly_name, avatar_type, avatar_url, bio')
     .limit(limit)
-  if (q) req = req.ilike('silly_name', `%${q}%`)
+  if (q) {
+    const needle = q.replace(/^@/, '').trim()
+    req = req.or(`fren_handle.ilike.%${needle}%,silly_name.ilike.%${needle}%`)
+  }
   const { data, error } = await req
   if (error) {
     throwIfNotInstalled(error)
@@ -66,6 +69,7 @@ export async function searchProfiles(query, { limit = 20 } = {}) {
   }
   return (data ?? []).map((r) => ({
     userId: r.id,
+    frenHandle: r.fren_handle || null,
     frenName: r.silly_name || 'a fren',
     avatarType: r.avatar_type || 'frog',
     avatarUrl: r.avatar_url || null,
@@ -76,6 +80,7 @@ export async function searchProfiles(query, { limit = 20 } = {}) {
 function mapPerson(row) {
   return {
     userId: row.user_id,
+    frenHandle: row.handle || null,
     frenName: row.name || 'a fren',
     avatarType: row.avatar_type || 'frog',
     avatarUrl: row.avatar_url || null,
@@ -112,6 +117,7 @@ export async function getProfileCard(userId) {
   if (!row) return null
   return {
     id: row.id,
+    frenHandle: row.handle || null,
     frenName: row.name || 'a fren',
     oneHumanThing: row.one_human_thing || null,
     bio: row.bio || null,

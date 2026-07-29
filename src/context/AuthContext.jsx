@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { setupRealtimeAuth } from '../lib/realtime'
+import { fetchProfileForUser } from '../lib/profile'
 
 const AuthContext = createContext(undefined)
 
@@ -7,39 +9,45 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
-  async function loadProfile(userId) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-    if (error) {
+  async function loadProfile(userId, email) {
+    try {
+      return await fetchProfileForUser(userId, email)
+    } catch (error) {
       console.error('Error loading profile:', error.message)
       return null
     }
-    return data
   }
 
   useEffect(() => {
-    // check for an existing session on load
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session)
-      if (session?.user) {
-        const p = await loadProfile(session.user.id)
-        setProfile(p)
-      }
-      setLoading(false)
-    })
+    supabase.auth.getUser()
+      .then(async ({ data: { user } }) => {
+        if (user) {
+          const { data: { session: currentSession } } = await supabase.auth.getSession()
+          setupRealtimeAuth(currentSession?.access_token ?? null)
+          setSession(currentSession)
+          const p = await loadProfile(user.id, user.email)
+          setProfile(p)
+        } else {
+          setSession(null)
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
 
-    // listen for login/logout changes
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session)
-      if (session?.user) {
-        const p = await loadProfile(session.user.id)
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true)
+      }
+      setupRealtimeAuth(nextSession?.access_token ?? null)
+      setSession(nextSession)
+      if (nextSession?.user) {
+        const p = await loadProfile(nextSession.user.id, nextSession.user.email)
         setProfile(p)
       } else {
         setProfile(null)
+        setPasswordRecovery(false)
       }
     })
 
@@ -47,14 +55,26 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function refreshProfile() {
-    if (session?.user) {
-      const p = await loadProfile(session.user.id)
-      setProfile(p)
-    }
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) return null
+
+    const { data: { session: currentSession } } = await supabase.auth.getSession()
+    setSession(currentSession)
+
+    const p = await loadProfile(user.id, user.email)
+    setProfile(p)
+    return p
   }
 
   async function signOut() {
     await supabase.auth.signOut()
+    setSession(null)
+    setProfile(null)
+    setPasswordRecovery(false)
+  }
+
+  function clearPasswordRecovery() {
+    setPasswordRecovery(false)
   }
 
   const value = {
@@ -62,8 +82,10 @@ export function AuthProvider({ children }) {
     user: session?.user ?? null,
     profile,
     loading,
+    passwordRecovery,
     refreshProfile,
     signOut,
+    clearPasswordRecovery,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

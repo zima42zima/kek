@@ -1,12 +1,13 @@
 {
-  "name": "frens-app",
+  "name": "misao",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite",
     "dev:https": "HTTPS=true vite --host 0.0.0.0",
     "dev:ca": "node scripts/print-dev-ca.mjs",
+    "dev:lan": "node scripts/dev-lan.mjs",
     "dev:tunnel": "node scripts/dev-tunnel.mjs",
     "dev:ngrok": "node scripts/dev-ngrok.mjs",
     "build": "vite build",

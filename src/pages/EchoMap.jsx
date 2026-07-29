@@ -10,6 +10,7 @@ import EchoIcon from '../components/echo/EchoIcon'
 import { LocationIcon, MapIcon } from '../components/icons/UiIcons'
 import EchoRangeGallery from '../components/echo/EchoRangeGallery'
 import EchoCollectionCard from '../components/echo/EchoCollectionCard'
+import { echoWatchedPreviewUrl } from '../components/echo/EchoPreviewMedia'
 import EchoMineCard from '../components/echo/EchoMineCard'
 import EchoMineToolbar from '../components/echo/EchoMineToolbar'
 import EchoEditModal from '../components/echo/EchoEditModal'
@@ -58,12 +59,15 @@ import {
   isEchoScannable,
   isCityDiscoverRadius,
   sortByDistance,
+  echoMatchesExplorePlace,
+  echoInSameCity,
   formatRangeM,
   echoMapNavTarget,
 } from '../lib/echoRange'
 import { listFollowing, listFollowers, getProfileCard } from '../lib/social'
 import { distanceMeters, blurCoord, randomOffsetInRadius, fuzzHintCoord, reverseGeocode, approxLocationByIp } from '../lib/geo'
 import { canHintEcho, canDiscoverEcho, canShowEchoPin, canBrowseGlobally } from '../lib/echoPrivacy'
+import { applyCommentReactionToggle } from '../lib/commentReactions'
 import {
   echoesInstalled,
   uploadEchoMedia,
@@ -105,6 +109,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   const [hinted, setHinted] = useState(() => loadHinted(userId))
   const [auraMap, setAuraMap] = useState(() => loadEchoAura(userId))
   const [history, setHistory] = useState(() => loadEchoHistory(userId))
+  const [historyEchoCache, setHistoryEchoCache] = useState({})
   const [savedCollection, setSavedCollection] = useState(() => (
     userId ? migrateLegacySavedEchoes(userId) : []
   ))
@@ -133,6 +138,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   const [searchRadiusM, setSearchRadiusM] = useState(() => loadSearchRadius())
   const [mapMode, setMapMode] = useState('near')
   const [browseEchoes, setBrowseEchoes] = useState([])
+  const [exploreCityEchoes, setExploreCityEchoes] = useState([])
   const [explorePlace, setExplorePlace] = useState(null)
   const [exploreCenter, setExploreCenter] = useState({ lat: 20, lon: 0 })
   const refreshBrowseEchoes = useCallback(async (bounds) => {
@@ -168,24 +174,6 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   function handleMapModeChange(mode) {
     setMapMode(mode)
-  }
-
-  function handleOpenEcho(id, flyTarget) {
-    if (flyTarget?.lat != null) {
-      handleSearchPlace({
-        lat: flyTarget.lat,
-        lon: flyTarget.lon,
-        label: flyTarget.label,
-      })
-      return
-    }
-    if (!id) return
-    const echo = echoes.find((e) => e.id === id) || browseEchoes.find((e) => e.id === id)
-    if (!echo) return
-    if (canBrowseGlobally(echo) || echo.mine) {
-      setDiscovered((prev) => new Set([...prev, id]))
-    }
-    setOpenId(id)
   }
 
   const mapCenter = useMemo(() => {
@@ -243,6 +231,42 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     () => ({ followingIds, followerIds }),
     [followingIds, followerIds],
   )
+
+  useEffect(() => {
+    if (mapMode !== 'explore' || !explorePlace?.lat || !explorePlace?.lon || !backendReady || !userId) {
+      setExploreCityEchoes([])
+      return undefined
+    }
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const rows = await listEchoesNear(
+          explorePlace.lat,
+          explorePlace.lon,
+          ECHO_CITY_RADIUS_M,
+          userId,
+        )
+        const filtered = rows.filter((e) => canDiscoverEcho(e, frenGraph))
+        const withUrls = await attachMediaUrls(
+          filtered.map((e) => ({ ...e, mine: e.ownerId === userId })),
+        )
+        if (!cancelled) setExploreCityEchoes(withUrls)
+      } catch (err) {
+        console.error('Could not load city echoes:', err?.message || err)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [
+    mapMode,
+    explorePlace?.lat,
+    explorePlace?.lon,
+    explorePlace?.label,
+    backendReady,
+    userId,
+    frenGraph,
+  ])
 
   const refreshServerEchoes = useCallback(async () => {
     if (!userId || !backendReady) return
@@ -731,6 +755,88 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     [nearbyForPlaces],
   )
 
+  const swipeGalleryEchoes = useMemo(() => {
+    function mergeDiscoverable(...lists) {
+      const byId = new Map()
+      lists.flat().forEach((e) => {
+        if (!e?.id || byId.has(e.id)) return
+        if (!e.mine && !canDiscoverEcho(e, frenGraph)) return
+        byId.set(e.id, e)
+      })
+      return [...byId.values()]
+    }
+
+    function decorate(list, anchor) {
+      return list.map((echo) => ({
+        ...echo,
+        inRange: userPos
+          ? isInDiscoverRange(echo, userPos)
+          : canBrowseGlobally(echo),
+      })).sort((a, b) => {
+        if (!anchor?.lat || !anchor?.lon) return 0
+        const da = distanceMeters(anchor, { lat: a.lat, lon: a.lon })
+        const db = distanceMeters(anchor, { lat: b.lat, lon: b.lon })
+        return da - db
+      })
+    }
+
+    if (mapMode === 'near') {
+      if (!userPos) return []
+      const scanRadius = Math.max(searchRadiusM, ECHO_CITY_RADIUS_M)
+      const merged = mergeDiscoverable(
+        liveEchoes.filter(
+          (e) => !e.mine && canDiscoverEcho(e, frenGraph) && echoInSameCity(e, cityLabel),
+        ),
+        liveEchoes.filter(
+          (e) =>
+            !e.mine &&
+            canDiscoverEcho(e, frenGraph) &&
+            isEchoScannable(e, userPos, scanRadius),
+        ),
+      )
+      if (merged.length === 0) return []
+      return decorate(merged, userPos)
+    }
+
+    if (mapMode === 'explore') {
+      const anchor = explorePlace || exploreCenter
+      const placeLabel = explorePlace?.label
+      const fromBrowse = explorePlace
+        ? browseEchoes.filter(
+            (e) =>
+              echoMatchesExplorePlace(e, explorePlace)
+              || (placeLabel && echoInSameCity(e, placeLabel)),
+          )
+        : browseEchoes
+      const merged = mergeDiscoverable(explorePlace ? exploreCityEchoes : [], fromBrowse)
+      if (merged.length === 0) return []
+      return decorate(merged, anchor)
+    }
+
+    return []
+  }, [
+    mapMode,
+    userPos,
+    cityLabel,
+    liveEchoes,
+    searchRadiusM,
+    explorePlace,
+    exploreCenter,
+    browseEchoes,
+    exploreCityEchoes,
+    frenGraph,
+  ])
+
+  const swipeGalleryTitle = useMemo(() => {
+    if (mapMode === 'near') {
+      return cityLabel && cityLabel !== 'your region'
+        ? `Public echoes · ${cityLabel}`
+        : 'Public echoes near you'
+    }
+    if (explorePlace?.label) return `Public echoes · ${explorePlace.label}`
+    return 'World echoes in this view'
+  }, [mapMode, cityLabel, explorePlace])
+
   const mapHidden = showCreate || !!openId || showIntro
 
   const myEchoes = useMemo(() => {
@@ -811,22 +917,108 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     } catch { /* ignore */ }
   }
 
+  function findEchoById(id) {
+    if (!id) return null
+    return echoes.find((e) => e.id === id)
+      || browseEchoes.find((e) => e.id === id)
+      || exploreCityEchoes.find((e) => e.id === id)
+      || displayCollection.find((e) => e.id === id)
+      || historyEchoCache[id]
+      || null
+  }
+
+  function touchEchoHistory(echo, { interaction } = {}) {
+    if (!userId || !echo?.id) return
+    const previewUrl = echoWatchedPreviewUrl(echo) || echo.collectionPreviewUrl || echo.mediaUrl || echo.coverUrl || null
+    const next = recordEchoHistory(userId, {
+      echoId: echo.id,
+      kind: echo.kind,
+      authorName: echo.authorName,
+      ownerId: echo.ownerId,
+      label: echo.label || '',
+      visibility: echo.visibility || 'world',
+      discoverRadiusM: echo.discoverRadiusM,
+      browseGlobally: echo.browseGlobally,
+      mediaPath: echo.mediaPath || null,
+      coverPath: echo.coverPath || null,
+      collectionPreviewUrl: previewUrl,
+      avatarType: echo.avatarType,
+      avatarUrl: echo.avatarUrl,
+      interaction: interaction || 'viewed',
+    })
+    setHistory(next)
+  }
+
   const heardCollection = useMemo(() => history.map((h) => {
-    const echo = echoes.find((e) => e.id === h.echoId)
-      || browseEchoes.find((e) => e.id === h.echoId)
-    return {
-      heardAt: h.listenedAt,
-      echo: echo || {
+    const live = findEchoById(h.echoId)
+    const previewUrl = h.collectionPreviewUrl || live?.collectionPreviewUrl || echoWatchedPreviewUrl(live) || null
+    const echo = live
+      ? {
+          ...live,
+          collectionPreviewUrl: previewUrl || live.collectionPreviewUrl,
+          mediaUrl: live.mediaUrl || (live.kind === 'image' ? previewUrl : live.mediaUrl),
+          coverUrl: live.coverUrl || (live.kind !== 'image' ? previewUrl : live.coverUrl),
+        }
+      : {
         id: h.echoId,
         kind: h.kind,
         authorName: h.authorName,
         ownerId: h.ownerId,
-        label: '',
-        visibility: 'world',
+        label: h.label || '',
+        visibility: h.visibility || 'world',
+        discoverRadiusM: h.discoverRadiusM,
+        browseGlobally: h.browseGlobally,
+        mediaPath: h.mediaPath || null,
+        coverPath: h.coverPath || null,
+        collectionPreviewUrl: previewUrl,
+        mediaUrl: h.kind === 'image' ? previewUrl : null,
+        coverUrl: h.kind !== 'image' ? previewUrl : null,
+        avatarType: h.avatarType,
+        avatarUrl: h.avatarUrl,
         mine: false,
-      },
+      }
+    return {
+      heardAt: h.listenedAt,
+      interaction: h.interaction,
+      echo,
     }
-  }), [history, echoes, browseEchoes])
+  }), [history, echoes, browseEchoes, exploreCityEchoes, displayCollection, historyEchoCache])
+
+  useEffect(() => {
+    if (tab !== 'history' || !userId || history.length === 0) return undefined
+
+    let cancelled = false
+    ;(async () => {
+      for (const h of history) {
+        const live = echoes.find((e) => e.id === h.echoId)
+          || browseEchoes.find((e) => e.id === h.echoId)
+          || exploreCityEchoes.find((e) => e.id === h.echoId)
+          || displayCollection.find((e) => e.id === h.echoId)
+        if (live?.mediaUrl || h.collectionPreviewUrl) continue
+        if (!backendReady) continue
+
+        try {
+          let row = live || {
+            id: h.echoId,
+            kind: h.kind,
+            mediaPath: h.mediaPath,
+            coverPath: h.coverPath,
+          }
+          if (!row.mediaPath && !row.coverPath) {
+            const fetched = await getEchoById(h.echoId, userId)
+            if (fetched) row = fetched
+          }
+          const [withUrl] = await attachMediaUrls([{ ...row, mine: false }])
+          if (cancelled || !withUrl) continue
+          setHistoryEchoCache((prev) => (
+            prev[h.echoId]?.mediaUrl ? prev : { ...prev, [h.echoId]: withUrl }
+          ))
+        } catch { /* ignore */ }
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [tab, history, userId, backendReady, echoes, browseEchoes, exploreCityEchoes, displayCollection])
 
   function openCreateFlow() {
     if (!window.isSecureContext && !import.meta.env.DEV) {
@@ -1126,6 +1318,10 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     setEchoes((prev) => prev.map((e) => (
       e.id === echoId ? { ...e, auraCount, iGaveAura } : e
     )))
+    if (iGaveAura) {
+      const echo = findEchoById(echoId)
+      if (echo) touchEchoHistory(echo, { interaction: 'reacted' })
+    }
   }
 
   function toggleComments(echoId, enabled) {
@@ -1137,9 +1333,38 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   }
 
   function addComment(echoId, comment) {
+    let touched = null
     setEchoes((prev) => prev.map((e) => {
       if (e.id !== echoId) return e
       const comments = [...(e.comments ?? []), comment]
+      const updated = { ...e, comments }
+      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) publishToWorldPool(updated)
+      touched = updated
+      return updated
+    }))
+    if (touched) touchEchoHistory(touched, { interaction: 'commented' })
+  }
+
+  function removeComment(echoId, commentId) {
+    setEchoes((prev) => prev.map((e) => {
+      if (e.id !== echoId) return e
+      const comments = (e.comments ?? []).filter((c) => c.id !== commentId)
+      const updated = { ...e, comments }
+      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) publishToWorldPool(updated)
+      return updated
+    }))
+  }
+
+  function toggleCommentReaction(echoId, commentId, emoji) {
+    const em = (emoji || '').trim()
+    if (!em || !commentId) return
+    setEchoes((prev) => prev.map((e) => {
+      if (e.id !== echoId) return e
+      const comments = (e.comments ?? []).map((c) => (
+        c.id === commentId
+          ? { ...c, reactions: applyCommentReactionToggle(c.reactions, em) }
+          : c
+      ))
       const updated = { ...e, comments }
       if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) publishToWorldPool(updated)
       return updated
@@ -1147,29 +1372,54 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   }
 
   function handleReviewed(echo) {
-    const next = recordEchoHistory(userId, {
-      echoId: echo.id,
-      kind: echo.kind,
-      authorName: echo.authorName,
-      ownerId: echo.ownerId,
-    })
-    setHistory(next)
+    touchEchoHistory(echo, { interaction: 'viewed' })
   }
 
   const openEcho = echoes.find((e) => e.id === openId)
     || browseEchoes.find((e) => e.id === openId)
+    || exploreCityEchoes.find((e) => e.id === openId)
     || displayCollection.find((e) => e.id === openId)
     || null
   const openEchoNearby = openEcho && userPos
     ? isInDiscoverRange(openEcho, userPos)
     : false
   const openRangeEchoes = useMemo(() => {
-    if (!openId || !inRangeEchoes.some((e) => e.id === openId)) return []
-    return inRangeEchoes
-  }, [openId, inRangeEchoes])
+    if (!openId || !swipeGalleryEchoes.some((e) => e.id === openId)) return []
+    return swipeGalleryEchoes
+  }, [openId, swipeGalleryEchoes])
 
-  function openRangeEcho(id) {
-    setDiscovered((prev) => new Set([...prev, id]))
+  function openGalleryEcho(id) {
+    if (!id) return
+    const echo = swipeGalleryEchoes.find((e) => e.id === id)
+      || echoes.find((e) => e.id === id)
+      || browseEchoes.find((e) => e.id === id)
+      || exploreCityEchoes.find((e) => e.id === id)
+    if (!echo) return
+    if (canBrowseGlobally(echo) || echo.mine || (userPos && isInDiscoverRange(echo, userPos))) {
+      setDiscovered((prev) => new Set([...prev, id]))
+    }
+    setOpenId(id)
+  }
+
+  function handleOpenEcho(id, flyTarget) {
+    if (flyTarget?.lat != null) {
+      handleSearchPlace({
+        lat: flyTarget.lat,
+        lon: flyTarget.lon,
+        label: flyTarget.label,
+      })
+      return
+    }
+    if (!id) return
+    if (swipeGalleryEchoes.some((e) => e.id === id)) {
+      openGalleryEcho(id)
+      return
+    }
+    const echo = echoes.find((e) => e.id === id) || browseEchoes.find((e) => e.id === id)
+    if (!echo) return
+    if (canBrowseGlobally(echo) || echo.mine) {
+      setDiscovered((prev) => new Set([...prev, id]))
+    }
     setOpenId(id)
   }
 
@@ -1285,10 +1535,10 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
               ) : (
                 <div className="w-full h-96 rounded-xl border frens-border bg-[#d8dde8]" aria-hidden />
               )}
-              {!mapHidden && mapMode === 'explore' && explorePlace && (
+              {!mapHidden && mapMode === 'explore' && explorePlace && swipeGalleryEchoes.length === 0 && (
                 <p className="text-xs frens-muted px-1 text-center">
                   {browseEchoes.length > 0
-                    ? `${browseEchoes.length} world echo${browseEchoes.length === 1 ? '' : 's'} in this view`
+                    ? `${browseEchoes.length} world echo${browseEchoes.length === 1 ? '' : 's'} in this view — pan the map or pick a closer spot`
                     : 'No world echoes here yet — drop one with 🌍 Browsable from anywhere'}
                 </p>
               )}
@@ -1304,14 +1554,17 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
                   )}
                 </div>
               )}
-              {!mapHidden && mapMode === 'near' && inRangeEchoes.length > 0 && (
+              {!mapHidden && swipeGalleryEchoes.length > 0 && (
                 <EchoRangeGallery
-                  echoes={inRangeEchoes}
-                  userPos={userPos}
-                  onOpenEcho={openRangeEcho}
+                  echoes={swipeGalleryEchoes}
+                  userPos={mapMode === 'near' ? userPos : null}
+                  anchor={mapMode === 'explore' ? (explorePlace || exploreCenter) : userPos}
+                  title={swipeGalleryTitle}
+                  hint={mapMode === 'explore' ? 'swipe cards · tap for full detail' : 'swipe cards · approximate spots'}
+                  onOpenEcho={openGalleryEcho}
                 />
               )}
-              {!mapHidden && mapMode === 'near' && placeGroups.length > 0 && (
+              {!mapHidden && mapMode === 'near' && placeGroups.length > 0 && swipeGalleryEchoes.length === 0 && (
                 <EchoPlacesPanel
                   cityLabel={cityLabel}
                   placeGroups={placeGroups}
@@ -1431,12 +1684,13 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
               <p className="text-sm frens-muted">Echoes you open — meme, video, or audio — show up here.</p>
             </div>
           ) : (
-            heardCollection.map(({ echo, heardAt }) => (
+            heardCollection.map(({ echo, heardAt, interaction }) => (
               <EchoCollectionCard
                 key={`${echo.id}-${heardAt}`}
                 echo={echo}
                 variant="log"
                 heardAt={heardAt}
+                logInteraction={interaction}
                 auraMap={auraMap}
                 backendReady={backendReady}
                 onView={(e) => setOpenId(e.id)}
@@ -1478,7 +1732,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           spatialNearby={openEchoNearby}
           useRemoteAura={backendReady}
           rangeEchoes={openRangeEchoes}
-          onRangeEchoChange={openRangeEcho}
+          onRangeEchoChange={openGalleryEcho}
           onAuraChange={applyAuraChange}
           onSave={saveEcho}
           onUnsave={unsaveEcho}
@@ -1486,6 +1740,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           onClose={closeOpenEcho}
           onOpenProfile={onOpenProfile}
           onAddComment={addComment}
+          onRemoveComment={removeComment}
+          onToggleCommentReaction={toggleCommentReaction}
           onToggleComments={toggleComments}
           onReviewed={handleReviewed}
         />

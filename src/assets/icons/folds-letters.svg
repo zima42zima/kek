@@ -1,0 +1,7 @@
+<svg width="40" height="24" viewBox="0 0 40 24" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="P.S.">
+  <!-- Fold -->
+  <path d="M2 21V4h8.5l2.5 2.5V21H2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+  <path d="M2 4h8.5l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+  <!-- Letter -->
+  <rect x="21" y="10" width="11" height="11" stroke="currentColor" stroke-width="1.5" />
+</svg>

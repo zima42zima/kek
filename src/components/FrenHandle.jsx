@@ -1,4 +1,4 @@
-/** Minimal username / handle styling used across Frens. */
+/** Minimal username / handle styling used across MISAO. */
 export default function FrenHandle({
   children,
   onClick,

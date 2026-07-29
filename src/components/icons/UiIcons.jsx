@@ -1,4 +1,4 @@
-// Shared monochrome UI icons for FRENS. All use `currentColor`, so they inherit
+// Shared monochrome UI icons for MISAO. All use `currentColor`, so they inherit
 // the surrounding text color (black in light mode, white in dark) and stay
 // minimal + clean. Use these for buttons, toolbars, popups, etc. going forward.
 
@@ -16,6 +16,15 @@ export function PaperclipIcon({ className = 'w-4 h-4' }) {
   return (
     <svg {...base} className={`inline-block align-middle ${className}`}>
       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  )
+}
+
+export function SendIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={`inline-block align-middle ${className}`}>
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
   )
 }
@@ -184,6 +193,18 @@ export function UsersIcon({ className = 'w-4 h-4' }) {
   )
 }
 
+/** Person with plus — invite a fren. */
+export function UserPlusIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={`inline-block align-middle ${className}`}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="8.5" cy="7" r="4" />
+      <line x1="20" y1="8" x2="20" y2="14" />
+      <line x1="23" y1="11" x2="17" y2="11" />
+    </svg>
+  )
+}
+
 export function BookIcon({ className = 'w-4 h-4' }) {
   return (
     <svg {...base} className={`inline-block align-middle ${className}`}>
@@ -288,6 +309,16 @@ export function LinkIcon({ className = 'w-4 h-4' }) {
   )
 }
 
+export function ShareIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={`inline-block align-middle ${className}`}>
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+      <polyline points="16 6 12 2 8 6" />
+      <line x1="12" y1="2" x2="12" y2="15" />
+    </svg>
+  )
+}
+
 export function MuteIcon({ className = 'w-4 h-4' }) {
   return (
     <svg {...base} className={`inline-block align-middle ${className}`}>
@@ -316,9 +347,33 @@ export function ShowToFrensIcon({ className = 'w-4 h-4', active = false }) {
   )
 }
 
+/** Icon-only post footer buttons — 10% smaller than base (25px hit target). */
+export const POST_ACTION_BTN =
+  'relative z-10 flex items-center justify-center w-[25px] h-[25px] rounded-full frens-action hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition touch-manipulation shrink-0'
+
+/** Inline glyph size for post action buttons (14px). */
+export const POST_ACTION_ICON = 'w-[14px] h-[14px]'
+
+/** Reaction chip icon inside post action row (18px). */
+export const POST_ACTION_REACTION_ICON = 'w-[18px] h-[18px]'
+
+/** Count badge on post action buttons. */
+export const POST_ACTION_BADGE =
+  'absolute -top-1 -right-1 min-w-[13px] h-[13px] px-0.5 rounded-full bg-black text-white dark:bg-white dark:text-black text-[8px] flex items-center justify-center'
+
+/** Expanded reaction picker (fire/thunder menu). */
+export const POST_ACTION_PICKER_BTN =
+  'w-[29px] h-[29px] rounded-lg flex items-center justify-center transition hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+
+export const POST_ACTION_PICKER_ICON = 'w-[22px] h-[22px] object-contain dark:invert'
+
+/** Post action icon row — left-aligned; gap and top margin tuned for photo breathing room. */
+export const POST_ACTION_ROW =
+  'relative z-10 flex items-center gap-4 w-full mt-2.5'
+
 /** Reusable selected-state classes for option pickers (no brand color). */
 export const OPTION_ACTIVE =
-  'border-black/50 dark:border-white/50 bg-black/5 dark:bg-white/10'
+  'border-frens bg-black/[0.04] dark:bg-white/[0.06]'
 export const OPTION_IDLE =
   'frens-border hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
 

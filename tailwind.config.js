@@ -5,6 +5,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        frens: 'var(--frens-outline)',
         cave: {
           950: '#14130F',   // deepest background
           900: '#1C1A15',   // main background

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { APP_NAME } from '../lib/brand'
+import FrogLogo from '../components/FrogLogo'
 import { supabase } from '../supabaseClient'
 
 export default function Welcome() {
@@ -33,13 +35,16 @@ export default function Welcome() {
 
     setStatus('valid')
     // pass the valid code forward to the signup page
-    navigate('/signup', { state: { inviteCode: cleanCode } })
+    navigate('/onboarding', { state: { inviteCode: cleanCode } })
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="cave-card max-w-sm w-full text-center">
-        <h1 className="text-3xl mb-1 text-ember-400">FRENS</h1>
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <FrogLogo className="w-10 h-10 shrink-0" alt="" />
+          <h1 className="text-3xl text-ember-400">{APP_NAME}</h1>
+        </div>
         <p className="text-bone-300 text-sm mb-6">
           a small, human-only cave. <span className="ember-dot" /> no clout, no ads, just frens.
         </p>
