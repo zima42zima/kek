@@ -38,9 +38,7 @@ export function SharedVideo({ src, className = '', autoPlay = false, loop = fals
   )
 }
 
-export function textBubbleClass(mine) {
-  const base = 'rounded-2xl px-3 py-2 text-sm max-w-full min-w-0 break-words [overflow-wrap:anywhere]'
-  return mine
-    ? `${base} bg-[#6BC06B]/12 dark:bg-white/10`
-    : `${base} bg-black/[0.04] dark:bg-white/[0.06]`
+/** Chat/DM text bubbles — same transparent outline for both sides. */
+export function textBubbleClass(_mine) {
+  return 'rounded-2xl px-3 py-2 text-sm font-light max-w-full min-w-0 break-words [overflow-wrap:anywhere] border frens-border bg-transparent'
 }

@@ -57,8 +57,8 @@ function TemplateMenu({ onPick, onClose }) {
   )
 }
 
-/** Letter page tools — photo + templates only. */
-export default function LetterPageToolbar({ onAddImage, onTemplate }) {
+/** Letter page tools — photo + templates. Use bare when nested in unified top bar. */
+export default function LetterPageToolbar({ onAddImage, onTemplate, bare = false }) {
   const rootRef = useRef(null)
   const [menu, setMenu] = useState(null)
 
@@ -71,12 +71,11 @@ export default function LetterPageToolbar({ onAddImage, onTemplate }) {
     return () => document.removeEventListener('mousedown', onDoc)
   }, [menu])
 
-  return (
-    <div ref={rootRef} className="letter-studio-toolbar letter-studio-toolbar--page" role="toolbar" aria-label="Page tools">
+  const tools = (
+    <>
       <ToolBtn title="Add photo" onClick={onAddImage}>
         <ImageIcon />
       </ToolBtn>
-      <span className="letter-tool-divider" aria-hidden />
       <ToolBtn
         title="Start from template"
         active={menu === 'template'}
@@ -87,6 +86,20 @@ export default function LetterPageToolbar({ onAddImage, onTemplate }) {
       {menu === 'template' && (
         <TemplateMenu onPick={onTemplate} onClose={() => setMenu(null)} />
       )}
+    </>
+  )
+
+  if (bare) {
+    return (
+      <div ref={rootRef} className="letter-studio-toolbar-group relative" role="group" aria-label="Page tools">
+        {tools}
+      </div>
+    )
+  }
+
+  return (
+    <div ref={rootRef} className="letter-studio-toolbar letter-studio-toolbar--page" role="toolbar" aria-label="Page tools">
+      {tools}
     </div>
   )
 }

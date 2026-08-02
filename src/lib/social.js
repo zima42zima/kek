@@ -51,30 +51,103 @@ export async function followCounts(userId) {
   }
 }
 
-// Search any account by username (even people you don't follow).
-export async function searchProfiles(query, { limit = 20 } = {}) {
-  const q = (query || '').trim()
-  let req = supabase
-    .from('profiles')
-    .select('id, fren_handle, silly_name, avatar_type, avatar_url, bio')
-    .limit(limit)
-  if (q) {
-    const needle = q.replace(/^@/, '').trim()
-    req = req.or(`fren_handle.ilike.%${needle}%,silly_name.ilike.%${needle}%`)
-  }
-  const { data, error } = await req
-  if (error) {
-    throwIfNotInstalled(error)
-    throw error
-  }
-  return (data ?? []).map((r) => ({
-    userId: r.id,
-    frenHandle: r.fren_handle || null,
-    frenName: r.silly_name || 'a fren',
+function mapSearchRow(r) {
+  return {
+    userId: r.id ?? r.user_id,
+    frenHandle: r.handle || r.fren_handle || null,
+    frenName: r.name || r.silly_name || 'a fren',
     avatarType: r.avatar_type || 'frog',
     avatarUrl: r.avatar_url || null,
     bio: r.bio || '',
-  }))
+  }
+}
+
+/** Escape a value for PostgREST filter strings (or/ilike). */
+function escapePostgrestValue(value) {
+  return String(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '""')
+}
+
+/** Escape LIKE wildcards so user input is literal. */
+function escapeLike(value) {
+  return String(value).replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
+async function searchProfilesViaTable(needle, limit) {
+  const like = `%${escapeLike(needle)}%`
+  const quoted = `"${escapePostgrestValue(like)}"`
+
+  // Prefer handle + display name. If fren_handle column is missing on older DBs,
+  // retry with silly_name only so search still works.
+  const attempts = [
+    {
+      select: 'id, fren_handle, silly_name, avatar_type, avatar_url, bio',
+      or: `fren_handle.ilike.${quoted},silly_name.ilike.${quoted}`,
+    },
+    {
+      select: 'id, silly_name, avatar_type, avatar_url, bio',
+      or: `silly_name.ilike.${quoted}`,
+    },
+  ]
+
+  let lastError = null
+  for (const attempt of attempts) {
+    let req = supabase.from('profiles').select(attempt.select).limit(limit)
+    if (attempt.or.includes(',')) {
+      req = req.or(attempt.or)
+    } else {
+      // single column — use ilike directly
+      req = req.ilike('silly_name', like)
+    }
+    const { data, error } = await req
+    if (!error) return (data ?? []).map(mapSearchRow)
+
+    lastError = error
+    // Column missing / schema cache — try next shape
+    const msg = error.message || ''
+    if (
+      error.code === '42703' ||
+      error.code === 'PGRST204' ||
+      /fren_handle|column|schema cache/i.test(msg)
+    ) {
+      continue
+    }
+    throwIfNotInstalled(error)
+    throw error
+  }
+  if (lastError) {
+    throwIfNotInstalled(lastError)
+    throw lastError
+  }
+  return []
+}
+
+// Search any account by username / display name (even people you don't follow).
+export async function searchProfiles(query, { limit = 20 } = {}) {
+  const raw = (query || '').trim()
+  if (!raw) return []
+
+  const needle = raw.replace(/^@+/, '').trim()
+  if (!needle) return []
+
+  // Preferred path: security-definer RPC (bypasses tight RLS, stable search).
+  const { data: rpcData, error: rpcError } = await supabase.rpc('search_profiles', {
+    p_query: needle,
+    p_limit: limit,
+  })
+
+  if (!rpcError) {
+    return (rpcData ?? []).map(mapSearchRow)
+  }
+
+  // RPC not installed yet — fall back to direct table select.
+  if (rpcError.code === 'PGRST202' || rpcError.code === '42883') {
+    return searchProfilesViaTable(needle, limit)
+  }
+
+  throwIfNotInstalled(rpcError)
+  throw rpcError
 }
 
 function mapPerson(row) {

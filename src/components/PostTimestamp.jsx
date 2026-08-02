@@ -6,7 +6,7 @@ export default function PostTimestamp({ timestamp, createdAt, className = '' }) 
     <time
       dateTime={createdAt || undefined}
       title={full}
-      className={`text-[10px] frens-muted shrink-0 ${className}`}
+      className={`text-[12px] leading-none frens-muted shrink-0 ${className}`}
     >
       {timestamp}
     </time>

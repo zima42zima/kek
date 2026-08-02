@@ -300,7 +300,7 @@ export default function NotificationsPanel({
         <div className="py-10 text-center">
           <p className="text-sm frens-muted">No notifications yet.</p>
           <p className="text-xs frens-hint mt-1 max-w-xs mx-auto">
-            Personal activity, community spaces, and echo map drops each land in their own tab.
+            Personal activity, community spaces, and echo drops each land in their own tab.
           </p>
         </div>
       ) : (
@@ -315,7 +315,7 @@ export default function NotificationsPanel({
               <p className="text-xs frens-hint mt-1 px-6">
                 {section === 'personal' && 'Follows, aura, comments, and DMs show up here.'}
                 {section === 'community' && 'Cave posts and rabbit hole replies land here.'}
-                {section === 'places' && 'Echo map activity — nearby drops and published spots — shows here.'}
+                {section === 'places' && 'Echo activity — nearby drops and published spots — shows here.'}
               </p>
             </div>
           ) : (

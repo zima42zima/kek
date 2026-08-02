@@ -336,32 +336,44 @@ function ChatMessage({
           {message.pinned ? <PinIcon className="w-3 h-3" title="Pinned" /> : null}
           {message.hidden ? <span className="text-[10px] frens-muted">(hidden)</span> : null}
         </div>
-        {message.sticker ? (
-          <span className="text-4xl leading-none">{message.sticker}</span>
-        ) : (
-          <>
-            {message.image ? (
-              <SharedImage src={message.image} className={message.text ? 'mb-1' : ''} />
+        <div className={`flex items-end gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
+          <div className="min-w-0">
+            {message.sticker ? (
+              <span className="text-4xl leading-none">{message.sticker}</span>
+            ) : (
+              <>
+                {message.image ? (
+                  <SharedImage src={message.image} className={message.text ? 'mb-1' : ''} />
+                ) : null}
+                {message.text ? (
+                  hasRichEmbeds(message.text) ? (
+                    <RichText text={message.text} />
+                  ) : (
+                    <div className={textBubbleClass(mine)}>
+                      <RichText text={message.text} />
+                    </div>
+                  )
+                ) : null}
+              </>
+            )}
+          </div>
+          <EmojiReactions
+            reactions={message.reactions}
+            mine={mine}
+            canReact={canReact}
+            onReact={onReact}
+            controlsOnly
+            extra={canMod ? (
+              <CaveModMenu message={message} mine={mine} onPin={onPin} onHide={onHide} />
             ) : null}
-            {message.text ? (
-              hasRichEmbeds(message.text) ? (
-                <RichText text={message.text} />
-              ) : (
-                <div className={textBubbleClass(mine)}>
-                  <RichText text={message.text} />
-                </div>
-              )
-            ) : null}
-          </>
-        )}
+          />
+        </div>
         <EmojiReactions
           reactions={message.reactions}
           mine={mine}
           canReact={canReact}
           onReact={onReact}
-          extra={canMod ? (
-            <CaveModMenu message={message} mine={mine} onPin={onPin} onHide={onHide} />
-          ) : null}
+          chipsOnly
         />
       </div>
     </div>
@@ -397,12 +409,19 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
     const root = rootRef.current
     if (!chrome || !root) return undefined
     const syncChromeHeight = () => {
-      root.style.setProperty('--frens-cave-chrome-h', `${chrome.offsetHeight}px`)
+      const h = Math.ceil(chrome.getBoundingClientRect().height)
+      root.style.setProperty('--frens-cave-chrome-h', `${h}px`)
     }
     syncChromeHeight()
-    const ro = new ResizeObserver(syncChromeHeight)
-    ro.observe(chrome)
-    return () => ro.disconnect()
+    const ro = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(syncChromeHeight)
+      : null
+    ro?.observe(chrome)
+    window.addEventListener('resize', syncChromeHeight)
+    return () => {
+      ro?.disconnect()
+      window.removeEventListener('resize', syncChromeHeight)
+    }
   }, [caveView, cave.name, isKeeper])
 
   useEffect(() => {
@@ -479,10 +498,13 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
   }
 
   return (
-    <div ref={rootRef} className="flex flex-col min-h-[calc(100dvh-8rem)] w-full -m-4">
+    // Full-bleed: Home already drops content padding when a cave is open.
+    // Do not use negative margin here — it overflows the scrollport and
+    // makes sticky playlist chrome jump / clip.
+    <div ref={rootRef} className="flex flex-col min-h-[calc(100dvh-8rem)] w-full">
       {/* Compact cave chrome */}
-      <div ref={chromeRef} className="sticky top-0 z-20 frens-surface shrink-0 border-b frens-border">
-        <div className="px-2 py-1.5 flex items-center gap-2">
+      <div ref={chromeRef} className="sticky top-0 z-20 frens-surface shrink-0">
+        <div className="px-3 pt-2 pb-1 flex items-center gap-2">
           <button type="button" onClick={onBack} className="frens-muted text-lg px-1 shrink-0" aria-label="Back to caves">
             ‹
           </button>
@@ -508,13 +530,13 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
           ) : null}
         </div>
 
-        <div className="px-2 pb-1.5 flex items-center gap-1.5">
-          <div className="flex gap-0.5 flex-1 min-w-0">
+        <div className="px-3 pb-2 flex items-center gap-1.5">
+          <div className="flex gap-1 flex-1 min-w-0 p-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06]">
             <button
               type="button"
               onClick={() => switchCaveView('chat')}
-              className={`flex-1 py-1 text-[11px] rounded-full transition touch-manipulation ${
-                caveView === 'chat' ? 'bg-black text-white dark:bg-white dark:text-black' : 'frens-muted hover:bg-black/5 dark:hover:bg-white/5'
+              className={`flex-1 py-1.5 text-[11px] rounded-full transition touch-manipulation ${
+                caveView === 'chat' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'frens-muted'
               }`}
             >
               Chat
@@ -522,8 +544,8 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
             <button
               type="button"
               onClick={() => switchCaveView('playlists')}
-              className={`flex-1 py-1 text-[11px] rounded-full inline-flex items-center justify-center gap-1 transition touch-manipulation ${
-                caveView === 'playlists' ? 'bg-black text-white dark:bg-white dark:text-black' : 'frens-muted hover:bg-black/5 dark:hover:bg-white/5'
+              className={`flex-1 py-1.5 text-[11px] rounded-full inline-flex items-center justify-center gap-1 transition touch-manipulation ${
+                caveView === 'playlists' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'frens-muted'
               }`}
             >
               <MusicNoteIcon className="w-3 h-3" />
@@ -602,7 +624,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
       </div>
 
       {/* Input bar */}
-      <div className="sticky bottom-0 z-20 frens-surface shrink-0 border-t frens-border px-3 py-2.5">
+      <div className="sticky bottom-0 z-20 frens-surface shrink-0 px-3 pt-2 pb-2.5">
         <input
           ref={fileInputRef}
           type="file"
@@ -626,12 +648,9 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
       </div>
       </div>
 
-      <div
-        className={caveView === 'playlists' ? '' : 'hidden'}
-        aria-hidden={caveView !== 'playlists'}
-      >
+      {caveView === 'playlists' ? (
         <CavePlaylists cave={cave} currentUserId={currentUserId} />
-      </div>
+      ) : null}
 
       {showAdd && (
         <AddMembersModal

@@ -225,15 +225,43 @@ export function ComposeLetterForm({ recipient, onSent, onCancel }) {
     )
   }
 
+  async function handlePreviewPrint() {
+    if (!letter || !owlLetterHasContent(letter)) return
+    setError('')
+    try {
+      const { printOwlLetter } = await import('../../lib/owlPrint')
+      await printOwlLetter({
+        body: serializeOwlLetterBody(letter),
+        fromDisplay: senderName,
+        anonymous,
+      })
+    } catch (err) {
+      setError(err.message || 'Could not open print preview.')
+    }
+  }
+
   return (
-    <div className="space-y-4 letter-studio-ui">
-      <form onSubmit={handleSend} className="space-y-4">
+    <form onSubmit={handleSend} className="letter-compose-shell">
+      {/* Canvas only — actions stay outside so they never steal page height */}
+      <div className="letter-compose-canvas letter-studio-ui">
         <LetterStudioComposer
           fromName={senderName}
           toName={recipient.frenName}
           anonymous={anonymous}
           onLetterChange={onLetterChange}
+          showPrint={false}
         />
+      </div>
+
+      <div className="letter-compose-actions">
+        <button
+          type="button"
+          onClick={handlePreviewPrint}
+          disabled={!letter || !owlLetterHasContent(letter)}
+          className="text-xs frens-muted hover:underline disabled:opacity-40"
+        >
+          Preview print
+        </button>
 
         <label className="flex items-center gap-2 text-xs frens-muted justify-center">
           <input
@@ -247,7 +275,7 @@ export function ComposeLetterForm({ recipient, onSent, onCancel }) {
 
         {error && <p className="text-xs text-red-500 dark:text-red-400 text-center">{error}</p>}
 
-        <div className="flex items-center justify-center gap-4 pt-1">
+        <div className="flex items-center justify-center gap-4">
           <button type="button" onClick={onCancel} className="text-xs frens-muted hover:underline">
             Cancel
           </button>
@@ -259,8 +287,8 @@ export function ComposeLetterForm({ recipient, onSent, onCancel }) {
             {sending ? 'Sending…' : 'Send'}
           </button>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   )
 }
 

@@ -23,31 +23,43 @@ function DmBubble({ message, mine, canReact, onReact }) {
     <div className={`flex gap-2 min-w-0 ${mine ? 'flex-row-reverse' : ''}`}>
       <ProfileAvatar profile={message} className="w-8 h-8 shrink-0" logoClassName="w-5 h-auto" />
       <div className={`min-w-0 max-w-[78%] flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-        <span className="text-[11px] frens-muted mb-0.5">
+        <span className="text-[10px] frens-muted mb-1 tracking-wide">
           {message.authorName} · {message.ts}
         </span>
-        {message.sticker ? (
-          <span className="text-4xl leading-none">{message.sticker}</span>
-        ) : (
-          <>
-            {hasMedia && (
-              <div className={`max-w-full min-w-0 ${hasText ? 'mb-1' : ''}`}>
-                {message.video && <SharedVideo src={message.video} />}
-                {message.image && !message.video && <SharedImage src={message.image} />}
-              </div>
+        <div className={`flex items-end gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
+          <div className="min-w-0">
+            {message.sticker ? (
+              <span className="text-4xl leading-none">{message.sticker}</span>
+            ) : (
+              <>
+                {hasMedia && (
+                  <div className={`max-w-full min-w-0 ${hasText ? 'mb-1' : ''}`}>
+                    {message.video && <SharedVideo src={message.video} />}
+                    {message.image && !message.video && <SharedImage src={message.image} />}
+                  </div>
+                )}
+                {hasText ? (
+                  <div className={textBubbleClass(mine)}>
+                    <RichText text={message.text} className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words" />
+                  </div>
+                ) : null}
+              </>
             )}
-            {hasText ? (
-              <div className={textBubbleClass(mine)}>
-                <RichText text={message.text} className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words" />
-              </div>
-            ) : null}
-          </>
-        )}
+          </div>
+          <EmojiReactions
+            reactions={message.reactions || []}
+            mine={mine}
+            canReact={canReact}
+            onReact={onReact}
+            controlsOnly
+          />
+        </div>
         <EmojiReactions
           reactions={message.reactions || []}
           mine={mine}
           canReact={canReact}
           onReact={onReact}
+          chipsOnly
         />
       </div>
     </div>
@@ -165,17 +177,18 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-8rem)] -m-4">
-      <div className="sticky top-0 z-20 frens-surface shrink-0 border-b frens-border px-3 py-2 flex items-center gap-2">
+    // Full-bleed when parent drops padding (same as caves)
+    <div className="flex flex-col min-h-[calc(100dvh-8rem)] w-full">
+      <div className="sticky top-0 z-20 frens-surface shrink-0 px-3 pt-2 pb-2 flex items-center gap-2">
         <button type="button" onClick={onBack} className="frens-muted text-lg px-1" aria-label="Back">
           ‹
         </button>
         <ProfileAvatar profile={other} className="w-9 h-9 shrink-0" logoClassName="w-5 h-auto" />
         <div className="min-w-0 flex-1">
           <FrenHandle>{thread.otherName}</FrenHandle>
-          <p className="text-xs frens-muted">direct message</p>
+          <p className="text-[10px] frens-muted tracking-wide uppercase">direct</p>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             type="button"
             onClick={() => placeCall('audio')}
@@ -200,14 +213,14 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
       </div>
 
       {callError ? (
-        <p className="shrink-0 text-xs text-red-500 dark:text-red-400 px-3 py-1 border-b frens-border">{callError}</p>
+        <p className="shrink-0 text-xs text-red-500 dark:text-red-400 px-3 py-1">{callError}</p>
       ) : null}
 
-      <div className="mt-auto px-3 py-3 space-y-3">
+      <div className="mt-auto px-3 py-3 space-y-3.5">
         {messages.length === 0 ? (
           <div className="py-16 flex flex-col items-center justify-center text-center">
-            <p className="text-sm frens-body-text mb-1">Say hi to {thread.otherName}</p>
-            <p className="text-xs frens-muted">This conversation is just between you two.</p>
+            <p className="text-sm frens-body-text mb-1 font-light">Say hi to {thread.otherName}</p>
+            <p className="text-xs frens-muted">Just between you two. No third hand.</p>
           </div>
         ) : (
           messages.map((m) => (
@@ -223,14 +236,14 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
         <div ref={bottomRef} aria-hidden className="h-px shrink-0" />
       </div>
 
-      <div className="sticky bottom-0 z-20 frens-surface shrink-0 px-3 py-2.5">
+      <div className="sticky bottom-0 z-20 frens-surface shrink-0 px-3 pt-2 pb-2.5">
         <input ref={imageInputRef} type="file" accept="image/*,image/gif,.gif" className="hidden" onChange={handleImage} />
         <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideo} />
         <PillComposer
           value={draft}
           onChange={setDraft}
           onSubmit={handleSend}
-          placeholder="Leave a message"
+          placeholder="Leave a message…"
           busy={mediaBusy}
           attachBusy={mediaBusy}
           error={mediaError}

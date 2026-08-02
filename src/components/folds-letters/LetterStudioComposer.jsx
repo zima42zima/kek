@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import LetterCanvas, { duplicateBlock } from './LetterCanvas'
-import LetterMetaBar from './LetterMetaBar'
+import LetterMetaBar, { LetterMetaTools } from './LetterMetaBar'
 import LetterPageToolbar from './LetterPageToolbar'
 import FoldPageToolbar from './FoldPageToolbar'
 import LetterBlockToolbar from './LetterBlockToolbar'
@@ -303,24 +303,29 @@ export default function LetterStudioComposer({
 
   return (
     <div className="letter-studio-ui">
-      <LetterMetaBar
-        fromName={letter.fromName}
-        toName={letter.toName}
-        anonymous={anonymous}
-        showDate={letter.showDate !== false}
-        showStamp={letter.showStamp !== false}
-        writeFrom={letter.writeFrom || 'left'}
-        onFromChange={(fromName) => update({ fromName, signature: fromName })}
-        onToChange={(toName) => update({ toName })}
-        onShowDateChange={(showDate) => update({ showDate })}
-        onShowStampChange={(showStamp) => update({ showStamp })}
-        onWriteFromChange={(writeFrom) => update({ writeFrom })}
-      />
+      {/* Top chrome only — tools stay off the letter page */}
+      <div className="letter-studio-chrome">
+        <LetterMetaBar
+          fromName={letter.fromName}
+          toName={letter.toName}
+          anonymous={anonymous}
+          onFromChange={(fromName) => update({ fromName, signature: fromName })}
+          onToChange={(toName) => update({ toName })}
+        />
 
-      <div className="letter-studio-stage">
-        <div className="letter-studio-toolbars">
+        <div className="letter-studio-toolbar letter-studio-toolbar--top" role="toolbar" aria-label="Letter tools">
+          <LetterMetaTools
+            showDate={letter.showDate !== false}
+            showStamp={letter.showStamp !== false}
+            writeFrom={letter.writeFrom || 'left'}
+            onShowDateChange={(showDate) => update({ showDate })}
+            onShowStampChange={(showStamp) => update({ showStamp })}
+            onWriteFromChange={(writeFrom) => update({ writeFrom })}
+          />
+          <span className="letter-tool-divider" aria-hidden />
           {isFold ? (
             <FoldPageToolbar
+              bare
               typeAnywhere={typeAnywhere}
               onTypeAnywhereChange={handleTypeAnywhereChange}
               onAddText={addTextBlock}
@@ -328,11 +333,14 @@ export default function LetterStudioComposer({
             />
           ) : (
             <LetterPageToolbar
+              bare
               onAddImage={() => fileRef.current?.click()}
               onTemplate={applyOccasion}
             />
           )}
+          <span className="letter-tool-divider" aria-hidden />
           <LetterBlockToolbar
+            bare
             block={toolbarBlock}
             hasSelection={isFold ? hasTextSelection : Boolean(focusedField && selectionInElement(fieldRefs.current[focusedField || 'body']))}
             onPatch={applyToolbarPatch}
@@ -351,7 +359,9 @@ export default function LetterStudioComposer({
             }}
           />
         </div>
+      </div>
 
+      <div className="letter-studio-stage letter-studio-stage--clean">
         {isFold ? (
           <LetterCanvas
             letter={letter}

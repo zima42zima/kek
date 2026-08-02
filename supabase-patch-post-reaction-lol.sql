@@ -1,5 +1,5 @@
--- Allow the hearth post reaction alongside fire and thunder.
--- Safe to re-run. Run in Supabase → SQL Editor after supabase-patch-post-reactions.sql.
+-- Allow the lol post reaction alongside fire, thunder, and hearth.
+-- Safe to re-run. Run in Supabase → SQL Editor after post reaction patches.
 
 create or replace function public.toggle_post_reaction(
   p_post uuid,

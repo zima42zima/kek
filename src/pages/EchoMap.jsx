@@ -1427,7 +1427,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="frens-title-xl leading-tight">Echo Map</h2>
+          <h2 className="frens-title-xl leading-tight">Echo</h2>
           <p className="text-xs frens-muted">
             {cityLabel}
             {' '}· search places · walk into range · 🌍 = browse from anywhere
@@ -1437,9 +1437,9 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           type="button"
           onClick={openCreateFlow}
           className="frens-btn-primary px-3 py-2 text-sm rounded-full inline-flex items-center gap-1.5"
-          title={userPos ? 'Drop a meme spot' : 'Enable location first'}
+          title={userPos ? 'Drop an echo' : 'Enable location first'}
         >
-          <EchoIcon className="w-5 h-4" /> Meme
+          <EchoIcon className="w-5 h-4" /> Echo
         </button>
       </div>
 

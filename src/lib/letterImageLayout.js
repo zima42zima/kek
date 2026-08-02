@@ -12,20 +12,35 @@ function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n))
 }
 
+/**
+ * Compare content bottom to the sheet’s content box (inside padding).
+ * Matches A4 printable area used by the editor preview.
+ */
 export function measureLetterPageOverflow(sheetEl, contentEl, imageEl) {
   if (!sheetEl || !contentEl) return { overflow: false, overflowPx: 0, pageHeight: 0 }
 
+  const style = window.getComputedStyle(sheetEl)
+  const padBottom = Number.parseFloat(style.paddingBottom) || 0
   const pageHeight = sheetEl.clientHeight
+  const usableBottom = Math.max(0, pageHeight - padBottom)
+
   let maxBottom = contentEl.offsetTop + contentEl.scrollHeight
 
   if (imageEl) {
     maxBottom = Math.max(maxBottom, imageEl.offsetTop + imageEl.offsetHeight)
   }
 
-  const overflowPx = Math.max(0, maxBottom - pageHeight + 4)
+  // Small slack so sub-pixel / line-box rounding doesn’t flash a false page break
+  const overflowPx = Math.max(0, maxBottom - usableBottom + 1)
   return {
-    overflow: overflowPx > 2,
+    overflow: overflowPx > 6,
     overflowPx,
     pageHeight,
   }
+}
+
+/** True when image is stretched near full page (print with zero margins). */
+export function isFullBleedImage(layout) {
+  const L = normalizeImageLayout(layout)
+  return L.w >= 88 && L.y <= 6
 }

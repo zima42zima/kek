@@ -1,11 +1,13 @@
 import fireIcon from '../assets/icons/reactions/fire.png'
 import thunderIcon from '../assets/icons/reactions/thunder.png'
-import hearthIcon from '../assets/icons/reactions/hearth.png'
+import hearthIcon from '../assets/icons/reactions/hearth.svg'
+import lolIcon from '../assets/icons/reactions/lol.svg'
 
 export const POST_REACTION_DEFS = [
   { id: 'fire', icon: fireIcon },
   { id: 'thunder', icon: thunderIcon },
   { id: 'hearth', icon: hearthIcon },
+  { id: 'lol', icon: lolIcon },
 ]
 
 const ALLOWED_REACTION_IDS = new Set(POST_REACTION_DEFS.map((d) => d.id))

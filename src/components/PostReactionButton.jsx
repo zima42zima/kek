@@ -3,7 +3,6 @@ import {
   PlusIcon,
   POST_ACTION_BTN,
   POST_ACTION_ICON,
-  POST_ACTION_REACTION_ICON,
   POST_ACTION_BADGE,
   POST_ACTION_PICKER_BTN,
   POST_ACTION_PICKER_ICON,
@@ -42,7 +41,7 @@ export default function PostReactionButton({
   }
 
   return (
-    <div ref={wrapRef} className={`relative z-10 flex items-center gap-1 ${className}`}>
+    <div ref={wrapRef} className={`relative z-10 flex items-center gap-2 ${className}`}>
       {visible.map(({ id, icon }) => {
         const count = reactionCount(reactions, id)
         const mine = reactionMine(reactions, id)
@@ -57,7 +56,7 @@ export default function PostReactionButton({
               mine ? 'ring-1 ring-black/20 dark:ring-white/30 bg-black/[0.04] dark:bg-white/[0.06]' : 'opacity-80 hover:opacity-100'
             } ${!canReact ? 'pointer-events-none' : ''}`}
           >
-            <img src={icon} alt="" className={`${POST_ACTION_REACTION_ICON} object-contain dark:invert`} draggable={false} />
+            <img src={icon} alt="" className={`${POST_ACTION_ICON} object-contain dark:invert`} draggable={false} />
             {count > 1 ? (
               <span className={POST_ACTION_BADGE}>
                 {count}
@@ -82,7 +81,7 @@ export default function PostReactionButton({
           </PostActionTip>
 
           {open && (
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-1">
               {POST_REACTION_DEFS.map(({ id, icon }) => {
                 const mine = reactionMine(reactions, id)
                 return (

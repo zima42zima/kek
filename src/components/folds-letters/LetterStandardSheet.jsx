@@ -10,7 +10,7 @@ import PsLetterStamp from './PsLetterStamp'
 const FIELDS = [
   { id: 'greeting', placeholder: 'Dear friend,', className: 'letter-standard-field--greeting', multiline: false },
   { id: 'body', placeholder: 'Write your letter…', className: 'letter-standard-field--body', multiline: true },
-  { id: 'closing', placeholder: 'Warmly,', className: 'letter-standard-field--closing', multiline: false },
+  { id: 'closing', placeholder: 'Closing (optional)', className: 'letter-standard-field--closing', multiline: false },
   { id: 'signature', placeholder: 'Your name', className: 'letter-standard-field--signature', multiline: false },
 ]
 

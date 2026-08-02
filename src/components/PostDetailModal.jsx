@@ -35,8 +35,11 @@ export default function PostDetailModal({ post, authorProfile, onClose, onOpenPr
     (displayPost.avatarType === 'frog') ||
     (displayPost.avatarType === 'photo' && displayPost.avatarUrl)
   const { auraCount, iGaveAura } = getPostAura(post)
-  const canGiveAura = Boolean(user?.id && post.userId && post.userId !== user.id)
-  const canShowToFrens = canGiveAura && ['everyone', 'frens'].includes(post.audience)
+  const canAura = Boolean(user?.id)
+  const canReact = Boolean(user?.id)
+  const canShowToFrens =
+    Boolean(user?.id && post.userId && post.userId !== user.id) &&
+    ['everyone', 'frens'].includes(post.audience)
   const shownByFren = post.feedSource === 'shown' && post.shownByName
   const canFollow = post.userId && user?.id && post.userId !== user.id
   const showThoughtMark = isTextOnlyThoughtPost(post)
@@ -87,41 +90,43 @@ export default function PostDetailModal({ post, authorProfile, onClose, onOpenPr
                   <ProfileAvatar profile={displayPost} className="w-11 h-11 shrink-0" logoClassName="w-6 h-auto" />
                 </button>
               ) : (
-                <ProfileAvatar profile={displayPost} className="w-11 h-11 shrink-0" logoClassName="w-6 h-auto" />
+                <ProfileAvatar profile={displayPost} className="w-10 h-10 shrink-0" logoClassName="w-5 h-auto" />
               )
             ) : (
-              <div className="w-11 h-11 shrink-0 rounded-full frens-avatar-ring flex items-center justify-center text-lg">
+              <div className="w-10 h-10 shrink-0 rounded-full frens-avatar-ring flex items-center justify-center text-base">
                 {post.avatar}
               </div>
             )}
 
             <div className="min-w-0 flex-1">
               {shownByFren ? (
-                <p className="text-[11px] frens-muted mb-2">
+                <p className="text-[11px] frens-muted mb-1.5">
                   {post.shownByName} thought your frens might like this
                 </p>
               ) : null}
 
-              <div className="flex items-baseline gap-2 mb-1 flex-wrap">
-                {canOpenProfile ? (
-                  <FrenHandle onClick={() => onOpenProfile(post.userId)}>
-                    {post.frenName}
-                  </FrenHandle>
-                ) : (
-                  <FrenHandle>{post.frenName}</FrenHandle>
-                )}
-                {post.isPinned ? <PinnedLabel /> : null}
-                <PostTimestamp timestamp={post.timestamp} createdAt={post.createdAt} />
-                {canFollow && !following && (
-                  <button
-                    type="button"
-                    onClick={() => setFollow(post.userId, true)}
-                    className="shrink-0 text-[11px] rounded-full px-2.5 py-0.5 transition bg-black text-white dark:bg-white dark:text-black"
-                  >
-                    Follow
-                  </button>
-                )}
-                <div className="ml-auto flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
+                  {canOpenProfile ? (
+                    <FrenHandle onClick={() => onOpenProfile(post.userId)}>
+                      {post.frenName}
+                    </FrenHandle>
+                  ) : (
+                    <FrenHandle>{post.frenName}</FrenHandle>
+                  )}
+                  {post.isPinned ? <PinnedLabel /> : null}
+                  <PostTimestamp timestamp={post.timestamp} createdAt={post.createdAt} />
+                  {canFollow && !following && (
+                    <button
+                      type="button"
+                      onClick={() => setFollow(post.userId, true)}
+                      className="shrink-0 text-[11px] rounded-full px-2.5 py-0.5 transition bg-black text-white dark:bg-white dark:text-black"
+                    >
+                      Follow
+                    </button>
+                  )}
+                </div>
+                <div className="ml-auto flex items-center gap-1 shrink-0">
                   {post.audience && post.audience !== 'everyone' && (
                     <span
                       className="border frens-border rounded-full p-1 inline-flex items-center justify-center"
@@ -143,10 +148,10 @@ export default function PostDetailModal({ post, authorProfile, onClose, onOpenPr
               </div>
 
               {post.text && (
-                <div className="mb-3">
+                <div className={post.image ? 'mb-2.5' : 'mb-0.5'}>
                   <RichText
                     text={post.text}
-                    className="frens-post-text text-[15px]"
+                    className="frens-post-text"
                     variant="timeline"
                     thoughtMark={showThoughtMark}
                     showAddToPlaylist
@@ -158,13 +163,13 @@ export default function PostDetailModal({ post, authorProfile, onClose, onOpenPr
               {post.image && <PostMedia src={post.image} size="detail" />}
 
               {post.audience === 'other' && post.tags?.length > 0 && (
-                <p className="text-xs frens-muted mb-2">
+                <p className="text-xs frens-muted mt-2">
                   tagged: {post.tags.map((t) => `@${t}`).join(' ')}
                 </p>
               )}
 
-              <div className={`${POST_ACTION_ROW} text-xs frens-muted mb-3`}>
-                {canGiveAura ? (
+              <div className={`${POST_ACTION_ROW} mb-3`}>
+                {canAura ? (
                   <AuraButton postId={post.id} auraCount={auraCount} iGaveAura={iGaveAura} />
                 ) : (
                   <AuraCount count={auraCount} />
@@ -182,18 +187,16 @@ export default function PostDetailModal({ post, authorProfile, onClose, onOpenPr
                     ) : null}
                   </span>
                 </PostActionTip>
-                {canGiveAura ? (
-                  <PostReactionButton
-                    reactions={getPostReactions(post)}
-                    onReact={(id) => togglePostReaction(post.id, id)}
-                  />
-                ) : (
-                  <PostReactionButton reactions={getPostReactions(post)} />
-                )}
-                {canShowToFrens ? (
-                  <ShowToFrensButton postId={post.id} iShowToFrens={post.iShowToFrens} />
-                ) : null}
-                <PostShareButton post={post} />
+                <PostReactionButton
+                  reactions={getPostReactions(post)}
+                  onReact={canReact ? (id) => togglePostReaction(post.id, id) : undefined}
+                />
+                <div className="ml-auto flex items-center gap-4 shrink-0">
+                  {canShowToFrens ? (
+                    <ShowToFrensButton postId={post.id} iShowToFrens={post.iShowToFrens} />
+                  ) : null}
+                  <PostShareButton post={post} />
+                </div>
               </div>
 
               <PostComments postId={post.id} count={post.commentCount ?? 0} alwaysOpen focusInput hideHeader />

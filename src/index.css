@@ -2,28 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'Open Sans';
-  src: url('/fonts/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');
-  font-weight: 300 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Open Sans';
-  src: url('/fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf') format('truetype');
-  font-weight: 300 800;
-  font-style: italic;
-  font-display: swap;
-}
+/* JetBrains Mono — loaded from Google Fonts in index.html (weights 300–600). */
 
 @layer base {
   html {
-    font-size: 110%;
+    font-size: 108%;
     --frens-canvas-bg-light: #ffffff;
     --frens-canvas-bg-dark: #000000;
     --frens-outline: #e4e4e4;
+    /* Explicit (not only @apply font-sans) so Vite/Tailwind cache cannot leave Open Sans */
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   html.dark {
@@ -31,9 +19,13 @@
   }
 
   body {
-    @apply text-black dark:text-white font-sans;
+    @apply text-black dark:text-white font-normal;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     background-color: var(--frens-canvas-bg-light);
     min-height: 100vh;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   html.dark body {
@@ -41,7 +33,16 @@
   }
 
   h1, h2, h3 {
-    @apply font-sans font-semibold;
+    @apply font-medium tracking-wide;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  button, input, textarea, select {
+    font-family: inherit;
+  }
+
+  code, kbd, samp, pre {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 }
 
@@ -78,7 +79,8 @@
   }
 
   .frens-page {
-    @apply text-black dark:text-white font-sans;
+    @apply text-black dark:text-white;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     background-color: var(--frens-canvas-bg-light);
   }
 
@@ -147,6 +149,7 @@
   }
 
   .frens-post-morse__dot {
+    display: block;
     width: 3px;
     height: 3px;
     border-radius: 9999px;
@@ -156,6 +159,7 @@
   }
 
   .frens-post-morse__dash {
+    display: block;
     width: 11px;
     height: 2px;
     background: var(--frens-outline);
@@ -164,11 +168,13 @@
   }
 
   .frens-post-morse__letter {
+    display: block;
     width: 10px;
     flex-shrink: 0;
   }
 
   .frens-post-morse__word {
+    display: block;
     width: 18px;
     flex-shrink: 0;
   }
@@ -226,14 +232,16 @@
     border-color: var(--frens-outline);
   }
 
+  /* Feed body — fixed scale so handle / text / icons sit in one rhythm. */
   .frens-post-text {
-    @apply text-gray-800 dark:text-gray-200;
-    font-size: clamp(0.95rem, 0.9rem + 0.45vw, 1.15rem);
-    line-height: 1.55;
+    @apply text-gray-800 dark:text-gray-200 font-normal;
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.5;
+    letter-spacing: 0.01em;
   }
 
   .frens-handle {
-    @apply text-sm font-normal tracking-wide text-gray-700 dark:text-gray-300;
+    @apply text-[15px] font-medium tracking-wide text-gray-900 dark:text-gray-100;
   }
 
   .frens-handle-lg {
@@ -257,7 +265,7 @@
   }
 
   .frens-title-xl {
-    @apply frens-title text-xl;
+    @apply frens-title text-xl tracking-widest;
   }
 
   .frens-stat {
@@ -265,11 +273,11 @@
   }
 
   .frens-badge-count {
-    @apply font-medium;
+    @apply font-medium tracking-wide;
   }
 
   .frens-muted {
-    @apply text-gray-500 dark:text-gray-600;
+    @apply text-gray-500 dark:text-gray-500;
   }
 
   .frens-action {
@@ -319,8 +327,9 @@
     @apply dark:invert;
   }
 
+  /* Nav / mask icons — pure black (light) or pure white (dark), never gray. */
   .frens-nav-icon {
-    @apply block w-6 h-6 shrink-0 bg-black dark:bg-gray-500;
+    @apply block w-6 h-6 shrink-0 bg-black dark:bg-white;
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
@@ -330,11 +339,10 @@
   }
 
   .frens-nav-icon-active {
-    @apply bg-[#6BC06B] dark:bg-white;
+    @apply bg-black dark:bg-white;
   }
 
-  /* Generic masked icon: paints any (mono) icon in the current theme color,
-     so white-on-transparent art stays visible in light mode too. */
+  /* Generic masked icon: pure black (light) / pure white (dark). */
   .frens-mask-icon {
     @apply bg-black dark:bg-white;
     mask-size: contain;
@@ -446,38 +454,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-@keyframes echo-bat-orbit {
-  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.85; }
-  25% { transform: translate(6px, -4px) rotate(8deg); opacity: 1; }
-  50% { transform: translate(0, -8px) rotate(0deg); opacity: 0.9; }
-  75% { transform: translate(-6px, -4px) rotate(-8deg); opacity: 1; }
-  100% { transform: translate(0, 0) rotate(0deg); opacity: 0.85; }
-}
-.frens-echo-bat-fly {
-  animation: echo-bat-orbit 2.8s ease-in-out infinite;
-}
-.frens-echo-bat-city .frens-echo-bat-fly {
-  animation: echo-bat-city-roam 6s ease-in-out infinite;
-}
-@keyframes echo-bat-city-roam {
-  0% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
-  20% { transform: translate(14px, -10px) rotate(12deg); opacity: 1; }
-  40% { transform: translate(-10px, -18px) rotate(-8deg); opacity: 0.95; }
-  60% { transform: translate(-16px, 6px) rotate(-14deg); opacity: 1; }
-  80% { transform: translate(8px, 14px) rotate(10deg); opacity: 0.9; }
-  100% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
-}
-.frens-echo-bat-global .frens-echo-bat-fly {
-  animation: echo-bat-orbit 3.4s ease-in-out infinite;
-}
-.frens-echo-bat-globe {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  font-size: 10px;
-  line-height: 1;
-  filter: grayscale(0.2);
+  position: relative;
 }
 .frens-echo-cluster-marker {
   background: transparent;
@@ -693,18 +670,29 @@
   border-radius: 0;
 }
 
-/* P.S. — Letters & Folds studio */
-.letter-studio-ui,
-.letter-studio-ui .letter-btn-primary,
-.letter-studio-ui .letter-btn-outline {
-  color-scheme: light;
-  color: #111;
-}
+/* P.S. — Letters & Folds studio
+   Paper stays light (#111 type). Chrome/tools follow app theme so dark mode
+   is not black icons on black modal chrome. */
 .letter-studio-ui {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
   font-family: inherit;
+  color: inherit;
+}
+.letter-studio-ui .letter-btn-primary,
+.letter-studio-ui .letter-btn-outline {
+  color: inherit;
+}
+/* Letter page itself always light */
+.letter-studio-ui .letter-standard-sheet,
+.letter-studio-ui .letter-canvas,
+.letter-studio-ui .letter-standard-sheet * {
+  color-scheme: light;
+}
+.letter-studio-ui .letter-standard-sheet,
+.letter-studio-ui .letter-canvas {
+  color: #111;
 }
 .letter-studio-ui .letter-studio-toolbar,
 .letter-studio-ui .letter-studio-toolbar *:not(.letter-font-menu__preview),
@@ -735,12 +723,29 @@
   font-size: 0.8125rem;
   color: #666;
 }
+html.dark .letter-studio-meta {
+  color: rgba(255, 255, 255, 0.55);
+}
+html.dark .letter-studio-chrome {
+  color: #ececec;
+}
+.letter-studio-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: min(100%, 48rem);
+  margin-left: auto;
+  margin-right: auto;
+}
 .letter-meta-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem 0.75rem;
+}
+.letter-meta-bar--names-only {
+  justify-content: flex-start;
 }
 .letter-meta-bar__names {
   display: flex;
@@ -752,7 +757,7 @@
 .letter-meta-bar__input {
   border: none;
   background: transparent;
-  color: #111;
+  color: inherit;
   font-size: 0.8125rem;
   font-weight: 500;
   min-width: 0;
@@ -762,6 +767,9 @@
 }
 .letter-meta-bar__input:focus {
   border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+}
+html.dark .letter-meta-bar__input:focus {
+  border-bottom-color: rgba(255, 255, 255, 0.35);
 }
 .letter-meta-bar__input:disabled {
   opacity: 0.55;
@@ -778,36 +786,42 @@
   background: rgba(0, 0, 0, 0.04);
   border-radius: 9999px;
 }
-.letter-studio-toolbars {
-  position: absolute;
-  top: 0.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  max-width: calc(100% - 0.75rem);
-  pointer-events: none;
+html.dark .letter-meta-bar__tools {
+  background: rgba(255, 255, 255, 0.08);
 }
-.letter-studio-toolbars > * {
-  pointer-events: auto;
-}
+/* Unified top toolbar — same width as page, light pill */
 .letter-studio-toolbar {
   position: relative;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 1px;
+  width: 100%;
   max-width: 100%;
   padding: 0.25rem 0.35rem;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 9999px;
+  background: transparent;
+  border-radius: 0;
+  color: #111;
+}
+html.dark .letter-studio-toolbar {
+  background: transparent;
+  color: #ececec;
+}
+.letter-studio-toolbar--top {
+  width: 100%;
+  justify-content: flex-start;
+  row-gap: 0.2rem;
+  padding-left: 0;
+  padding-right: 0;
 }
 .letter-studio-toolbar--block {
-  background: rgba(255, 255, 255, 0.98);
+  background: transparent;
+}
+.letter-studio-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  flex-wrap: wrap;
 }
 .letter-tool-confirm {
   position: absolute;
@@ -865,17 +879,28 @@
   border-radius: 9999px;
   padding: 0.35rem 0.75rem;
 }
+/* A4 page preview (210×297) — full printable area, 1cm top / ~1.2cm sides */
 .letter-standard-sheet {
   position: relative;
   width: 100%;
-  aspect-ratio: 8.5 / 11;
-  min-height: 360px;
-  max-height: 68vh;
+  max-width: 48rem;
+  margin-left: auto;
+  margin-right: auto;
+  aspect-ratio: 210 / 297;
+  height: auto;
+  min-height: 0;
+  max-height: min(88vh, 1000px);
   background: #fff;
-  border-radius: 14px;
-  padding: 3rem 8% 2rem;
+  border-radius: 4px;
+  /* Match home-printer margins: top 10mm, sides/bottom ~12mm */
+  padding: 10mm 12mm 12mm;
   overflow: visible;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+html.dark .letter-standard-sheet {
+  border-color: rgba(255, 255, 255, 0.12);
 }
 .letter-standard-sheet--overflow {
   box-shadow: 0 0 0 1px rgba(180, 60, 60, 0.25);
@@ -931,10 +956,6 @@
   background: #fff;
   padding: 0 0.35rem;
 }
-.letter-standard-content {
-  position: relative;
-  z-index: 1;
-}
 .letter-sheet-image {
   position: absolute;
   z-index: 3;
@@ -968,15 +989,25 @@
   cursor: nwse-resize;
   padding: 0;
 }
+.letter-standard-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  height: 100%;
+}
 .letter-standard-date {
   font-size: 0.625rem;
   color: #888;
-  margin: 0 0 1.25rem;
+  margin: 0 0 0.65rem;
   letter-spacing: 0.02em;
 }
 .letter-standard-body {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 .letter-standard-field {
   width: 100%;
@@ -988,24 +1019,27 @@
   padding: 0.15rem 0;
 }
 .letter-standard-field--active {
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: 4px;
+  /* Keep focus invisible on the page — selection + caret is enough */
+  background: transparent;
+  border-radius: 0;
 }
 .letter-standard-field--greeting {
   font-size: 1.125rem;
   font-weight: 600;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
 }
 .letter-standard-field--body {
-  flex: 1;
+  flex: 1 1 auto;
   font-size: 0.9375rem;
-  line-height: 1.65;
-  min-height: 9rem;
-  margin-bottom: 1rem;
+  line-height: 1.55;
+  min-height: 8rem;
+  margin-bottom: 0.65rem;
 }
 .letter-standard-field--closing {
   font-size: 0.9375rem;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
+  flex-shrink: 0;
 }
 .letter-standard-field--signature {
   font-size: 1.125rem;
@@ -1025,9 +1059,57 @@
 
 .letter-studio-stage {
   position: relative;
-  background: #ececec;
-  border-radius: 18px;
-  padding: 4.5rem 1rem 1rem;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+/* Minimal: only the page canvas, no gray mat around it */
+.letter-studio-stage--clean {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: min(100%, 48rem);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Compose: canvas fills modal; actions sit outside the A4 page */
+.letter-compose-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  gap: 0;
+}
+.letter-compose-canvas {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.letter-compose-canvas .letter-studio-ui {
+  min-height: min-content;
+}
+.letter-compose-canvas .letter-standard-sheet,
+.letter-compose-canvas .letter-canvas {
+  /* Let A4 aspect-ratio size the page from width — don't cap short for footer chrome */
+  max-height: none;
+}
+.letter-compose-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0 0.15rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--frens-outline, #e4e4e4);
+  background: inherit;
+}
+.letter-modal-body {
+  min-height: 0;
 }
 .letter-tool {
   display: inline-flex;
@@ -1040,15 +1122,17 @@
   border: none;
   border-radius: 9999px;
   background: transparent;
-  color: #111;
+  color: inherit;
   font-size: 0.6875rem;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.12s ease;
 }
 .letter-tool:hover:not(:disabled) { background: rgba(0, 0, 0, 0.06); }
+html.dark .letter-tool:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
 .letter-tool:disabled { opacity: 0.35; cursor: not-allowed; }
 .letter-tool--active { background: rgba(0, 0, 0, 0.08); }
+html.dark .letter-tool--active { background: rgba(255, 255, 255, 0.16); }
 .letter-tool--wide { padding: 0 0.55rem; max-width: 7.5rem; }
 .letter-tool__label {
   overflow: hidden;
@@ -1078,6 +1162,9 @@
   background: rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
 }
+html.dark .letter-tool-divider {
+  background: rgba(255, 255, 255, 0.18);
+}
 .letter-tool-menu {
   position: absolute;
   top: calc(100% + 0.35rem);
@@ -1089,11 +1176,18 @@
   overflow-y: auto;
   padding: 0.25rem;
   background: rgba(255, 255, 255, 0.98);
+  color: #111;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
   z-index: 30;
+}
+html.dark .letter-tool-menu {
+  background: rgba(28, 28, 28, 0.98);
+  color: #ececec;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .letter-tool-menu--fonts { min-width: 13rem; max-height: 20rem; }
 
@@ -1110,11 +1204,18 @@
   padding: 0;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.98);
+  color: #111;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
   z-index: 30;
+}
+html.dark .letter-font-menu {
+  background: rgba(28, 28, 28, 0.98);
+  color: #ececec;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .letter-font-menu--panel {
   position: static;
@@ -1153,17 +1254,31 @@
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
+html.dark .letter-font-menu__section {
+  color: rgba(255, 255, 255, 0.55);
+}
 .letter-font-menu__section:hover {
   background: rgba(0, 0, 0, 0.05);
   color: rgba(0, 0, 0, 0.85);
+}
+html.dark .letter-font-menu__section:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
 }
 .letter-font-menu__section--open {
   background: rgba(0, 0, 0, 0.08);
   color: #000;
   font-weight: 600;
 }
+html.dark .letter-font-menu__section--open {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
 .letter-font-menu__section--has-active:not(.letter-font-menu__section--open) {
   color: rgba(0, 0, 0, 0.72);
+}
+html.dark .letter-font-menu__section--has-active:not(.letter-font-menu__section--open) {
+  color: rgba(255, 255, 255, 0.75);
 }
 .letter-font-menu__fonts {
   flex: 1;
@@ -1183,12 +1298,14 @@
   border-radius: 8px;
   padding: 0.45rem 0.6rem;
   background: transparent;
-  color: #111;
+  color: inherit;
   cursor: pointer;
   transition: background 0.12s ease;
 }
 .letter-tool-menu__item:hover { background: rgba(0, 0, 0, 0.05); }
+html.dark .letter-tool-menu__item:hover { background: rgba(255, 255, 255, 0.1); }
 .letter-tool-menu__item--active { background: rgba(0, 0, 0, 0.07); }
+html.dark .letter-tool-menu__item--active { background: rgba(255, 255, 255, 0.14); }
 .letter-tool-menu__item--row { font-size: 0.8125rem; padding: 0.4rem 0.65rem; }
 .letter-tool-menu__meta {
   display: block;
@@ -1197,6 +1314,9 @@
   color: #888;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+html.dark .letter-tool-menu__meta {
+  color: rgba(255, 255, 255, 0.5);
 }
 .letter-field-label,
 .owl-field-label { display: block; font-size: 0.75rem; font-weight: 500; margin-bottom: 0.25rem; color: #000; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -1209,15 +1329,23 @@
 .letter-canvas {
   position: relative;
   width: 100%;
-  aspect-ratio: 8.5 / 11;
-  min-height: 360px;
-  max-height: 68vh;
+  max-width: 48rem;
+  margin-left: auto;
+  margin-right: auto;
+  aspect-ratio: 210 / 297;
+  height: auto;
+  min-height: 0;
+  max-height: min(88vh, 1000px);
   background: #fff;
-  border: none;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: none;
-  border-radius: 14px;
+  border-radius: 4px;
   cursor: text;
   overflow: hidden;
+  box-sizing: border-box;
+}
+html.dark .letter-canvas {
+  border-color: rgba(255, 255, 255, 0.12);
 }
 .letter-canvas--fold { background: #fff; }
 .letter-canvas__image {
@@ -1294,6 +1422,9 @@
   text-underline-offset: 2px;
 }
 .letter-studio-print:hover { color: #111; }
+html.dark .letter-studio-print { color: rgba(255, 255, 255, 0.55); }
+html.dark .letter-studio-print:hover { color: #fff; }
+html.dark .letter-studio-note { color: rgba(255, 255, 255, 0.5); }
 .letter-choice {
   display: block;
   width: 100%;
@@ -1447,4 +1578,9 @@ html.dark .ps-field:focus {
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   backdrop-filter: blur(4px);
+}
+
+/* Force MISAO typeface — wins over any stale Tailwind font-sans */
+html, body, #root, .frens-page, .frens-feed, .frens-screen {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
 }

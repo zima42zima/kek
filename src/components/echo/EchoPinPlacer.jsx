@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { blurCoord, clampToRadius } from '../../lib/geo'
 import { ECHO_PIN_OFFSET_MAX_M } from '../../lib/echoConstants'
 import { addEchoMapTiles } from '../../lib/mapTiles'
-import { echoIcon } from './EchoIcon'
+import { batIcon } from './EchoIcon'
 
 const MARKER_INK = '#1a1a1a'
 const ZONE_STROKE = '#888888'
@@ -19,8 +19,8 @@ function pinHtml() {
       box-shadow:0 2px 8px rgba(0,0,0,.15);">
       <span style="
         display:inline-block;width:14px;height:10px;background:${MARKER_INK};
-        -webkit-mask:url(${echoIcon}) center/contain no-repeat;
-        mask:url(${echoIcon}) center/contain no-repeat;"></span>
+        -webkit-mask:url(${batIcon}) center/contain no-repeat;
+        mask:url(${batIcon}) center/contain no-repeat;"></span>
     </div>`
 }
 

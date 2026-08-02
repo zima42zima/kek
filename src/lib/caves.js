@@ -131,6 +131,35 @@ export async function listProfileCaves(userId) {
     }))
 }
 
+/** Discover public caves by name (empty query = recent public). Needs search_public_caves RPC. */
+export async function searchPublicCaves(query = '') {
+  const { data, error } = await supabase.rpc('search_public_caves', {
+    p_query: (query || '').trim() || null,
+  })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+  return (data ?? []).map((r) => ({
+    id: r.cave_id,
+    name: r.name,
+    emoji: r.emoji || '🕳️',
+    ownerId: r.owner_id,
+    memberCount: Number(r.member_count ?? 0),
+    iMember: Boolean(r.i_member),
+    access: 'public',
+  }))
+}
+
+/** Self-join a public cave. Needs join_public_cave RPC. */
+export async function joinPublicCave(caveId) {
+  const { error } = await supabase.rpc('join_public_cave', { p_cave_id: caveId })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+}
+
 /** Caves a fren chose to show on their profile (public + not hidden). */
 export function cavesVisibleOnProfile(caves) {
   return (caves ?? []).filter((c) => c.access === 'public' && !c.hiddenOnProfile)

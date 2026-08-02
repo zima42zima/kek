@@ -27,12 +27,12 @@ export default function PostShareButton({ post, className = '' }) {
   const label = status === 'copied' ? 'Copied' : 'Share post'
 
   return (
-    <PostActionTip label="share with others">
+    <PostActionTip label="share with others" className={className}>
       <button
         type="button"
         onClick={handleClick}
         aria-label={label}
-        className={`${POST_ACTION_BTN} frens-muted ${className}`}
+        className={`${POST_ACTION_BTN} frens-muted`}
       >
         <ShareIcon className={`${POST_ACTION_ICON} shrink-0`} />
       </button>

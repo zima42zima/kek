@@ -41,8 +41,11 @@ export default function PostCard({ post, authorProfile, onOpenProfile, highlight
     (displayPost.avatarType === 'photo' && displayPost.avatarUrl)
 
   const { auraCount, iGaveAura } = getPostAura(post)
-  const canGiveAura = Boolean(user?.id && post.userId && post.userId !== user.id)
-  const canShowToFrens = canGiveAura && ['everyone', 'frens'].includes(post.audience)
+  const canAura = Boolean(user?.id)
+  const canReact = Boolean(user?.id)
+  const canShowToFrens =
+    Boolean(user?.id && post.userId && post.userId !== user.id) &&
+    ['everyone', 'frens'].includes(post.audience)
   const shownByFren = post.feedSource === 'shown' && post.shownByName
   const canFollow = post.userId && user?.id && post.userId !== user.id
   const following = post.iFollowAuthor ?? false
@@ -173,7 +176,7 @@ export default function PostCard({ post, authorProfile, onOpenProfile, highlight
           </div>
 
           <div className={POST_ACTION_ROW}>
-            {canGiveAura ? (
+            {canAura ? (
               <AuraButton postId={post.id} auraCount={auraCount} iGaveAura={iGaveAura} />
             ) : (
               <AuraCount count={auraCount} />
@@ -184,18 +187,16 @@ export default function PostCard({ post, authorProfile, onOpenProfile, highlight
               onOpen={openDetail}
               inline
             />
-            {canGiveAura ? (
-              <PostReactionButton
-                reactions={getPostReactions(post)}
-                onReact={(id) => togglePostReaction(post.id, id)}
-              />
-            ) : (
-              <PostReactionButton reactions={getPostReactions(post)} />
-            )}
-            {canShowToFrens ? (
-              <ShowToFrensButton postId={post.id} iShowToFrens={post.iShowToFrens} />
-            ) : null}
-            <PostShareButton post={post} />
+            <PostReactionButton
+              reactions={getPostReactions(post)}
+              onReact={canReact ? (id) => togglePostReaction(post.id, id) : undefined}
+            />
+            <div className="ml-auto flex items-center gap-4 shrink-0">
+              {canShowToFrens ? (
+                <ShowToFrensButton postId={post.id} iShowToFrens={post.iShowToFrens} />
+              ) : null}
+              <PostShareButton post={post} />
+            </div>
           </div>
         </div>
       </div>

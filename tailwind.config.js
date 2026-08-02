@@ -27,9 +27,10 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['"Open Sans"', 'system-ui', 'sans-serif'],
-        mono: ['"Open Sans"', 'system-ui', 'sans-serif'],
-        display: ['"Open Sans"', 'system-ui', 'sans-serif'],
+        // App chrome + body — MISAO Marks preview (relic / mono)
+        sans: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        display: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       borderRadius: {
         cave: '18px',

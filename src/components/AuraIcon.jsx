@@ -13,7 +13,7 @@ export const AURA_COLORS = [
 
 export const AURA_IDLE = '#94a3b8'
 
-/** Masked aura glyph — visible in light + dark mode, tinted any color. */
+/** Masked aura glyph — size comes from className (matches POST_ACTION_ICON). */
 export default function AuraIcon({
   color = AURA_IDLE,
   className = 'w-4 h-4',
@@ -25,8 +25,6 @@ export default function AuraIcon({
       aria-hidden
       className={`inline-block shrink-0 pointer-events-none aura-glyph ${animate ? 'aura-glyph-pop' : ''} ${className}`}
       style={{
-        width: '1rem',
-        height: '1rem',
         backgroundColor: color,
         WebkitMaskImage: `url(${auraIcon})`,
         maskImage: `url(${auraIcon})`,

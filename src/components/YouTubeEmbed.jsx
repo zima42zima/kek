@@ -123,19 +123,27 @@ export function VideoTimelineCard({
   if (playing && externalPlayback) {
     return (
       <figure className="my-2">
-        <div className="relative w-full rounded-xl overflow-hidden ring-2 ring-black/20 dark:ring-white/20">
+        <button
+          type="button"
+          onClick={() => onPlayRequest?.()}
+          className="relative w-full block rounded-xl overflow-hidden ring-2 ring-[#6BC06B]/70 dark:ring-white/40 text-left focus:outline-none"
+          aria-label={caption ? `Now playing ${caption}` : `Now playing ${label}`}
+        >
           <img
             src={thumb}
             alt=""
             className="w-full object-cover"
             style={{ aspectRatio: '16 / 9' }}
           />
-          <span className="absolute inset-0 flex items-center justify-center bg-black/20">
-            <span className="w-10 h-10 rounded-full bg-black/80 dark:bg-white/90 text-white dark:text-black flex items-center justify-center">
-              <PlayIcon className="w-4 h-4" />
+          <span className="absolute inset-0 flex items-center justify-center bg-black/25">
+            <span className="w-10 h-10 rounded-full bg-black/80 dark:bg-white/90 text-white dark:text-black flex items-center justify-center text-sm tracking-tight">
+              ⏸
             </span>
           </span>
-        </div>
+          <span className="absolute bottom-2 left-2 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-black/70 text-white">
+            Now playing
+          </span>
+        </button>
         {caption ? (
           <p className="text-xs font-medium frens-body-text mt-1 truncate">{caption}</p>
         ) : null}

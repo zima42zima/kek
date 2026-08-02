@@ -1,0 +1,25 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <!-- Spread love — heart center, four outward corner arrows (ref monoline). -->
+  <path
+    d="M12 16.85
+       C12 16.85 7.35 13.75 7.35 10.55
+       C7.35 9.05 8.45 8 9.8 8
+       C10.65 8 11.4 8.4 12 9.1
+       C12.6 8.4 13.35 8 14.2 8
+       C15.55 8 16.65 9.05 16.65 10.55
+       C16.65 13.75 12 16.85 12 16.85Z"
+    stroke="white"
+    stroke-width="1.5"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <!-- Top-left → outward -->
+  <path d="M8.1 8.1L4.35 4.35M4.35 4.35h3.1M4.35 4.35v3.1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Top-right → outward -->
+  <path d="M15.9 8.1l3.75-3.75M19.65 4.35h-3.1M19.65 4.35v3.1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Bottom-left → outward -->
+  <path d="M8.1 15.9L4.35 19.65M4.35 19.65h3.1M4.35 19.65v-3.1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Bottom-right → outward -->
+  <path d="M15.9 15.9l3.75 3.75M19.65 19.65h-3.1M19.65 19.65v-3.1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

@@ -205,6 +205,26 @@ export function UserPlusIcon({ className = 'w-4 h-4' }) {
   )
 }
 
+/** Pencil — edit profile. */
+export function PencilIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={`inline-block align-middle ${className}`}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  )
+}
+
+/** Gear — settings. */
+export function SettingsIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={`inline-block align-middle ${className}`}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.6.9 1 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+    </svg>
+  )
+}
+
 export function BookIcon({ className = 'w-4 h-4' }) {
   return (
     <svg {...base} className={`inline-block align-middle ${className}`}>
@@ -347,29 +367,29 @@ export function ShowToFrensIcon({ className = 'w-4 h-4', active = false }) {
   )
 }
 
-/** Icon-only post footer buttons — 10% smaller than base (25px hit target). */
+/** Icon-only post footer buttons — shared hit target (~20% under previous 28px). */
 export const POST_ACTION_BTN =
-  'relative z-10 flex items-center justify-center w-[25px] h-[25px] rounded-full frens-action hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition touch-manipulation shrink-0'
+  'relative z-10 flex items-center justify-center w-[22px] h-[22px] rounded-full frens-action hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition touch-manipulation shrink-0'
 
-/** Inline glyph size for post action buttons (14px). */
-export const POST_ACTION_ICON = 'w-[14px] h-[14px]'
+/** Shared glyph size for every post action icon (~20% under previous 16px → 13px). */
+export const POST_ACTION_ICON = 'w-[13px] h-[13px]'
 
-/** Reaction chip icon inside post action row (18px). */
-export const POST_ACTION_REACTION_ICON = 'w-[18px] h-[18px]'
+/** @deprecated use POST_ACTION_ICON — kept so older imports stay same size. */
+export const POST_ACTION_REACTION_ICON = POST_ACTION_ICON
 
 /** Count badge on post action buttons. */
 export const POST_ACTION_BADGE =
-  'absolute -top-1 -right-1 min-w-[13px] h-[13px] px-0.5 rounded-full bg-black text-white dark:bg-white dark:text-black text-[8px] flex items-center justify-center'
+  'absolute -top-0.5 -right-0.5 min-w-[12px] h-[12px] px-0.5 rounded-full bg-black text-white dark:bg-white dark:text-black text-[8px] leading-none flex items-center justify-center tabular-nums'
 
 /** Expanded reaction picker (fire/thunder menu). */
 export const POST_ACTION_PICKER_BTN =
-  'w-[29px] h-[29px] rounded-lg flex items-center justify-center transition hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+  'w-[26px] h-[26px] rounded-lg flex items-center justify-center transition hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
 
-export const POST_ACTION_PICKER_ICON = 'w-[22px] h-[22px] object-contain dark:invert'
+export const POST_ACTION_PICKER_ICON = 'w-4 h-4 object-contain dark:invert'
 
-/** Post action icon row — left-aligned; gap and top margin tuned for photo breathing room. */
+/** Post action row — even gaps; share still uses ml-auto on its tip. */
 export const POST_ACTION_ROW =
-  'relative z-10 flex items-center gap-4 w-full mt-2.5'
+  'relative z-10 flex items-center gap-4 w-full mt-3'
 
 /** Reusable selected-state classes for option pickers (no brand color). */
 export const OPTION_ACTIVE =

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePlaylistPlayback } from '../../context/PlaylistPlaybackContext'
 import PlaylistIcon from '../playlists/PlaylistIcon'
 import PlaylistCoverEditor, { PlaylistCoverBanner, PlaylistCoverThumb } from '../playlists/PlaylistCover'
@@ -50,7 +50,7 @@ function TrackRow({
   index,
   activeIndex,
   isPlaying,
-  queueActive,
+  thisQueueActive,
   editable,
   busy,
   onPlayTrack,
@@ -58,7 +58,8 @@ function TrackRow({
 }) {
   const embed = trackToEmbed(track)
   const isActive = index === activeIndex
-  const useGlobal = queueActive && isActive && isPlaying
+  // Only hand off to the global hidden player for THIS cave playlist queue.
+  const useGlobal = thisQueueActive && isActive && isPlaying
 
   return (
     <div className="relative group">
@@ -104,8 +105,12 @@ export default function CavePlaylists({ cave, currentUserId }) {
   const [layoutEditing, setLayoutEditing] = useState(false)
   const [editing, setEditing] = useState(false)
 
+  const listReqRef = useRef(0)
+  const tracksReqRef = useRef(0)
+  const selectedIdRef = useRef(null)
+  selectedIdRef.current = selected?.id ?? null
+
   const isThisQueue = Boolean(selected && playback?.isActivePlaylist(`cave-${selected.id}`))
-  const queueActive = Boolean(playback?.meta?.playlistId && playback.tracks?.length > 0)
   const activeIndex = isThisQueue ? playback.activeIndex : -1
   const isPlaying = isThisQueue && playback.isPlaying
 
@@ -118,12 +123,23 @@ export default function CavePlaylists({ cave, currentUserId }) {
     }
   }
 
-  function loadPlaylists() {
-    setListLoading(true)
+  function loadPlaylists({ silent = false } = {}) {
+    const req = ++listReqRef.current
+    if (!silent) setListLoading(true)
     setError('')
     listCavePlaylists(cave.id)
-      .then(setPlaylists)
+      .then((rows) => {
+        if (req !== listReqRef.current) return
+        setPlaylists(rows)
+        // Keep open playlist metadata (cover, track count) in sync without flicker.
+        setSelected((prev) => {
+          if (!prev) return prev
+          const next = rows.find((p) => p.id === prev.id)
+          return next || prev
+        })
+      })
       .catch((err) => {
+        if (req !== listReqRef.current) return
         if (err instanceof CavePlaylistsNotInstalledError) {
           setNeedsSql(true)
           setPlaylists([])
@@ -131,15 +147,24 @@ export default function CavePlaylists({ cave, currentUserId }) {
         }
         setError(err.message || 'Could not load cave playlists.')
       })
-      .finally(() => setListLoading(false))
+      .finally(() => {
+        if (req !== listReqRef.current) return
+        setListLoading(false)
+      })
   }
 
-  function loadTracks(playlistId) {
-    setTracksLoading(true)
+  function loadTracks(playlistId, { silent = false } = {}) {
+    const req = ++tracksReqRef.current
+    if (!silent) setTracksLoading(true)
     setError('')
     listCavePlaylistTracks(playlistId)
-      .then(setTracks)
+      .then((rows) => {
+        if (req !== tracksReqRef.current) return
+        if (selectedIdRef.current && selectedIdRef.current !== playlistId) return
+        setTracks(rows)
+      })
       .catch((err) => {
+        if (req !== tracksReqRef.current) return
         if (err instanceof CavePlaylistsNotInstalledError) {
           setNeedsSql(true)
           setTracks([])
@@ -147,11 +172,24 @@ export default function CavePlaylists({ cave, currentUserId }) {
         }
         setError(err.message || 'Could not load tracks.')
       })
-      .finally(() => setTracksLoading(false))
+      .finally(() => {
+        if (req !== tracksReqRef.current) return
+        setTracksLoading(false)
+      })
   }
 
   useEffect(() => {
+    setSelected(null)
+    setTracks([])
+    setLayoutEditing(false)
+    setEditing(false)
+    setNeedsSql(false)
+    setError('')
     loadPlaylists()
+    return () => {
+      listReqRef.current += 1
+      tracksReqRef.current += 1
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cave.id])
 
@@ -183,6 +221,7 @@ export default function CavePlaylists({ cave, currentUserId }) {
   }
 
   function backToList() {
+    tracksReqRef.current += 1
     setSelected(null)
     setTracks([])
     setLayoutEditing(false)
@@ -190,7 +229,7 @@ export default function CavePlaylists({ cave, currentUserId }) {
     try {
       sessionStorage.removeItem(playlistStorageKey(cave.id))
     } catch { /* ignore */ }
-    loadPlaylists()
+    loadPlaylists({ silent: playlists.length > 0 })
   }
 
   function exitEditMode() {
@@ -200,6 +239,11 @@ export default function CavePlaylists({ cave, currentUserId }) {
 
   function playTrack(index) {
     if (!selected || !playback) return
+    // Tapping the active playing track pauses (matches “⏸ / Now playing” card).
+    if (isThisQueue && isPlaying && index === activeIndex) {
+      playback.pause()
+      return
+    }
     playback.setQueue(tracks, queueMeta(), index)
     playback.play(index)
   }
@@ -222,7 +266,7 @@ export default function CavePlaylists({ cave, currentUserId }) {
     try {
       await createCavePlaylist(cave.id, newPlaylistName)
       setNewPlaylistName('')
-      loadPlaylists()
+      loadPlaylists({ silent: playlists.length > 0 })
     } catch (err) {
       setError(err.message || 'Could not create playlist.')
     } finally {
@@ -244,10 +288,13 @@ export default function CavePlaylists({ cave, currentUserId }) {
       await addCavePlaylistTrack(selected.id, urlDraft, titleDraft)
       setUrlDraft('')
       setTitleDraft('')
-      loadTracks(selected.id)
-      loadPlaylists()
+      const updated = await listCavePlaylistTracks(selected.id)
+      if (selectedIdRef.current === selected.id) {
+        setTracks(updated)
+        setTracksLoading(false)
+      }
+      loadPlaylists({ silent: true })
       if (isThisQueue) {
-        const updated = await listCavePlaylistTracks(selected.id)
         playback.setQueue(updated, queueMeta(), playback.activeIndex)
       }
     } catch (err) {
@@ -274,10 +321,10 @@ export default function CavePlaylists({ cave, currentUserId }) {
         )
         if (nextTracks.length === 0) playback.pause()
       }
-      loadPlaylists()
+      loadPlaylists({ silent: true })
     } catch (err) {
       setError(err.message || 'Could not remove track.')
-      if (selected) loadTracks(selected.id)
+      if (selected) loadTracks(selected.id, { silent: true })
     } finally {
       setBusy(false)
     }
@@ -365,12 +412,15 @@ export default function CavePlaylists({ cave, currentUserId }) {
     )
   }
 
-  const trackCount = selected?.trackCount ?? tracks.length
+  // Prefer live tracks length once loaded; fall back to list metadata.
+  const trackCount = !tracksLoading && selected
+    ? tracks.length
+    : (selected?.trackCount ?? tracks.length)
 
   return (
-    <div className="pb-8">
-      <div className="sticky top-[var(--frens-cave-chrome-h,4.75rem)] z-10 shrink-0 frens-surface border-b frens-border px-3 pt-2.5 pb-2 flex items-center gap-2">
-        {selected ? (
+    <div className="px-3 pb-8 pt-2 space-y-3">
+      {selected ? (
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={backToList}
@@ -379,42 +429,31 @@ export default function CavePlaylists({ cave, currentUserId }) {
           >
             ‹
           </button>
-        ) : (
-          <PlaylistIcon className="w-4 h-4 shrink-0 frens-muted" />
-        )}
-        <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-medium truncate leading-snug">
-            {selected ? selected.name : 'Playlists'}
-          </h2>
-          {selected ? (
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-medium truncate leading-snug">{selected.name}</h2>
             <p className="text-[11px] frens-muted truncate">
               {trackCount} {trackCount === 1 ? 'track' : 'tracks'}
               {canModerate && editing ? ' · adding tracks' : ''}
             </p>
-          ) : (
-            <p className="text-[11px] frens-muted truncate">
-              {canModerate ? 'Tap + on a playlist to add tracks' : 'Listen together'}
-            </p>
-          )}
+          </div>
+          {canModerate ? (
+            <button
+              type="button"
+              onClick={() => (editing ? exitEditMode() : setEditing(true))}
+              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition ${
+                editing
+                  ? 'bg-black text-white dark:bg-white dark:text-black'
+                  : 'frens-btn-outline'
+              }`}
+              aria-label={editing ? 'Done editing playlist' : 'Add tracks to playlist'}
+              title={editing ? 'Done' : 'Add tracks'}
+            >
+              {editing ? <span className="text-sm leading-none">✓</span> : <PlusIcon className="w-4 h-4" />}
+            </button>
+          ) : null}
         </div>
-        {selected && canModerate ? (
-          <button
-            type="button"
-            onClick={() => (editing ? exitEditMode() : setEditing(true))}
-            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition ${
-              editing
-                ? 'bg-black text-white dark:bg-white dark:text-black'
-                : 'frens-btn-outline'
-            }`}
-            aria-label={editing ? 'Done editing playlist' : 'Add tracks to playlist'}
-            title={editing ? 'Done' : 'Add tracks'}
-          >
-            {editing ? <span className="text-sm leading-none">✓</span> : <PlusIcon className="w-4 h-4" />}
-          </button>
-        ) : null}
-      </div>
+      ) : null}
 
-      <div className={`px-3 pb-2 space-y-3 ${selected ? 'pt-[calc(0.875rem+3mm)]' : 'pt-2'}`}>
       {error ? (
         <p className="text-xs text-red-500 dark:text-red-400">{error}</p>
       ) : null}
@@ -444,7 +483,7 @@ export default function CavePlaylists({ cave, currentUserId }) {
           {listLoading ? (
             <p className="text-sm frens-muted text-center py-6">Loading…</p>
           ) : playlists.length === 0 ? (
-            <div className="border frens-border rounded-lg p-6 text-center">
+            <div className="rounded-xl p-8 text-center bg-black/[0.02] dark:bg-white/[0.02]">
               <p className="text-sm frens-muted">
                 {canModerate
                   ? 'No playlists yet — create one above.'
@@ -572,7 +611,7 @@ export default function CavePlaylists({ cave, currentUserId }) {
                     index={index}
                     activeIndex={activeIndex}
                     isPlaying={isPlaying}
-                    queueActive={queueActive}
+                    thisQueueActive={isThisQueue}
                     editable={canModerate && editing}
                     busy={busy}
                     onPlayTrack={playTrack}
@@ -584,7 +623,6 @@ export default function CavePlaylists({ cave, currentUserId }) {
           )}
         </>
       )}
-      </div>
     </div>
   )
 }

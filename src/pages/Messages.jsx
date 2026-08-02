@@ -18,12 +18,12 @@ function ThreadRow({ thread, onOpen }) {
       <button
         type="button"
         onClick={() => onOpen(thread.id)}
-        className="w-full text-left border frens-border rounded-xl p-3 flex items-center gap-3 hover:frens-surface transition"
+        className="w-full text-left border frens-border rounded-xl p-3 flex items-center gap-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition"
       >
         <div className="relative shrink-0">
           <ProfileAvatar profile={profile} className="w-11 h-11" logoClassName="w-6 h-auto" />
           {thread.unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#6BC06B] text-white text-[10px] frens-badge-count flex items-center justify-center">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-black text-white dark:bg-white dark:text-black text-[10px] frens-badge-count flex items-center justify-center">
               {thread.unread > 9 ? '9+' : thread.unread}
             </span>
           )}
@@ -32,10 +32,10 @@ function ThreadRow({ thread, onOpen }) {
           <span className="flex items-center justify-between gap-2">
             <FrenHandle>{thread.otherName}</FrenHandle>
             {thread.lastAt && (
-              <span className="text-[10px] frens-muted shrink-0">{relativeTime(thread.lastAt)}</span>
+              <span className="text-[10px] frens-muted shrink-0 tracking-wide">{relativeTime(thread.lastAt)}</span>
             )}
           </span>
-          <span className={`block text-xs truncate mt-0.5 ${thread.unread ? 'font-semibold frens-body-text' : 'frens-muted'}`}>
+          <span className={`block text-xs truncate mt-0.5 font-light ${thread.unread ? 'frens-body-text' : 'frens-muted'}`}>
             {thread.preview}
           </span>
         </span>

@@ -191,7 +191,13 @@ export default function LettersPanel({ onBack, onExit, onSettingsChange }) {
         )}
         onClose={onExit}
         maxWidth={composeStep === 'write' ? 'max-w-5xl' : composeStep === 'pick' ? 'max-w-sm' : 'max-w-lg'}
-        panelClassName={composeStep === 'pick' ? 'p-4' : ''}
+        panelClassName={
+          composeStep === 'write'
+            ? 'p-3 sm:p-4 flex flex-col max-h-[94vh] overflow-hidden'
+            : composeStep === 'pick'
+              ? 'p-4'
+              : ''
+        }
       >
         {!openLetter && !inCompose && (
           <p className="text-[11px] frens-muted -mt-2 mb-3 tracking-wide">

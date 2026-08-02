@@ -15,8 +15,8 @@ import { formatFrenHandle } from '../lib/frenName'
 import { CosmosProfileLink } from './ProfileGallery'
 import ProfilePlaylistsPublic from './playlists/ProfilePlaylistsPublic'
 import ProfileGathererPublic from './gatherer/ProfileGathererPublic'
-import LettersStatus from './folds-letters/LettersStatus'
 import SendLetterModal from './folds-letters/SendLetterModal'
+import ProfileOwlPost from './owl/ProfileOwlPost'
 
 export default function UserProfileModal({ userId, onClose, onOpenList, onNavigate, onOpenProfile, onOpenEcho, onOpenPlaylists, onOpenGatherer }) {
   const { user } = useAuth()
@@ -92,16 +92,12 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
             <ProfileAvatar profile={card} className="w-20 h-20" logoClassName="w-12 h-auto" />
             {!isMe && (
               <div className="flex items-center gap-2 shrink-0">
-                {card.owlPostOpen && (
-                  <button
-                    type="button"
-                    onClick={() => setShowSendLetter(true)}
-                    className="frens-btn-outline px-3 py-1.5 text-xs rounded-full"
-                    title="Send a sealed letter"
-                  >
-                    Letter
-                  </button>
-                )}
+                <ProfileOwlPost
+                  open={Boolean(card.owlPostOpen)}
+                  onClick={() => {
+                    if (card.owlPostOpen) setShowSendLetter(true)
+                  }}
+                />
                 <button
                   type="button"
                   onClick={handleMessage}
@@ -144,10 +140,6 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
             )}
 
             <CosmosProfileLink url={card.cosmosUrl} />
-
-            <div className="mt-2">
-              <LettersStatus open={Boolean(card.owlPostOpen)} compact={false} />
-            </div>
 
             <div className="flex gap-4 mt-2 text-sm">
               <button type="button" onClick={() => onOpenList?.(userId, 'following')} className="hover:underline">

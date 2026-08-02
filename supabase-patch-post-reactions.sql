@@ -76,7 +76,7 @@ declare
 begin
   if uid is null then raise exception 'Not authenticated'; end if;
   if rid is null or rid = '' then raise exception 'Reaction required'; end if;
-  if rid not in ('fire', 'thunder', 'hearth') then raise exception 'Invalid reaction'; end if;
+  if rid not in ('fire', 'thunder', 'hearth', 'lol') then raise exception 'Invalid reaction'; end if;
 
   if not exists (select 1 from public.posts p where p.id = p_post) then
     raise exception 'Post not found';

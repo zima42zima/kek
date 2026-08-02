@@ -2,14 +2,20 @@ import { useTheme } from '../context/ThemeContext'
 import sunIcon from '../assets/icons/sun.png'
 import moonIcon from '../assets/icons/moon.png'
 
-function ThemeIcon({ src, active }) {
+function ThemeIcon({ src }) {
   return (
     <span
       aria-hidden
-      className={`frens-mask-icon w-4 h-4 shrink-0 transition-opacity ${active ? 'opacity-100' : 'opacity-30'}`}
+      className="w-4 h-4 shrink-0 bg-black dark:bg-white"
       style={{
         maskImage: `url(${src})`,
         WebkitMaskImage: `url(${src})`,
+        maskSize: 'contain',
+        WebkitMaskSize: 'contain',
+        maskRepeat: 'no-repeat',
+        WebkitMaskRepeat: 'no-repeat',
+        maskPosition: 'center',
+        WebkitMaskPosition: 'center',
       }}
     />
   )
@@ -29,9 +35,9 @@ export default function ThemeToggle({ className = '' }) {
         aria-label="Light mode"
         aria-pressed={theme === 'light'}
         title="Light mode"
-        className={btnClass}
+        className={`${btnClass} ${theme === 'light' ? 'ring-1 ring-black dark:ring-white' : ''}`}
       >
-        <ThemeIcon src={sunIcon} active={theme === 'light'} />
+        <ThemeIcon src={sunIcon} />
       </button>
       <button
         type="button"
@@ -39,9 +45,9 @@ export default function ThemeToggle({ className = '' }) {
         aria-label="Dark mode"
         aria-pressed={theme === 'dark'}
         title="Dark mode"
-        className={btnClass}
+        className={`${btnClass} ${theme === 'dark' ? 'ring-1 ring-black dark:ring-white' : ''}`}
       >
-        <ThemeIcon src={moonIcon} active={theme === 'dark'} />
+        <ThemeIcon src={moonIcon} />
       </button>
     </div>
   )

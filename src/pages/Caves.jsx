@@ -114,6 +114,10 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
         currentUserId={meId}
         onOpenCave={selectCave}
         onCreateClick={() => setShowCreate(true)}
+        onJoinedPublic={async (id) => {
+          await syncRemoteCaves()
+          selectCave(id)
+        }}
       />
       {showCreate && (
         <CreateCaveModal onCreate={handleCreate} onClose={() => setShowCreate(false)} />

@@ -5,7 +5,7 @@ import { ECHO_DISCOVER_RADIUS_MIN_M, ECHO_PIN_OFFSET_MAX_M } from '../../lib/ech
 
 export default function EchoIntroModal({ onClose, onStart }) {
   return (
-    <Modal title="Echo Map" onClose={onClose} maxWidth="max-w-sm">
+    <Modal title="Echo" onClose={onClose} maxWidth="max-w-sm">
       <div className="space-y-4 text-center">
         <MapIcon className="w-12 h-12 mx-auto opacity-70" />
         <p className="text-sm frens-body-text">

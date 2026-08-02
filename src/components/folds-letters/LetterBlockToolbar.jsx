@@ -87,6 +87,7 @@ export default function LetterBlockToolbar({
   onFontChange,
   onDuplicate,
   onDelete,
+  bare = false,
 }) {
   const rootRef = useRef(null)
   const [menu, setMenu] = useState(null)
@@ -120,8 +121,8 @@ export default function LetterBlockToolbar({
   const fontLabel = owlFontMeta(block.font).label
   const scopeHint = hasSelection ? '' : ' — applies to new text'
 
-  return (
-    <div ref={rootRef} className="letter-studio-toolbar letter-studio-toolbar--block" role="toolbar" aria-label="Text formatting">
+  const tools = (
+    <>
       <ToolBtn
         title={`Text style${scopeHint}`}
         active={menu === 'role'}
@@ -131,8 +132,6 @@ export default function LetterBlockToolbar({
         <span className="letter-tool__label">{roleLabel}</span>
         <ChevronDownIcon />
       </ToolBtn>
-
-      <span className="letter-tool-divider" aria-hidden />
 
       <ToolBtn
         title="Size"
@@ -283,6 +282,19 @@ export default function LetterBlockToolbar({
           onPick={(id) => { onFontChange?.(id); setMenu(null) }}
         />
       )}
+    </>
+  )
+
+  return (
+    <div
+      ref={rootRef}
+      className={bare
+        ? 'letter-studio-toolbar-group relative'
+        : 'letter-studio-toolbar letter-studio-toolbar--block'}
+      role={bare ? 'group' : 'toolbar'}
+      aria-label="Text formatting"
+    >
+      {tools}
     </div>
   )
 }

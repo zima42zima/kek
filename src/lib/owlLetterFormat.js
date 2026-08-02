@@ -92,7 +92,7 @@ export const OWL_OCCASION_EXAMPLES = {
   general: {
     greeting: 'Dear friend,',
     body: 'I was thinking about you today and wanted to send a proper letter instead of just a message. Hope this finds you well.',
-    closing: 'Warmly,',
+    closing: '',
   },
   birthday: {
     greeting: 'Happy Birthday, you legend!',

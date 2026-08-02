@@ -163,7 +163,9 @@ export function GlobalPlaylistPauseButton({ className = '' }) {
       aria-label={isPlaying ? `Pause ${label}` : `Resume ${label}`}
       title={`${isPlaying ? 'Pause' : 'Play'}: ${label}${ownerHint}`}
     >
-      {isPlaying ? '⏸' : '▶'}
+      <span className="text-[11px] leading-none tracking-tight" aria-hidden>
+        {isPlaying ? 'II' : '▶'}
+      </span>
     </button>
   )
 }

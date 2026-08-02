@@ -46,19 +46,19 @@ export const ECHO_TYPES = [
   {
     id: 'image',
     label: 'Meme spot',
-    hint: 'Drop a meme or photo — the main way to echo a place',
+    hint: 'Image, GIF, or photo',
     featured: true,
   },
   {
     id: 'audio',
-    label: 'Voice echo',
-    hint: 'Optional — short audio with an optional cover meme',
+    label: 'Voice',
+    hint: 'Short audio, optional cover',
     maxSec: ECHO_AUDIO_MAX_SEC,
   },
   {
     id: 'video',
     label: 'Short video',
-    hint: 'Optional — glitchy moment, up to ' + ECHO_VIDEO_MAX_SEC + 's',
+    hint: `Up to ${ECHO_VIDEO_MAX_SEC}s, glitchy`,
     maxSec: ECHO_VIDEO_MAX_SEC,
   },
 ]

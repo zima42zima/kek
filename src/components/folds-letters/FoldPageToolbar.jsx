@@ -42,15 +42,16 @@ function CursorAnywhereIcon() {
   )
 }
 
-/** Freeform fold canvas tools. */
+/** Freeform fold canvas tools. Use bare when nested in unified top bar. */
 export default function FoldPageToolbar({
   typeAnywhere,
   onTypeAnywhereChange,
   onAddText,
   onAddImage,
+  bare = false,
 }) {
-  return (
-    <div className="letter-studio-toolbar letter-studio-toolbar--page" role="toolbar" aria-label="Fold tools">
+  const tools = (
+    <>
       <ToolBtn title="Add text block" onClick={onAddText}>
         <TextIcon />
       </ToolBtn>
@@ -65,6 +66,20 @@ export default function FoldPageToolbar({
       >
         <CursorAnywhereIcon />
       </ToolBtn>
+    </>
+  )
+
+  if (bare) {
+    return (
+      <div className="letter-studio-toolbar-group" role="group" aria-label="Fold tools">
+        {tools}
+      </div>
+    )
+  }
+
+  return (
+    <div className="letter-studio-toolbar letter-studio-toolbar--page" role="toolbar" aria-label="Fold tools">
+      {tools}
     </div>
   )
 }

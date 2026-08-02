@@ -12,7 +12,7 @@ import CavesManager from '../components/caves/CavesManager'
 import CaveIcon from '../components/caves/CaveIcon'
 import FollowListModal from '../components/FollowListModal'
 import UserProfileModal from '../components/UserProfileModal'
-import { MessageIcon, UserPlusIcon } from '../components/icons/UiIcons'
+import { MessageIcon, UserPlusIcon, PencilIcon, SettingsIcon } from '../components/icons/UiIcons'
 import InviteGenerator from '../components/InviteGenerator'
 import { useDms } from '../context/DmsContext'
 import EmojiButton from '../components/EmojiButton'
@@ -30,11 +30,20 @@ import ProfileLikedTracks from '../components/playlists/ProfileLikedTracks'
 import ProfileOwlPost from '../components/owl/ProfileOwlPost'
 import PsHubModal from '../components/folds-letters/PsHubModal'
 import { consumeOpenPsFlag } from '../lib/psNav'
+import { consumeOpenTrailFlag } from '../lib/trailNav'
 import { getMyOwlSettings, OwlPostNotInstalledError } from '../lib/owlPost'
+import ProfileTrail from '../components/ProfileTrail'
 
 const SHOW_EMAIL_KEY = 'frens-show-email'
 
-export default function Profile({ onNavigate, onOpenEcho, onOpenPlaylists, onOpenGatherer }) {
+export default function Profile({
+  onNavigate,
+  onOpenEcho,
+  onOpenPlaylists,
+  onOpenGatherer,
+  /** When false, profile stays mounted but hidden (keeps Posts|_log state stable). */
+  active = true,
+}) {
   const { profile: contextProfile, user, refreshProfile, signOut } = useAuth()
   const { postsByUser, loadPostsForUser } = usePosts()
   const { openConversationWithUser, totalUnread: dmUnread } = useDms()
@@ -43,11 +52,12 @@ export default function Profile({ onNavigate, onOpenEcho, onOpenPlaylists, onOpe
   const [frenName, setFrenName] = useState('')
   const [cosmosUrl, setCosmosUrl] = useState('')
   const [shareLocation, setShareLocation] = useState(false)
-  const [loading, setLoading] = useState(true)
+  // Don't block the whole shell if auth already has a profile — avoids Posts|_log flash.
+  const [loading, setLoading] = useState(() => !contextProfile)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
-  const [userId, setUserId] = useState(null)
-  const [userEmail, setUserEmail] = useState(null)
+  const [userId, setUserId] = useState(user?.id ?? null)
+  const [userEmail, setUserEmail] = useState(user?.email ?? null)
   const [dbSetup, setDbSetup] = useState(null)
   const [showEmail, setShowEmail] = useState(() => {
     try { return localStorage.getItem(SHOW_EMAIL_KEY) === '1' } catch { return false }
@@ -63,8 +73,16 @@ export default function Profile({ onNavigate, onOpenEcho, onOpenPlaylists, onOpe
   const [psSection, setPsSection] = useState(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [owlSettings, setOwlSettings] = useState(null)
+  /** Profile feed: posts vs _log (replies / aura — no quotes or reposts). */
+  const [profileView, setProfileView] = useState(() => (consumeOpenTrailFlag() ? 'log' : 'posts'))
   const fileInputRef = useRef(null)
   const bioRef = useRef(null)
+
+  // Home “_log →” and return visits: open trail when flag is set while active.
+  useEffect(() => {
+    if (!active) return
+    if (consumeOpenTrailFlag()) setProfileView('log')
+  }, [active])
 
   useEffect(() => {
     checkProfileDbSetup().then(setDbSetup)
@@ -244,15 +262,7 @@ export default function Profile({ onNavigate, onOpenEcho, onOpenPlaylists, onOpe
     }
   }
 
-  if (loading) {
-    return (
-      <div className="p-8 text-center">
-        <p className="frens-muted text-sm">Loading your profile...</p>
-      </div>
-    )
-  }
-
-  const displayProfile = profile ?? {
+  const displayProfile = profile ?? contextProfile ?? {
     frenName: frenName || userEmail?.split('@')[0] || 'nameless fren',
     bio: null,
     oneHumanThing: null,
@@ -262,6 +272,15 @@ export default function Profile({ onNavigate, onOpenEcho, onOpenPlaylists, onOpe
     cosmosUrl: null,
     isFounder: false,
     shareLocation: false,
+  }
+
+  // Only fully block when we have nothing to show (first paint, no auth profile yet).
+  if (loading && !profile && !contextProfile) {
+    return (
+      <div className="p-8 text-center">
+        <p className="frens-muted text-sm">Loading your profile...</p>
+      </div>
+    )
   }
 
   const email = userEmail || user?.email || null
@@ -288,49 +307,53 @@ export default function Profile({ onNavigate, onOpenEcho, onOpenPlaylists, onOpe
 
       {/* Profile header (cover removed — avatar only) */}
       <div>
-        {/* Avatar + Edit profile (X-style) */}
+        {/* Avatar + quiet tools (icons only — edit/settings aren't daily) */}
         <div className="flex items-end justify-between px-1 gap-2">
           <div className="rounded-full p-1 frens-surface">
             <ProfileAvatar profile={displayProfile} className="w-24 h-24" logoClassName="w-14 h-auto" />
           </div>
           <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowEditor(true)}
-            className="frens-btn-outline px-4 py-1.5 text-sm rounded-full"
-          >
-            Edit profile
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowSettings(true)}
-            className="frens-btn-outline px-4 py-1.5 text-sm rounded-full"
-          >
-            Settings
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowInviteModal(true)}
-            className="frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            aria-label="Invite a fren"
-            title="Invite a fren"
-          >
-            <UserPlusIcon className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate?.('messages')}
-            className="relative frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            aria-label={dmUnread ? `Messages (${dmUnread} unread)` : 'Messages'}
-            title="Messages"
-          >
-            <MessageIcon className="w-5 h-5" />
-            {dmUnread > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-[#6BC06B] text-white text-[9px] frens-badge-count flex items-center justify-center">
-                {dmUnread > 9 ? '9+' : dmUnread}
-              </span>
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowEditor(true)}
+              className="frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              aria-label="Edit profile"
+              title="Edit profile"
+            >
+              <PencilIcon className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              className="frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <SettingsIcon className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowInviteModal(true)}
+              className="frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              aria-label="Invite a fren"
+              title="Invite a fren"
+            >
+              <UserPlusIcon className="w-5 h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate?.('messages')}
+              className="relative frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              aria-label={dmUnread ? `Messages (${dmUnread} unread)` : 'Messages'}
+              title="Messages"
+            >
+              <MessageIcon className="w-5 h-5" />
+              {dmUnread > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-black text-white dark:bg-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
+                  {dmUnread > 9 ? '9+' : dmUnread}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -402,22 +425,58 @@ export default function Profile({ onNavigate, onOpenEcho, onOpenPlaylists, onOpe
         </div>
       </div>
 
-      {/* Feed */}
-      <div className="border-t frens-border pt-4 space-y-3">
-        <PostComposer collapsible />
-        {myPosts.length === 0 ? (
-          <div className="p-6 text-center">
-            <p className="text-sm frens-muted">No posts yet — share your first echo</p>
-          </div>
+      {/* Posts | _log — always both visible; selection only changes style + body */}
+      <div className="border-t frens-border pt-3 space-y-3 min-w-0">
+        <div className="flex items-center justify-between gap-2 px-1 min-h-[2.25rem]">
+          <button
+            type="button"
+            onClick={() => setProfileView('posts')}
+            aria-pressed={profileView === 'posts'}
+            className={`text-sm px-3 py-1.5 rounded-full transition shrink-0 ${
+              profileView === 'posts'
+                ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                : 'frens-muted hover:text-black dark:hover:text-white'
+            }`}
+          >
+            Posts
+          </button>
+          <button
+            type="button"
+            onClick={() => setProfileView('log')}
+            aria-pressed={profileView === 'log'}
+            className={`text-sm px-3 py-1.5 rounded-full transition shrink-0 ${
+              profileView === 'log'
+                ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                : 'frens-muted hover:text-black dark:hover:text-white'
+            }`}
+          >
+            _log
+          </button>
+        </div>
+
+        {profileView === 'posts' ? (
+          <>
+            <PostComposer collapsible />
+            {myPosts.length === 0 ? (
+              <div className="p-6 text-center">
+                <p className="text-sm frens-muted">No posts yet — share your first echo</p>
+              </div>
+            ) : (
+              myPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  authorProfile={userId ? { ...displayProfile, id: userId } : null}
+                  onOpenProfile={setViewUserId}
+                />
+              ))
+            )}
+          </>
         ) : (
-          myPosts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              authorProfile={userId ? { ...displayProfile, id: userId } : null}
-              onOpenProfile={setViewUserId}
-            />
-          ))
+          <ProfileTrail
+            userId={userId}
+            onOpenProfile={setViewUserId}
+          />
         )}
       </div>
 

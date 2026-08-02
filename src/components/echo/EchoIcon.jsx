@@ -1,12 +1,15 @@
-import echoIcon from '../../assets/icons/echo.png'
+import echoIcon from '../../assets/icons/echo.svg'
+import batIcon from '../../assets/icons/echo.png'
 
-// The echo brand mark. Painted with `currentColor` via a CSS mask so it always
-// matches the surrounding text color (works on any background).
-export default function EchoIcon({ className = 'w-5 h-4' }) {
+/**
+ * Echo brand mark for app UI — nav, buttons, headers.
+ * CSS mask + currentColor so light/dark both work.
+ */
+export default function EchoIcon({ className = 'w-5 h-5' }) {
   return (
     <span
       aria-hidden
-      className={`inline-block align-middle ${className}`}
+      className={`inline-block align-middle shrink-0 ${className}`}
       style={{
         backgroundColor: 'currentColor',
         maskImage: `url(${echoIcon})`,
@@ -22,5 +25,8 @@ export default function EchoIcon({ className = 'w-5 h-4' }) {
   )
 }
 
-// Raw asset URL, for contexts that can't render React (e.g. Leaflet HTML markers).
+/** Brand mark asset (`assets/icons/echo.svg`). */
 export { echoIcon }
+
+/** Bat silhouette — map pins only (not the app echo mark). */
+export { batIcon }

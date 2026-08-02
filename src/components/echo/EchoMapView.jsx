@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { echoIcon } from './EchoIcon'
+import { batIcon } from './EchoIcon'
 import {
   ECHO_CITY_RADIUS_M,
   ECHO_DISCOVER_RADIUS_MIN_M,
@@ -17,53 +17,41 @@ const MARKER_RING = '#444444'
 const ZONE_STROKE = '#888888'
 const ZONE_FILL = '#aaaaaa'
 
-function echoGlyphHtml(size = 16) {
-  return `<span style="
-    display:inline-block;width:${size}px;height:${Math.round(size * 0.7)}px;background:${MARKER_INK};
-    -webkit-mask:url(${echoIcon}) center/contain no-repeat;
-    mask:url(${echoIcon}) center/contain no-repeat;"></span>`
+/** Bat glyph only on the map (not the app echo mark). */
+function batGlyphHtml(size = 16, extraClass = '') {
+  const h = Math.round(size * 0.55)
+  return `<span class="${extraClass}" style="
+    display:inline-block;width:${size}px;height:${h}px;background:${MARKER_INK};
+    -webkit-mask:url(${batIcon}) center/contain no-repeat;
+    mask:url(${batIcon}) center/contain no-repeat;"></span>`
 }
 
-function markerHtml(echo, { global = false } = {}) {
-  const inner = echoGlyphHtml(echo.mine ? 16 : 14)
+function markerHtml(echo) {
+  const inner = batGlyphHtml(echo.mine ? 16 : 14)
   const weight = echo.mine ? 2 : 1.5
-  const globe = global
-    ? `<span style="position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:9999px;background:#fff;border:1px solid ${MARKER_RING};display:flex;align-items:center;justify-content:center;font-size:8px;">🌍</span>`
-    : ''
   return `
     <div style="position:relative;width:32px;height:32px;border-radius:9999px;
       display:flex;align-items:center;justify-content:center;
       background:#ffffff;border:${weight}px solid ${MARKER_RING};
       box-shadow:0 2px 8px rgba(0,0,0,.12);">
-      ${inner}${globe}
+      ${inner}
     </div>`
 }
 
-function batHintHtml(cityWide = false, global = false) {
-  const cityClass = cityWide ? ' frens-echo-bat-city' : ''
-  const globalClass = global ? ' frens-echo-bat-global' : ''
-  const title = global
-    ? 'World echo — tap to view from anywhere'
-    : cityWide
-      ? 'A city-wide meme spot is out there — explore to discover it'
-      : 'An echo is somewhere in this area — walk closer to discover it'
+function batHintHtml(cityWide = false) {
+  const title = cityWide
+    ? 'A city-wide meme spot is out there — explore to discover it'
+    : 'An echo is somewhere in this area — walk closer to discover it'
   return `
-    <div class="frens-echo-bat-hint${cityClass}${globalClass}" title="${title}">
-      <span class="frens-echo-bat-fly" style="
-        display:inline-block;width:18px;height:12px;background:${MARKER_INK};
-        -webkit-mask:url(${echoIcon}) center/contain no-repeat;
-        mask:url(${echoIcon}) center/contain no-repeat;"></span>
-      ${global ? '<span class="frens-echo-bat-globe">🌍</span>' : ''}
+    <div class="frens-echo-bat-hint" title="${title}">
+      ${batGlyphHtml(18)}
     </div>`
 }
 
 function clusterHtml(count) {
   return `
     <div class="frens-echo-cluster" title="${count} echoes here">
-      <span class="frens-echo-bat-fly" style="
-        display:inline-block;width:20px;height:14px;background:${MARKER_INK};
-        -webkit-mask:url(${echoIcon}) center/contain no-repeat;
-        mask:url(${echoIcon}) center/contain no-repeat;"></span>
+      ${batGlyphHtml(20)}
       <span class="frens-echo-cluster-count">${count}</span>
     </div>`
 }
@@ -300,7 +288,7 @@ export default function EchoMapView({
 
     echoes.forEach((echo) => {
       const icon = L.divIcon({
-        html: markerHtml(echo, { global: canBrowseGlobally(echo) }),
+        html: markerHtml(echo),
         className: 'frens-echo-marker',
         iconSize: [32, 32],
         iconAnchor: [16, 16],
@@ -321,7 +309,7 @@ export default function EchoMapView({
 
     hints.forEach((hint) => {
       const icon = L.divIcon({
-        html: batHintHtml(hint.cityWide, hint.global),
+        html: batHintHtml(hint.cityWide),
         className: 'frens-echo-bat-marker',
         iconSize: [40, 40],
         iconAnchor: [20, 20],
@@ -372,7 +360,7 @@ export default function EchoMapView({
       const echo = item.echo
       const global = canBrowseGlobally(echo)
       const icon = L.divIcon({
-        html: batHintHtml(false, global),
+        html: batHintHtml(false),
         className: 'frens-echo-bat-marker',
         iconSize: [40, 40],
         iconAnchor: [20, 20],

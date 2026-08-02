@@ -25,32 +25,16 @@ import EchoDurationPicker, { durationToExpiresAt } from './EchoDurationPicker'
 import { formatRangeM } from '../../lib/echoRange'
 import { OPTION_ACTIVE, OPTION_IDLE, GlobeIcon } from '../icons/UiIcons'
 
-function StepDots({ steps, step }) {
-  const idx = steps.indexOf(step)
-  return (
-    <div className="flex justify-center gap-1.5 mb-4">
-      {steps.map((s, i) => (
-        <span
-          key={s}
-          className={`h-1.5 rounded-full transition-all ${
-            i === idx ? 'w-6 bg-black dark:bg-white' : i < idx ? 'w-1.5 bg-black/40 dark:bg-white/40' : 'w-1.5 bg-black/10 dark:bg-white/15'
-          }`}
-        />
-      ))}
-    </div>
-  )
-}
-
 function SafetyNotice({ visibility }) {
   if (!ECHO_PUBLIC_VISIBILITIES.has(visibility)) return null
   return (
     <div className="rounded-xl border border-amber-500/40 bg-amber-500/8 px-3 py-2.5 text-left">
       <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
-        Public meme spots can reveal you were here
+        Public echoes can reveal you were here
       </p>
       <p className="text-[11px] frens-muted mt-1">
-        We scatter your pin up to {ECHO_PIN_OFFSET_MAX_M}m. Nobody sees the exact spot — only an approximate area until they walk into your chosen range.
-        {visibility === 'friends' ? ' Only frens can discover it.' : ''}
+        Pin is scattered up to {ECHO_PIN_OFFSET_MAX_M}m — exact GPS stays private.
+        {visibility === 'friends' ? ' Only frens can find it.' : ''}
       </p>
     </div>
   )
@@ -157,7 +141,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
           senseFilter: null,
         })
       } catch (err) {
-        setPublishError(err.message || 'Could not publish meme spot.')
+        setPublishError(err.message || 'Could not publish echo.')
       } finally {
         setPublishing(false)
       }
@@ -196,34 +180,16 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
 
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2">Drop a meme spot <EchoIcon className="w-5 h-4" /></span>}
+      title={<span className="inline-flex items-center gap-2">Leave an echo <EchoIcon className="w-5 h-4" /></span>}
       onClose={onClose}
       maxWidth="max-w-sm"
     >
-      <StepDots steps={steps} step={step} />
-
       {step === 'type' && (
         <div className="space-y-3">
-          <p className="text-sm frens-body-text text-center">What are you leaving?</p>
-
-          <button
-            type="button"
-            onClick={() => setEchoType(FEATURED_TYPE.id)}
-            className={`w-full text-left rounded-xl border p-4 transition ${
-              echoType === FEATURED_TYPE.id ? OPTION_ACTIVE : OPTION_IDLE
-            }`}
-          >
-            <span className="inline-flex items-center gap-2">
-              <EchoTypeIcon kind={FEATURED_TYPE.id} className="w-5 h-5 shrink-0" />
-              <span className="font-medium text-sm">{FEATURED_TYPE.label}</span>
-              <span className="text-[10px] uppercase tracking-wide frens-muted ml-auto">main</span>
-            </span>
-            <p className="text-xs frens-muted mt-1 ml-7">{FEATURED_TYPE.hint}</p>
-          </button>
+          <p className="text-sm frens-body-text text-center">How are you echoing?</p>
 
           <div className="space-y-2">
-            <p className="text-[11px] frens-muted text-center">Or something else</p>
-            {ALT_TYPES.map((t) => (
+            {[FEATURED_TYPE, ...ALT_TYPES].map((t) => (
               <button
                 key={t.id}
                 type="button"
@@ -241,16 +207,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             ))}
           </div>
 
-          {echoType === 'video' && (
-            <div className="rounded-xl bg-black/5 dark:bg-white/5 px-3 py-2 text-center">
-              <p className="text-[11px] font-medium">Glitch your echo</p>
-              <p className="text-[10px] frens-muted mt-0.5">
-                Retro FX live on camera — ASCII, CRT, heat, 8-bit &amp; more
-              </p>
-            </div>
-          )}
-
-          <button type="button" onClick={next} className="frens-btn-primary w-full py-2.5 text-sm mt-2">
+          <button type="button" onClick={next} className="frens-btn-primary w-full py-2.5 text-sm mt-1">
             Continue
           </button>
         </div>
@@ -335,9 +292,9 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
 
       {step === 'place' && (
         <div className="space-y-3">
-          <p className="text-sm frens-body-text text-center">Place your meme spot</p>
+          <p className="text-sm frens-body-text text-center">Place your echo</p>
           <p className="text-xs frens-muted text-center -mt-1">
-            Drag the pin anywhere inside the {ECHO_PIN_OFFSET_MAX_M}m circle — your GPS stays private.
+            Drag the pin in the {ECHO_PIN_OFFSET_MAX_M}m circle — GPS stays private.
           </p>
           <label className="block">
             <span className="text-xs frens-muted">Place name (optional)</span>
@@ -377,7 +334,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
               className="frens-btn-primary flex-1 py-2.5 text-sm disabled:opacity-40"
             >
               {isImage
-                ? (publishing ? 'Publishing…' : 'Publish meme spot')
+                ? (publishing ? 'Publishing…' : 'Publish echo')
                 : 'Continue'}
             </button>
           </div>
@@ -451,8 +408,8 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
           <EchoImagePicker
             value={imagePick}
             onChange={setImagePick}
-            title="Drop your meme"
-            hint="GIFs, memes, and photos work — EXIF stripped for privacy"
+            title="Add image"
+            hint="GIF, meme, or photo — EXIF stripped"
           />
           {publishError ? (
             <p className="text-xs text-red-500 dark:text-red-400 text-center">{publishError}</p>
@@ -469,7 +426,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
                 ? 'Publishing…'
                 : needsPinStep
                   ? 'Continue'
-                  : 'Publish meme spot'}
+                  : 'Publish echo'}
             </button>
           </div>
         </div>
@@ -495,16 +452,13 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
 
           {isAudio && recording && (
             <div className="space-y-2 border-t frens-border pt-3">
-              <p className="text-xs font-medium text-center">Cover meme (optional)</p>
-              <p className="text-[10px] frens-muted text-center -mt-1">
-                Show a meme or photo while frens listen
-              </p>
+              <p className="text-xs font-medium text-center">Cover image (optional)</p>
               <EchoImagePicker
                 compact
                 value={audioCover}
                 onChange={setAudioCover}
-                title="Add a cover meme"
-                hint="Meme, album art, scene — anything visual"
+                title="Add cover"
+                hint="Photo or meme while frens listen"
               />
             </div>
           )}
