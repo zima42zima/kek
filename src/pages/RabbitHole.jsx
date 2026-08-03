@@ -9,6 +9,7 @@ import PillComposer from '../components/PillComposer'
 import { appendGifUrlToText, prepareCommentText } from '../lib/imageAttach'
 import { insertAtCaret } from '../lib/insertText'
 import rabbitholeIcon from '../assets/icons/rabbithole.svg'
+import { maskImageStyle } from '../lib/maskIcon'
 import {
   RABBIT_RULES,
   RABBIT_SORTS,
@@ -495,7 +496,7 @@ export default function RabbitHole({ topicId: urlTopicId = null, onTopicChange }
             <span
               aria-hidden
               className="frens-mask-icon w-10 h-10 shrink-0"
-              style={{ maskImage: `url(${rabbitholeIcon})`, WebkitMaskImage: `url(${rabbitholeIcon})` }}
+              style={maskImageStyle(rabbitholeIcon)}
             />
             <div>
               <h2 className="frens-title-lg">Rabbit Hole</h2>

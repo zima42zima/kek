@@ -1,6 +1,7 @@
 import worldIcon from '../assets/icons/world.png'
 import cavesIcon from '../assets/icons/caves.svg'
 import frogIcon from '../assets/icons/frog-icon.svg'
+import { maskImageStyle } from '../lib/maskIcon'
 
 // Masked (theme-colored) icons for audiences we have art for.
 const MASKED = {
@@ -18,7 +19,7 @@ export default function AudienceIcon({ id, className = 'w-4 h-4' }) {
       <span
         aria-hidden
         className={`frens-mask-icon inline-block align-middle ${className}`}
-        style={{ maskImage: `url(${masked})`, WebkitMaskImage: `url(${masked})` }}
+        style={maskImageStyle(masked)}
       />
     )
   }
@@ -45,7 +46,7 @@ export default function AudienceIcon({ id, className = 'w-4 h-4' }) {
     <span
       aria-hidden
       className={`frens-mask-icon inline-block align-middle ${className}`}
-      style={{ maskImage: `url(${worldIcon})`, WebkitMaskImage: `url(${worldIcon})` }}
+      style={maskImageStyle(worldIcon)}
     />
   )
 }

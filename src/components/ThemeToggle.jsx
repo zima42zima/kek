@@ -1,6 +1,7 @@
 import { useTheme } from '../context/ThemeContext'
 import sunIcon from '../assets/icons/sun.png'
 import moonIcon from '../assets/icons/moon.png'
+import { maskImageStyle } from '../lib/maskIcon'
 
 function ThemeIcon({ src }) {
   return (
@@ -8,8 +9,7 @@ function ThemeIcon({ src }) {
       aria-hidden
       className="w-4 h-4 shrink-0 bg-black dark:bg-white"
       style={{
-        maskImage: `url(${src})`,
-        WebkitMaskImage: `url(${src})`,
+        ...maskImageStyle(src),
         maskSize: 'contain',
         WebkitMaskSize: 'contain',
         maskRepeat: 'no-repeat',

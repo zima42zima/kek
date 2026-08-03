@@ -1,4 +1,5 @@
 import auraIcon from '../assets/icons/aura.png'
+import { maskImageStyle } from '../lib/maskIcon'
 
 export const AURA_COLORS = [
   '#6BC06B',
@@ -26,8 +27,7 @@ export default function AuraIcon({
       className={`inline-block shrink-0 pointer-events-none aura-glyph ${animate ? 'aura-glyph-pop' : ''} ${className}`}
       style={{
         backgroundColor: color,
-        WebkitMaskImage: `url(${auraIcon})`,
-        maskImage: `url(${auraIcon})`,
+        ...maskImageStyle(auraIcon),
         filter: active && !animate ? `drop-shadow(0 0 4px ${color})` : undefined,
       }}
     />

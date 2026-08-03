@@ -40,6 +40,7 @@ import {
 import { buildAppPath, goApp, isKnownAppPath, parseAppRoute } from '../lib/appNav'
 import { clearPostFromUrl } from '../lib/postShare'
 import { GlobalPlaylistPauseButton } from '../context/PlaylistPlaybackContext'
+import { maskImageStyle } from '../lib/maskIcon'
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: homeIcon },
@@ -60,8 +61,7 @@ function NavIcon({ src }) {
       aria-hidden
       className="block w-6 h-6 shrink-0 bg-black dark:bg-white"
       style={{
-        maskImage: `url(${src})`,
-        WebkitMaskImage: `url(${src})`,
+        ...maskImageStyle(src),
         maskSize: 'contain',
         WebkitMaskSize: 'contain',
         maskRepeat: 'no-repeat',
