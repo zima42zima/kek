@@ -175,7 +175,7 @@ export default function PostCard({ post, authorProfile, onOpenProfile, highlight
             )}
           </div>
 
-          <div className={POST_ACTION_ROW}>
+          <div className={`${POST_ACTION_ROW} items-center`}>
             {canAura ? (
               <AuraButton postId={post.id} auraCount={auraCount} iGaveAura={iGaveAura} />
             ) : (

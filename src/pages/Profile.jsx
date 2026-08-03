@@ -12,7 +12,7 @@ import CavesManager from '../components/caves/CavesManager'
 import CaveIcon from '../components/caves/CaveIcon'
 import FollowListModal from '../components/FollowListModal'
 import UserProfileModal from '../components/UserProfileModal'
-import { MessageIcon, UserPlusIcon, PencilIcon, SettingsIcon } from '../components/icons/UiIcons'
+import { MoreIcon, UserPlusIcon, PencilIcon, SettingsIcon } from '../components/icons/UiIcons'
 import InviteGenerator from '../components/InviteGenerator'
 import { useDms } from '../context/DmsContext'
 import EmojiButton from '../components/EmojiButton'
@@ -28,12 +28,15 @@ import ProfilePlaylists from '../components/playlists/ProfilePlaylists'
 import ProfileGatherer from '../components/gatherer/ProfileGatherer'
 import ProfileLikedTracks from '../components/playlists/ProfileLikedTracks'
 import ProfileOwlPost from '../components/owl/ProfileOwlPost'
+import ProfileFolds from '../components/folds-letters/ProfileFolds'
 import PsHubModal from '../components/folds-letters/PsHubModal'
 import { consumeOpenPsFlag } from '../lib/psNav'
+import { consumeOpenFounderConsoleFlag, peekOpenFounderConsoleFlag } from '../lib/founderNav'
 import { consumeOpenTrailFlag } from '../lib/trailNav'
 import { getMyOwlSettings, OwlPostNotInstalledError } from '../lib/owlPost'
+import { markPsHubSeen, psHubBadgeCount } from '../lib/profileHubBadges'
 import ProfileTrail from '../components/ProfileTrail'
-
+import FounderConsole from '../components/FounderConsole'
 const SHOW_EMAIL_KEY = 'frens-show-email'
 
 export default function Profile({
@@ -44,9 +47,9 @@ export default function Profile({
   /** When false, profile stays mounted but hidden (keeps Posts|_log state stable). */
   active = true,
 }) {
-  const { profile: contextProfile, user, refreshProfile, signOut } = useAuth()
+  const { profile: contextProfile, user, refreshProfile, signOut, accountStatus, refreshAccountStatus } = useAuth()
   const { postsByUser, loadPostsForUser } = usePosts()
-  const { openConversationWithUser, totalUnread: dmUnread } = useDms()
+  const { openConversationWithUser } = useDms()
   const [profile, setProfile] = useState(contextProfile)
   const [bio, setBio] = useState('')
   const [frenName, setFrenName] = useState('')
@@ -72,11 +75,34 @@ export default function Profile({
   const [showPsPanel, setShowPsPanel] = useState(false)
   const [psSection, setPsSection] = useState(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [showFounderConsole, setShowFounderConsole] = useState(false)
+  const [showToolsMenu, setShowToolsMenu] = useState(false)
   const [owlSettings, setOwlSettings] = useState(null)
+  const [hubBadgeTick, setHubBadgeTick] = useState(0)
   /** Profile feed: posts vs _log (replies / aura — no quotes or reposts). */
   const [profileView, setProfileView] = useState(() => (consumeOpenTrailFlag() ? 'log' : 'posts'))
   const fileInputRef = useRef(null)
   const bioRef = useRef(null)
+  const toolsMenuRef = useRef(null)
+
+  // Close profile tools menu on outside click / Escape
+  useEffect(() => {
+    if (!showToolsMenu) return
+    function onPointerDown(e) {
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target)) {
+        setShowToolsMenu(false)
+      }
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') setShowToolsMenu(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [showToolsMenu])
 
   // Home “_log →” and return visits: open trail when flag is set while active.
   useEffect(() => {
@@ -163,12 +189,58 @@ export default function Profile({
   }, [userId])
 
   useEffect(() => {
-    const open = consumeOpenPsFlag()
-    if (open) {
-      setPsSection(open)
-      setShowPsPanel(true)
+    const refreshOwl = () => {
+      if (!userId) return
+      getMyOwlSettings()
+        .then(setOwlSettings)
+        .catch(() => {})
     }
+    window.addEventListener('frens:notifications-refreshed', refreshOwl)
+    return () => window.removeEventListener('frens:notifications-refreshed', refreshOwl)
+  }, [userId])
+
+  function openPsHub(section = null) {
+    setPsSection(section)
+    setShowPsPanel(true)
+  }
+
+  const isPlatformStaff = Boolean(
+    accountStatus?.isPlatformStaff
+    || profile?.isFounder
+    || profile?.isCofounder
+    || contextProfile?.isFounder
+    || contextProfile?.isCofounder,
+  )
+  const openReportCount = Number(accountStatus?.openReports ?? 0)
+
+  const psBadgeCount = userId && owlSettings
+    ? psHubBadgeCount(userId, owlSettings.pendingCount)
+    : 0
+  void hubBadgeTick
+  const psOpenedMarked = useRef(false)
+
+  useEffect(() => {
+    if (!showPsPanel) {
+      psOpenedMarked.current = false
+      return
+    }
+    if (!userId || !owlSettings || psOpenedMarked.current) return
+    markPsHubSeen(userId, owlSettings.pendingCount)
+    setHubBadgeTick((t) => t + 1)
+    psOpenedMarked.current = true
+  }, [showPsPanel, userId, owlSettings])
+
+  useEffect(() => {
+    const open = consumeOpenPsFlag()
+    if (open) openPsHub(open)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!isPlatformStaff || !peekOpenFounderConsoleFlag()) return
+    consumeOpenFounderConsoleFlag()
+    setShowFounderConsole(true)
+  }, [isPlatformStaff])
 
   function toggleShowEmail() {
     setShowEmail((prev) => {
@@ -271,6 +343,7 @@ export default function Profile({
     coverUrl: null,
     cosmosUrl: null,
     isFounder: false,
+    isCofounder: false,
     shareLocation: false,
   }
 
@@ -307,53 +380,10 @@ export default function Profile({
 
       {/* Profile header (cover removed — avatar only) */}
       <div>
-        {/* Avatar + quiet tools (icons only — edit/settings aren't daily) */}
-        <div className="flex items-end justify-between px-1 gap-2">
+        {/* Avatar only — tools sit on the hub row below (with caves / P.S.) */}
+        <div className="flex items-end px-1">
           <div className="rounded-full p-1 frens-surface">
             <ProfileAvatar profile={displayProfile} className="w-24 h-24" logoClassName="w-14 h-auto" />
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowEditor(true)}
-              className="frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              aria-label="Edit profile"
-              title="Edit profile"
-            >
-              <PencilIcon className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowSettings(true)}
-              className="frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              aria-label="Settings"
-              title="Settings"
-            >
-              <SettingsIcon className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowInviteModal(true)}
-              className="frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              aria-label="Invite a fren"
-              title="Invite a fren"
-            >
-              <UserPlusIcon className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigate?.('messages')}
-              className="relative frens-btn-outline w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              aria-label={dmUnread ? `Messages (${dmUnread} unread)` : 'Messages'}
-              title="Messages"
-            >
-              <MessageIcon className="w-5 h-5" />
-              {dmUnread > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-0.5 rounded-full bg-black text-white dark:bg-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
-                  {dmUnread > 9 ? '9+' : dmUnread}
-                </span>
-              )}
-            </button>
           </div>
         </div>
 
@@ -367,6 +397,11 @@ export default function Profile({
             {displayProfile.isFounder && (
               <span className="text-[10px] text-[#6BC06B] dark:text-white border frens-border rounded-full px-2 py-0.5">
                 first fren
+              </span>
+            )}
+            {displayProfile.isCofounder && !displayProfile.isFounder && (
+              <span className="text-[10px] frens-muted border frens-border rounded-full px-2 py-0.5">
+                co-founder
               </span>
             )}
           </div>
@@ -403,24 +438,100 @@ export default function Profile({
             </button>
           </div>
 
-          <div className="flex items-center gap-2 mt-3">
+          {/* Always visible for you — entry points. Public visibility is opt-in inside each section. */}
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
             <ProfileCaves onNavigate={onNavigate} />
-            {userId && (
+            {userId ? (
               <ProfileEchoes userId={userId} onNavigate={onNavigate} onOpenEcho={onOpenEcho} />
-            )}
-            {userId && (
+            ) : null}
+            {userId ? (
               <ProfilePlaylists userId={userId} onOpenPlaylists={onOpenPlaylists} />
-            )}
-            {userId && (
+            ) : null}
+            {userId ? (
               <ProfileGatherer userId={userId} onOpenGatherer={onOpenGatherer} onNavigate={onNavigate} />
-            )}
+            ) : null}
             {owlSettings && (
               <ProfileOwlPost
                 open={owlSettings.enabled}
-                pendingCount={owlSettings.pendingCount}
-                onClick={() => { setPsSection(null); setShowPsPanel(true) }}
+                badgeCount={psBadgeCount}
+                onClick={() => openPsHub(null)}
               />
             )}
+            {userId ? <ProfileFolds userId={userId} /> : null}
+            <div className="relative ml-auto shrink-0" ref={toolsMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowToolsMenu((v) => !v)}
+                className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex items-center justify-center text-black dark:text-white"
+                aria-label="Profile tools"
+                aria-haspopup="menu"
+                aria-expanded={showToolsMenu}
+                title="More"
+              >
+                <MoreIcon className="w-[1.06rem] h-[1.06rem]" />
+              </button>
+              {showToolsMenu && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1.5 z-30 min-w-[11.5rem] rounded-xl border frens-border frens-surface shadow-lg py-1 overflow-hidden"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left hover:bg-black/5 dark:hover:bg-white/10 transition"
+                    onClick={() => {
+                      setShowToolsMenu(false)
+                      setShowEditor(true)
+                    }}
+                  >
+                    <PencilIcon className="w-4 h-4 shrink-0 opacity-80" />
+                    Edit profile
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left hover:bg-black/5 dark:hover:bg-white/10 transition"
+                    onClick={() => {
+                      setShowToolsMenu(false)
+                      setShowSettings(true)
+                    }}
+                  >
+                    <SettingsIcon className="w-4 h-4 shrink-0 opacity-80" />
+                    Settings
+                  </button>
+                  {isPlatformStaff ? (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="w-full flex items-center justify-between gap-2.5 px-3 py-2.5 text-sm text-left hover:bg-black/5 dark:hover:bg-white/10 transition"
+                      onClick={() => {
+                        setShowToolsMenu(false)
+                        setShowFounderConsole(true)
+                      }}
+                    >
+                      <span>Founder console</span>
+                      {openReportCount > 0 ? (
+                        <span className="min-w-[16px] h-4 px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
+                          {openReportCount > 9 ? '9+' : openReportCount}
+                        </span>
+                      ) : null}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left hover:bg-black/5 dark:hover:bg-white/10 transition"
+                    onClick={() => {
+                      setShowToolsMenu(false)
+                      setShowInviteModal(true)
+                    }}
+                  >
+                    <UserPlusIcon className="w-4 h-4 shrink-0 opacity-80" />
+                    Invite a fren
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -459,7 +570,7 @@ export default function Profile({
             <PostComposer collapsible />
             {myPosts.length === 0 ? (
               <div className="p-6 text-center">
-                <p className="text-sm frens-muted">No posts yet — share your first echo</p>
+                <p className="text-sm frens-muted">No posts yet — share your first aftersound</p>
               </div>
             ) : (
               myPosts.map((post) => (
@@ -509,10 +620,28 @@ export default function Profile({
         </Modal>
       )}
 
+      {showFounderConsole && (
+        <FounderConsole
+          open={showFounderConsole}
+          onClose={() => setShowFounderConsole(false)}
+          isFounder={Boolean(accountStatus?.isFounder || profile?.isFounder || contextProfile?.isFounder)}
+          onOpenRabbitTopic={(topicId) => onNavigate?.('rabbit', { topicId })}
+          onStatusChange={refreshAccountStatus}
+        />
+      )}
+
       {showPsPanel && (
         <PsHubModal
           initialSection={psSection}
-          onClose={() => { setShowPsPanel(false); setPsSection(null) }}
+          onClose={() => {
+            setShowPsPanel(false)
+            setPsSection(null)
+            if (userId) {
+              getMyOwlSettings()
+                .then(setOwlSettings)
+                .catch(() => {})
+            }
+          }}
           onSettingsChange={setOwlSettings}
         />
       )}
@@ -625,7 +754,7 @@ export default function Profile({
             />
 
             <SettingToggle
-              title="Share my city on Echoes"
+              title="Share my city on Aftersounds"
               hint="Only city level, never exact location."
               checked={shareLocation}
               onToggle={handleToggleLocation}

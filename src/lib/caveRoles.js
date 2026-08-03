@@ -1,48 +1,100 @@
-/** Fun cave titles — temporary, silly, human. Not corporate. */
+/** Per-cave role catalog — examples by default, fully editable by keepers. Max 12. */
 
+export const MAX_CAVE_ROLES = 12
 export const DEFAULT_TITLE_ID = 'dweller'
 
-/** Maps retired title ids still stored on members → current title. */
-const LEGACY_TITLE_IDS = {
-  frog_whisperer: 'vibe_curator',
-  wisdom_frog: 'deep_cut_sage',
-}
-
-export const CAVE_FUN_TITLES = [
-  { id: 'dweller', label: 'Cave Dweller', emoji: '🪨', weeks: null, blurb: 'Everyone starts here.' },
-  { id: 'kek_keeper', label: 'Kek Keeper', emoji: '😂', weeks: 2, blurb: 'Protects the bit. Keeps the silly alive.' },
-  { id: 'vibe_curator', label: 'Vibe Curator', emoji: '🌊', weeks: 2, blurb: 'Calms spirals and sets the mood.' },
-  { id: 'meme_archivist', label: 'Meme Archivist', emoji: '🗂️', weeks: 4, blurb: "Saves the cave's greatest hits." },
-  { id: 'link_sommelier', label: 'Link Sommelier', emoji: '🔗', weeks: 2, blurb: 'Finds the best URLs and rabbit holes.' },
-  { id: 'hype_person', label: 'Hype Person', emoji: '📣', weeks: 2, blurb: 'Celebrates wins and good posts.' },
-  { id: 'gentle_roaster', label: 'Gentle Roaster', emoji: '🔥', weeks: 2, blurb: 'Roasts with love, never mean.' },
-  { id: 'chaos_coordinator', label: 'Chaos Coordinator', emoji: '🎉', weeks: 2, blurb: 'Starts the fun group chaos.' },
-  { id: 'storyteller', label: 'Storyteller', emoji: '📖', weeks: 3, blurb: 'Shares lore, tales, and tangents.' },
-  { id: 'seasonal_dj', label: 'Seasonal DJ', emoji: '🎧', weeks: 1, blurb: 'Curates cave playlists for the room.' },
-  { id: 'deep_cut_sage', label: 'Deep Cut Sage', emoji: '💭', weeks: 2, blurb: 'Drops wisdom and deep recommendations.' },
-  { id: 'hug_giver', label: 'Emergency Hug Giver', emoji: '🤗', weeks: 2, blurb: 'On call for bad days.' },
-  { id: 'unga_bunga', label: 'Unga Bunga Champion', emoji: '🏆', weeks: 4, blurb: 'Peak silly human of the month.' },
+/**
+ * Six starter roles — Misao-flavored: presence over status, soft irony, 42-adjacent.
+ * Caves can rename, re-emoji, or replace any of these.
+ */
+export const DEFAULT_CAVE_ROLES = [
+  {
+    id: 'dweller',
+    label: 'Dweller',
+    emoji: '🪨',
+    markUrl: null,
+    blurb: 'Everyone arrives as this. No rank, only presence.',
+    weeks: null,
+    canDj: false,
+  },
+  {
+    id: 'witness_42',
+    label: 'Witness of 42',
+    emoji: '🌌',
+    markUrl: null,
+    blurb: 'Got the answer. Stayed for the silence after.',
+    weeks: 4,
+    canDj: false,
+  },
+  {
+    id: 'soft_static',
+    label: 'Soft Static',
+    emoji: '📻',
+    markUrl: null,
+    blurb: 'Fills the quiet without filling the room.',
+    weeks: 2,
+    canDj: true,
+  },
+  {
+    id: 'bit_archivist',
+    label: 'Bit Archivist',
+    emoji: '📼',
+    markUrl: null,
+    blurb: 'Treats the unserious like scripture.',
+    weeks: 3,
+    canDj: false,
+  },
+  {
+    id: 'reckless_empath',
+    label: 'Reckless Empath',
+    emoji: '🫀',
+    markUrl: null,
+    blurb: 'Feels first. Posts second. Deletes never.',
+    weeks: 2,
+    canDj: false,
+  },
+  {
+    id: 'plot_hole',
+    label: 'Plot Hole',
+    emoji: '🕳️',
+    markUrl: null,
+    blurb: 'Makes the story weirder — and somehow truer.',
+    weeks: 2,
+    canDj: false,
+  },
 ]
 
+/** Maps retired global title ids → default catalog ids. */
+const LEGACY_TITLE_IDS = {
+  frog_whisperer: 'soft_static',
+  wisdom_frog: 'witness_42',
+  kek_keeper: 'bit_archivist',
+  vibe_curator: 'soft_static',
+  meme_archivist: 'bit_archivist',
+  link_sommelier: 'plot_hole',
+  hype_person: 'reckless_empath',
+  gentle_roaster: 'plot_hole',
+  chaos_coordinator: 'plot_hole',
+  storyteller: 'bit_archivist',
+  seasonal_dj: 'soft_static',
+  deep_cut_sage: 'witness_42',
+  hug_giver: 'reckless_empath',
+  unga_bunga: 'plot_hole',
+  cave_dweller: 'dweller',
+}
+
+/** @deprecated use DEFAULT_CAVE_ROLES — kept for any leftover imports */
+export const CAVE_FUN_TITLES = DEFAULT_CAVE_ROLES
+
 export const MOD_ROLES = [
-  { id: 'keeper', label: 'Cave Keeper', emoji: '🕯️', weeks: null, blurb: 'Pin, hide spam, assign titles.' },
+  { id: 'keeper', label: 'Cave Keeper', emoji: '🕯️', weeks: null, blurb: 'Pin, hide spam, edit roles, assign titles.' },
   { id: 'co_keeper', label: 'Co-Keeper', emoji: '🪷', weeks: 1, blurb: 'Assistant mod — temporary.' },
 ]
 
-const titleById = new Map(CAVE_FUN_TITLES.map((t) => [t.id, t]))
 const modById = new Map(MOD_ROLES.map((t) => [t.id, t]))
 
 function resolveTitleId(id) {
-  return LEGACY_TITLE_IDS[id] || id
-}
-
-export function getFunTitle(id) {
-  const resolved = resolveTitleId(id)
-  return titleById.get(resolved) || titleById.get(DEFAULT_TITLE_ID)
-}
-
-export function getModRole(id) {
-  return modById.get(id) || null
+  return LEGACY_TITLE_IDS[id] || id || DEFAULT_TITLE_ID
 }
 
 function isExpired(iso) {
@@ -50,11 +102,71 @@ function isExpired(iso) {
   return new Date(iso).getTime() <= Date.now()
 }
 
-export function activeFunTitle(member) {
+export function newRoleId() {
+  return `role_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
+}
+
+export function normalizeRole(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const id = String(raw.id || '').trim() || newRoleId()
+  const label = String(raw.label || '').trim().slice(0, 40) || 'Untitled role'
+  const emoji = String(raw.emoji || '✦').trim().slice(0, 8) || '✦'
+  const markUrl = raw.markUrl || raw.mark_url || null
+  const blurb = String(raw.blurb || '').trim().slice(0, 160)
+  const weeks = raw.weeks == null || raw.weeks === '' ? null : Number(raw.weeks)
+  return {
+    id,
+    label,
+    emoji,
+    markUrl: typeof markUrl === 'string' && markUrl ? markUrl : null,
+    blurb,
+    weeks: Number.isFinite(weeks) && weeks > 0 ? weeks : null,
+    canDj: Boolean(raw.canDj ?? raw.can_dj),
+  }
+}
+
+/** Normalize a cave's role catalog (max 12). Empty/missing → defaults. */
+export function normalizeCaveRoles(roles) {
+  let list = Array.isArray(roles) ? roles.map(normalizeRole).filter(Boolean) : []
+  if (list.length === 0) {
+    list = DEFAULT_CAVE_ROLES.map((r) => ({ ...r }))
+  }
+  // Ensure default dweller exists
+  if (!list.some((r) => r.id === DEFAULT_TITLE_ID)) {
+    list = [{ ...DEFAULT_CAVE_ROLES[0] }, ...list].slice(0, MAX_CAVE_ROLES)
+  }
+  return list.slice(0, MAX_CAVE_ROLES)
+}
+
+export function getCaveRoles(cave) {
+  return normalizeCaveRoles(cave?.roles)
+}
+
+export function getCaveRole(cave, roleId) {
+  const id = resolveTitleId(roleId)
+  const roles = getCaveRoles(cave)
+  return roles.find((r) => r.id === id) || roles.find((r) => r.id === DEFAULT_TITLE_ID) || DEFAULT_CAVE_ROLES[0]
+}
+
+/** @deprecated prefer getCaveRole(cave, id) */
+export function getFunTitle(id) {
+  const resolved = resolveTitleId(id)
+  return DEFAULT_CAVE_ROLES.find((t) => t.id === resolved) || DEFAULT_CAVE_ROLES[0]
+}
+
+export function getModRole(id) {
+  return modById.get(id) || null
+}
+
+export function activeFunTitle(member, cave = null) {
   const id = resolveTitleId(member?.funTitle || DEFAULT_TITLE_ID)
-  if (id === DEFAULT_TITLE_ID) return getFunTitle(DEFAULT_TITLE_ID)
-  if (isExpired(member?.titleExpiresAt)) return getFunTitle(DEFAULT_TITLE_ID)
-  return getFunTitle(id)
+  if (id === DEFAULT_TITLE_ID) {
+    return cave ? getCaveRole(cave, DEFAULT_TITLE_ID) : getFunTitle(DEFAULT_TITLE_ID)
+  }
+  if (isExpired(member?.titleExpiresAt)) {
+    return cave ? getCaveRole(cave, DEFAULT_TITLE_ID) : getFunTitle(DEFAULT_TITLE_ID)
+  }
+  return cave ? getCaveRole(cave, id) : getFunTitle(id)
 }
 
 export function activeModRole(member) {
@@ -82,16 +194,29 @@ export function isCaveDj(cave, userId) {
   if (cave.ownerId === userId) return true
   const m = memberById(cave, userId)
   if (!m) return false
-  if (m.funTitle !== 'seasonal_dj' && resolveTitleId(m.funTitle) !== 'seasonal_dj') return false
-  if (m.titleExpiresAt && new Date(m.titleExpiresAt).getTime() <= Date.now()) return false
-  return true
+  const role = activeFunTitle(m, cave)
+  if (role?.canDj) {
+    if (m.titleExpiresAt && isExpired(m.titleExpiresAt) && role.id !== DEFAULT_TITLE_ID) return false
+    return true
+  }
+  // Legacy seasonal_dj title id
+  const id = resolveTitleId(m.funTitle)
+  if (id === 'seasonal_dj' || id === 'soft_static') {
+    if (m.titleExpiresAt && isExpired(m.titleExpiresAt)) return false
+    return id === 'seasonal_dj' || role?.canDj
+  }
+  return false
 }
 
-/** Cave founder or active Seasonal DJ can manage cave playlists. */
 export function canModerateCavePlaylists(cave, userId) {
   return isCaveDj(cave, userId)
 }
 
 export function memberById(cave, userId) {
   return cave?.members?.find((m) => m.id === userId) || null
+}
+
+export function roleMark(role) {
+  if (!role) return { emoji: '✦', markUrl: null }
+  return { emoji: role.emoji || '✦', markUrl: role.markUrl || null }
 }

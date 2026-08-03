@@ -30,16 +30,82 @@ function userIdFromLegacyMoodboardId(id) {
   return String(id).slice(LEGACY_MOODBOARD_PREFIX.length)
 }
 
-function mapMoodboard(row) {
+const LOCAL_COVERS_KEY = 'frens-moodboard-covers-v1'
+
+function loadLocalCovers() {
+  try {
+    const raw = localStorage.getItem(LOCAL_COVERS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveLocalCover(moodboardId, entry) {
+  try {
+    const all = loadLocalCovers()
+    if (!entry) delete all[moodboardId]
+    else all[moodboardId] = entry
+    localStorage.setItem(LOCAL_COVERS_KEY, JSON.stringify(all))
+  } catch { /* ignore */ }
+}
+
+function localCoverFor(moodboardId) {
+  const entry = loadLocalCovers()[moodboardId]
+  if (!entry?.imageUrl) return null
   return {
-    id: row.id,
+    coverUrl: entry.imageUrl,
+    coverItemId: entry.itemId || null,
+  }
+}
+
+function mapMoodboard(row) {
+  const id = row.id
+  const local = id ? localCoverFor(id) : null
+  return {
+    id,
     name: row.name,
     isPublic: Boolean(row.is_public),
     sortOrder: row.sort_order ?? 0,
     itemCount: Number(row.item_count ?? 0),
     createdAt: row.created_at,
+    // Local pick wins until server cover RPC is installed; then server wins if present.
+    coverUrl: row.cover_url || local?.coverUrl || null,
+    coverItemId: row.cover_item_id || local?.coverItemId || null,
     legacy: Boolean(row.legacy),
   }
+}
+
+function pickLastItem(items) {
+  if (!items?.length) return null
+  return [...items].sort((a, c) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
+    const tc = c.createdAt ? new Date(c.createdAt).getTime() : 0
+    if (tc !== ta) return tc - ta
+    return (c.sortOrder ?? 0) - (a.sortOrder ?? 0)
+  })[0]
+}
+
+/** When list RPC has no cover_url yet, fill from last-added item (client fallback). */
+async function enrichMoodboardCovers(boards) {
+  if (!boards?.length) return boards
+  const need = boards.filter((b) => !b.coverUrl && b.itemCount > 0 && !b.legacy)
+  if (need.length === 0) return boards
+
+  const filled = await Promise.all(
+    need.map(async (b) => {
+      try {
+        const items = await listMoodboardItems(b.id)
+        const last = pickLastItem(items)
+        if (!last) return b
+        return { ...b, coverUrl: last.imageUrl || null, coverItemId: last.id || null }
+      } catch {
+        return b
+      }
+    }),
+  )
+  const byId = new Map(filled.map((b) => [b.id, b]))
+  return boards.map((b) => byId.get(b.id) || b)
 }
 
 function mapItem(row) {
@@ -91,12 +157,67 @@ export async function listUserMoodboards(userId) {
       const { data: { user } } = await supabase.auth.getUser()
       const isOwn = user?.id === userId
       if (items.length === 0 && !isOwn) return []
-      return [legacyBoardForUser(userId, items.length)]
+      const last = items[items.length - 1]
+      return [{
+        ...legacyBoardForUser(userId, items.length),
+        coverUrl: last?.imageUrl || null,
+        coverItemId: last?.id || null,
+      }]
     }
     throwIfGalleryMissing(error)
     throw error
   }
-  return (data ?? []).map(mapMoodboard)
+  const boards = (data ?? []).map(mapMoodboard)
+  // Older list_user_moodboards without cover_url — hydrate from items.
+  if (boards.some((b) => b.itemCount > 0 && !b.coverUrl)) {
+    return enrichMoodboardCovers(boards)
+  }
+  return boards
+}
+
+/**
+ * Pin a gallery item as the board’s list cover (null = clear → last-added).
+ * Works offline via localStorage when set_moodboard_cover RPC is not installed.
+ * @param {string} moodboardId
+ * @param {string|null} itemId
+ * @param {{ imageUrl?: string|null }} [meta] imageUrl required for local fallback
+ */
+export async function setMoodboardCover(moodboardId, itemId, meta = {}) {
+  if (isLegacyMoodboardId(moodboardId)) {
+    if (itemId && meta.imageUrl) {
+      saveLocalCover(moodboardId, { itemId, imageUrl: meta.imageUrl })
+      return { local: true }
+    }
+    saveLocalCover(moodboardId, null)
+    return { local: true }
+  }
+
+  const { error } = await supabase.rpc('set_moodboard_cover', {
+    p_moodboard: moodboardId,
+    p_item: itemId ?? null,
+  })
+
+  if (!error) {
+    // Server owns cover — drop local override.
+    saveLocalCover(moodboardId, null)
+    return { local: false }
+  }
+
+  // RPC missing — persist cover on this device so the UI still works.
+  if (error.code === 'PGRST202' || error.code === '42883') {
+    if (itemId) {
+      if (!meta.imageUrl) {
+        throw new Error('Could not set cover — image missing.')
+      }
+      saveLocalCover(moodboardId, { itemId, imageUrl: meta.imageUrl })
+    } else {
+      saveLocalCover(moodboardId, null)
+    }
+    return { local: true }
+  }
+
+  throwIfGalleryMissing(error)
+  throw error
 }
 
 export async function listMoodboardItems(moodboardId) {

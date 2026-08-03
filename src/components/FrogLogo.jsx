@@ -14,16 +14,23 @@ export default function FrogLogo({ className = 'w-8 h-8', alt = APP_NAME }) {
   )
 }
 
-/** Small monad glyph — marks plain text-only thoughts. */
-export function ThoughtMark({ className = 'w-[0.62em] h-[0.62em] translate-y-[0.04em] opacity-75' }) {
+/**
+ * Text-thought mark (Ellipse 4) — solid disc in front of plain text posts.
+ * Theme-aware: black in light mode, white in dark. Sized small; parent centers to text.
+ * Source: RESOURCE FRENSAPP/Ellipse 4.svg
+ */
+export function ThoughtMark({
+  className = 'w-[6px] h-[6px] shrink-0 block',
+}) {
   return (
-    <img
-      src={monadLogo}
-      alt=""
+    <svg
+      viewBox="0 0 142 142"
+      className={className}
       aria-hidden
-      className={`frens-app-mark object-contain shrink-0 ${className}`}
-      draggable={false}
-    />
+      focusable="false"
+    >
+      <circle cx="71" cy="71" r="71" className="fill-black dark:fill-white" />
+    </svg>
   )
 }
 

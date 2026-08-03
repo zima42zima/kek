@@ -1,4 +1,20 @@
 import { createLetterBlock, formatLetterDate, todayIsoDate } from './owlLetterFormat'
+import {
+  clampLetterFontSize,
+  buildLetterSizeSteps,
+  LETTER_MIN_FONT_SIZE,
+  LETTER_MAX_FONT_SIZE,
+  LETTER_A4_PRINTABLE_MM,
+} from './letterMetrics'
+
+export {
+  clampLetterFontSize,
+  LETTER_MIN_FONT_SIZE,
+  LETTER_MAX_FONT_SIZE,
+  LETTER_A4_PRINTABLE_MM,
+}
+
+export const LETTER_SIZE_STEPS = buildLetterSizeSteps()
 
 /** Text hierarchy — writer-friendly presets. */
 export const LETTER_TEXT_ROLES = {
@@ -28,8 +44,6 @@ export const LETTER_WRITE_FROM = {
   right: { label: 'Right', x: 38, align: 'right' },
 }
 
-export const LETTER_SIZE_STEPS = [10, 12, 14, 16, 18, 22, 28, 36, 44, 52]
-
 export const DEFAULT_PENDING_STYLE = {
   fontSize: 14,
   bold: false,
@@ -45,7 +59,7 @@ export function styleFromBlock(block) {
   if (!block) return { ...DEFAULT_PENDING_STYLE }
   return {
     font: block.font,
-    fontSize: block.fontSize ?? DEFAULT_PENDING_STYLE.fontSize,
+    fontSize: clampLetterFontSize(block.fontSize ?? DEFAULT_PENDING_STYLE.fontSize),
     bold: Boolean(block.bold),
     italic: Boolean(block.italic),
     underline: Boolean(block.underline),
@@ -67,7 +81,7 @@ export function pendingStyleToBlockSeed(pending, { writeFrom = 'left', font, y, 
     y: y ?? 18,
     w: role?.w ?? layoutMeta.w,
     font: pending.font || font,
-    fontSize: pending.fontSize ?? DEFAULT_PENDING_STYLE.fontSize,
+    fontSize: clampLetterFontSize(pending.fontSize ?? DEFAULT_PENDING_STYLE.fontSize),
     bold: pending.bold ?? false,
     italic: pending.italic ?? false,
     underline: pending.underline ?? false,
@@ -89,7 +103,7 @@ export function applyTextRole(block, roleId) {
   return {
     ...block,
     role: roleId,
-    fontSize: role.fontSize,
+    fontSize: clampLetterFontSize(role.fontSize),
     bold: role.bold,
     w: role.w,
     layout: role.layout,

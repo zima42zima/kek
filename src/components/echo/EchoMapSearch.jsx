@@ -4,12 +4,34 @@ import { searchEchoPlaces } from '../../lib/echoes'
 import { loadEchoSearchHistory, pushEchoSearchHistory, zoomForPlaceType } from '../../lib/echoSearchHistory'
 import { SearchIcon, GlobeIcon, LocationIcon } from '../icons/UiIcons'
 import EchoIcon from './EchoIcon'
+import nearMeIcon from '../../assets/icons/near-me.svg'
+
+function NearMeIcon({ className = 'w-3.5 h-3.5' }) {
+  return (
+    <span
+      aria-hidden
+      className={`inline-block shrink-0 align-middle ${className}`}
+      style={{
+        backgroundColor: 'currentColor',
+        maskImage: `url(${nearMeIcon})`,
+        WebkitMaskImage: `url(${nearMeIcon})`,
+        maskSize: 'contain',
+        WebkitMaskSize: 'contain',
+        maskRepeat: 'no-repeat',
+        WebkitMaskRepeat: 'no-repeat',
+        maskPosition: 'center',
+        WebkitMaskPosition: 'center',
+      }}
+    />
+  )
+}
 
 export default function EchoMapSearch({
   selectedPlace = null,
   onSelectPlace,
   onClearPlace,
   backendReady = false,
+  cityLabel = null,
   placeholder = 'Search a city, café, landmark…',
 }) {
   const [editing, setEditing] = useState(!selectedPlace)
@@ -143,6 +165,11 @@ export default function EchoMapSearch({
     )
   }
 
+  const locationHint =
+    cityLabel && cityLabel !== 'your region'
+      ? cityLabel
+      : null
+
   return (
     <div ref={wrapRef} className="relative">
       <div className="flex items-center gap-2 rounded-xl border frens-border px-3 py-2 frens-surface">
@@ -155,7 +182,7 @@ export default function EchoMapSearch({
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           className="flex-1 bg-transparent text-sm outline-none min-w-0"
-          aria-label="Search places on the echo map"
+          aria-label="Search places on the aftersound map"
         />
         {busy ? <span className="text-[10px] frens-muted">…</span> : null}
         {selectedPlace ? (
@@ -164,6 +191,14 @@ export default function EchoMapSearch({
           </button>
         ) : null}
       </div>
+
+      {/* Location only when search is active (focused / dropdown open) */}
+      {open && locationHint ? (
+        <p className="text-[11px] frens-muted px-1 mt-1.5 inline-flex items-center gap-1">
+          <LocationIcon className="w-3 h-3 shrink-0" />
+          Near {locationHint}
+        </p>
+      ) : null}
 
       {showDropdown && (
         <div className="absolute z-[1200] left-0 right-0 mt-1 rounded-xl border frens-border frens-surface shadow-lg max-h-64 overflow-y-auto">
@@ -188,7 +223,7 @@ export default function EchoMapSearch({
           )}
           {echoPlaces.length > 0 && (
             <div className="p-2 border-b frens-border">
-              <p className="text-[10px] uppercase tracking-wide frens-muted px-2 py-1">Echo places</p>
+              <p className="text-[10px] uppercase tracking-wide frens-muted px-2 py-1">Aftersound places</p>
               <ul>
                 {echoPlaces.map((p) => (
                   <li key={p.placeKey}>
@@ -199,7 +234,7 @@ export default function EchoMapSearch({
                     >
                       <EchoIcon className="w-4 h-3 shrink-0" />
                       <span className="min-w-0 truncate">{p.placeLabel || p.cityLabel}</span>
-                      <span className="text-[10px] frens-muted ml-auto shrink-0">{p.echoCount} echo{p.echoCount === 1 ? '' : 's'}</span>
+                      <span className="text-[10px] frens-muted ml-auto shrink-0">{p.echoCount} aftersound{p.echoCount === 1 ? '' : 's'}</span>
                     </button>
                   </li>
                 ))}
@@ -243,7 +278,7 @@ export function EchoMapModeTabs({ mode, onChange, hasLocation, explorePlace }) {
             mode === 'near' ? 'frens-btn-primary' : 'frens-btn-outline disabled:opacity-40'
           }`}
         >
-          <LocationIcon className="w-3.5 h-3.5" /> Near me
+          <NearMeIcon className="w-3.5 h-3.5" /> Near me
         </button>
         <button
           type="button"

@@ -41,6 +41,51 @@
     font-family: inherit;
   }
 
+  /* All checkboxes — compact monochrome (never browser blue) */
+  input[type='checkbox'] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 1.25px solid currentColor;
+    border-radius: 2px;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    vertical-align: middle;
+    accent-color: #000000;
+  }
+  input[type='checkbox']:checked {
+    background: #000;
+    border-color: #000;
+  }
+  input[type='checkbox']:checked::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    width: 0.22rem;
+    height: 0.4rem;
+    border: solid #fff;
+    border-width: 0 1.5px 1.5px 0;
+    transform: translate(-50%, -55%) rotate(45deg);
+  }
+  html.dark input[type='checkbox'] {
+    accent-color: #ffffff;
+  }
+  html.dark input[type='checkbox']:checked {
+    background: #fff;
+    border-color: #fff;
+  }
+  html.dark input[type='checkbox']:checked::after {
+    border-color: #000;
+  }
+  input[type='checkbox']:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   code, kbd, samp, pre {
     font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
@@ -1190,6 +1235,7 @@ html.dark .letter-tool-menu {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .letter-tool-menu--fonts { min-width: 13rem; max-height: 20rem; }
+.letter-tool-menu--sizes { max-height: 18rem; min-width: 6.5rem; }
 
 /* Two-panel font picker — sections left, fonts right */
 .letter-font-menu {
@@ -1466,8 +1512,11 @@ html.dark .letter-studio-note { color: rgba(255, 255, 255, 0.5); }
   aspect-ratio: 64 / 44;
 }
 .letter-choice__icon--folds {
-  width: 94%;
-  height: 94%;
+  /* Match other hub glyphs: sit inside the choice icon wrap */
+  width: 1.05rem;
+  height: 1.05rem;
+  max-width: 100%;
+  max-height: 100%;
 }
 .ps-envelope-icon {
   width: 1.15em;
@@ -1511,13 +1560,13 @@ html.dark .letter-choice:hover {
   border-color: #fff;
 }
 
-/* P.S. settings — monochrome checkboxes */
+/* P.S. / shared — same compact monochrome as base checkboxes */
 .ps-checkbox {
   appearance: none;
   -webkit-appearance: none;
-  width: 1rem;
-  height: 1rem;
-  border: 1.5px solid currentColor;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1.25px solid currentColor;
   border-radius: 2px;
   background: transparent;
   cursor: pointer;
@@ -1531,13 +1580,13 @@ html.dark .letter-choice:hover {
 .ps-checkbox:checked::after {
   content: '';
   position: absolute;
-  left: 3px;
-  top: 1px;
-  width: 5px;
-  height: 8px;
+  left: 50%;
+  top: 45%;
+  width: 0.22rem;
+  height: 0.4rem;
   border: solid #fff;
   border-width: 0 1.5px 1.5px 0;
-  transform: rotate(45deg);
+  transform: translate(-50%, -55%) rotate(45deg);
 }
 html.dark .ps-checkbox:checked {
   background: #fff;

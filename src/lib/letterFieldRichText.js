@@ -1,4 +1,5 @@
 import { normalizeOwlFontId, owlFontStack, OWL_LETTER_FONTS } from './owlLetterFonts'
+import { clampLetterFontSize } from './letterMetrics'
 
 export function fieldPlainText(el) {
   if (!el) return ''
@@ -44,7 +45,7 @@ function styleFromNode(node, el) {
       }
       if (inline.fontSize && styles.fontSize === undefined) {
         const px = Number.parseInt(inline.fontSize, 10)
-        if (px) styles.fontSize = px
+        if (px) styles.fontSize = clampLetterFontSize(px)
       }
     }
     current = current.parentElement
@@ -108,9 +109,10 @@ export function applyPatchToSelection(el, patch) {
   }
 
   if (patch.fontSize !== undefined) {
+    const px = clampLetterFontSize(patch.fontSize)
     wrapRange(range, () => {
       const span = document.createElement('span')
-      span.style.fontSize = `${patch.fontSize}px`
+      span.style.fontSize = `${px}px`
       return span
     })
     return true

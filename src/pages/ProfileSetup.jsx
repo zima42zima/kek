@@ -115,7 +115,7 @@ const ProfileSetup = ({ onComplete, onBack }) => {
           <section>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm frens-body-text">Share my city on Echoes</p>
+                <p className="text-sm frens-body-text">Share my city on Aftersounds</p>
                 <p className="text-xs frens-hint mt-1">Only city level, never exact location</p>
               </div>
               <button

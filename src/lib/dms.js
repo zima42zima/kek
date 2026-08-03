@@ -134,6 +134,18 @@ export async function toggleDmMessageReaction(messageId, conversationId, emoji) 
   return normalizeEmojiReactions(data)
 }
 
+/** Sender deletes their own DM. Needs delete_dm_message RPC. */
+export async function deleteDmMessageRemote(conversationId, messageId) {
+  const { error } = await supabase.rpc('delete_dm_message', {
+    p_conversation_id: conversationId,
+    p_message_id: messageId,
+  })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+}
+
 export async function markDmRead(conversationId) {
   const { error } = await supabase.rpc('mark_dm_conversation_read', {
     p_conversation_id: conversationId,

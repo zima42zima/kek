@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { usePlaylistPlayback } from '../context/PlaylistPlaybackContext'
 import { fetchProfileForUser } from '../lib/profile'
 import PlaylistIcon from '../components/playlists/PlaylistIcon'
+import ProfileShareToggle from '../components/ProfileShareToggle'
 import SavePlaylistButton from '../components/playlists/SavePlaylistButton'
 import { VideoTimelineCard } from '../components/YouTubeEmbed'
 import PlaylistTrackAuraButton from '../components/playlists/PlaylistTrackAuraButton'
@@ -122,6 +123,7 @@ export default function Playlists({
   const [titleDraft, setTitleDraft] = useState('')
   const [layoutEditing, setLayoutEditing] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [listEditing, setListEditing] = useState(false)
 
   const editable = editableProp ?? Boolean(user?.id && userId && user.id === userId)
   const canAura = Boolean(user?.id && !editable)
@@ -199,6 +201,9 @@ export default function Playlists({
   useEffect(() => {
     setSelected(null)
     setTracks([])
+    setEditing(false)
+    setLayoutEditing(false)
+    setListEditing(false)
     loadPlaylists()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
@@ -433,14 +438,27 @@ export default function Playlists({
             <PlaylistIcon className="w-5 h-5" />
             {selected ? selected.name : 'Playlists'}
           </h2>
-          <p className="text-xs frens-muted mt-0.5">
-            {selected
-              ? (editable && editing ? 'Editing playlist' : `${selected.trackCount ?? tracks.length} ${(selected.trackCount ?? tracks.length) === 1 ? 'track' : 'tracks'}`)
-              : editable
-                ? 'Your YouTube & Vimeo playlists'
-                : `${ownerName}'s playlists`}
-          </p>
+          {selected ? (
+            !editing && (selected.trackCount ?? tracks.length) > 0 ? (
+              <p className="text-xs frens-muted mt-0.5">
+                {(selected.trackCount ?? tracks.length) === 1
+                  ? '1 track'
+                  : `${selected.trackCount ?? tracks.length} tracks`}
+              </p>
+            ) : null
+          ) : !editable ? (
+            <p className="text-xs frens-muted mt-0.5">{ownerName}</p>
+          ) : null}
         </div>
+        {!selected && editable ? (
+          <button
+            type="button"
+            onClick={() => setListEditing((v) => !v)}
+            className={`frens-btn-outline px-3 py-1.5 text-xs shrink-0 ${listEditing ? 'ring-2 ring-black/20 dark:ring-white/20' : ''}`}
+          >
+            {listEditing ? 'Done' : 'Edit'}
+          </button>
+        ) : null}
         {selected && editable ? (
           <button
             type="button"
@@ -462,13 +480,20 @@ export default function Playlists({
 
       {!selected ? (
         <>
+          {editable && listEditing ? (
+            <ProfileShareToggle
+              showcaseKey="playlists"
+              label="Show on profile"
+              hint=""
+            />
+          ) : null}
           {editable ? (
             <form onSubmit={handleCreatePlaylist} className="flex gap-2">
               <input
                 type="text"
                 value={newPlaylistName}
                 onChange={(e) => setNewPlaylistName(e.target.value)}
-                placeholder="New playlist — e.g. CHILL"
+                placeholder="New playlist"
                 className="frens-input flex-1 text-sm"
                 maxLength={40}
               />
@@ -488,7 +513,7 @@ export default function Playlists({
             <>
               {editable && savedPlaylists.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-xs frens-label">Saved from frens</p>
+                  <p className="text-xs frens-label">Saved</p>
                   <ul className="space-y-2">
                     {savedPlaylists.map((pl) => (
                       <li key={pl.id}>
@@ -503,18 +528,10 @@ export default function Playlists({
                 </div>
               ) : null}
 
-              {editable && playlists.length > 0 ? (
-                <p className="text-xs frens-label pt-1">Yours</p>
-              ) : null}
-
               {playlists.length === 0 && savedPlaylists.length === 0 ? (
-                <div className="border frens-border rounded-xl p-8 text-center">
-                  <p className="text-sm frens-muted">
-                    {editable
-                      ? 'No playlists yet — create a folder like CHILL and add YouTube links.'
-                      : `${ownerName} hasn't shared any playlists yet.`}
-                  </p>
-                </div>
+                <p className="text-sm frens-muted text-center py-8">
+                  {editable ? 'Nothing here yet.' : 'Nothing shared yet.'}
+                </p>
               ) : (
                 <ul className="space-y-2">
                   {playlists.map((pl) => (
@@ -550,7 +567,7 @@ export default function Playlists({
                   onClick={() => setLayoutEditing((v) => !v)}
                   className={`frens-btn-outline px-3 py-1.5 text-xs ${layoutEditing ? 'ring-2 ring-black/20 dark:ring-white/20' : ''}`}
                 >
-                  {layoutEditing ? 'Done reordering' : 'Reorder tracks'}
+                  {layoutEditing ? 'Done reordering' : 'Reorder'}
                 </button>
               ) : null}
               <button
@@ -559,45 +576,36 @@ export default function Playlists({
                 onClick={handleDeletePlaylist}
                 className="text-xs text-red-500 dark:text-red-400 hover:underline disabled:opacity-50 ml-auto"
               >
-                Delete playlist
+                Delete
               </button>
             </div>
           ) : null}
 
           {editable && editing && !layoutEditing ? (
-            <form onSubmit={handleAddTrack} className="space-y-2 border frens-border rounded-xl p-3">
-              <p className="text-xs frens-hint">Paste a YouTube or Vimeo link — plays inline, same as in posts.</p>
+            <form onSubmit={handleAddTrack} className="flex flex-wrap gap-2">
               <input
                 type="url"
                 value={urlDraft}
                 onChange={(e) => setUrlDraft(e.target.value)}
-                placeholder="https://youtube.com/watch?v=…"
-                className="frens-input w-full text-sm"
+                placeholder="Paste link"
+                className="frens-input flex-1 min-w-[10rem] text-sm"
               />
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={titleDraft}
-                  onChange={(e) => setTitleDraft(e.target.value)}
-                  placeholder="Title (optional)"
-                  className="frens-input flex-1 text-sm"
-                  maxLength={80}
-                />
-                <button
-                  type="submit"
-                  disabled={busy || !urlDraft.trim()}
-                  className="frens-btn-outline px-3 py-2 text-sm shrink-0 disabled:opacity-50"
-                >
-                  Add
-                </button>
-              </div>
+              <input
+                type="text"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                placeholder="Title"
+                className="frens-input w-[7rem] sm:w-36 text-sm"
+                maxLength={80}
+              />
+              <button
+                type="submit"
+                disabled={busy || !urlDraft.trim()}
+                className="frens-btn-outline px-3 py-2 text-sm shrink-0 disabled:opacity-50"
+              >
+                {busy ? '…' : 'Add'}
+              </button>
             </form>
-          ) : null}
-
-          {layoutEditing ? (
-            <p className="text-xs frens-hint">
-              Drag the ⋮⋮ handle to reorder tracks — drop anywhere in the list.
-            </p>
           ) : null}
 
           {loading ? (
@@ -605,8 +613,8 @@ export default function Playlists({
           ) : tracks.length === 0 ? (
             <p className="text-sm frens-muted text-center py-8">
               {editable
-                ? (editing ? 'No tracks yet — paste a link above or add from videos in the feed.' : 'No tracks yet — tap Edit to add some.')
-                : 'Empty playlist.'}
+                ? (editing ? 'Add a link.' : 'Empty.')
+                : 'Empty.'}
             </p>
           ) : layoutEditing ? (
             <PlaylistTrackEditList

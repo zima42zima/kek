@@ -49,6 +49,8 @@ export function mapDbProfile(row, email) {
     cosmosUrl: row.cosmos_url ?? null,
     shareLocation: row.share_location ?? false,
     isFounder: row.is_founder ?? false,
+    isCofounder: row.is_cofounder ?? false,
+    suspendedAt: row.suspended_at ?? null,
     email: email ?? null,
   }
 }

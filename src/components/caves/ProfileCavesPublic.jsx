@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import Modal from '../Modal'
 import { listProfileCaves, CavesNotInstalledError } from '../../lib/caves'
 import { useCaves } from '../../context/CavesContext'
-import CaveIcon, { CaveGlyph } from './CaveIcon'
+import CaveIcon from './CaveIcon'
+import { CaveCoverThumb } from './CaveCover'
 import CaveAccessLabel from '../CaveAccessLabel'
 
 function CavesListModal({ caves, myIds, frenName, onClose, onOpenCave }) {
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2"><CaveIcon className="w-5 h-5" /> {frenName}&apos;s caves</span>}
+      title={<span className="inline-flex items-center gap-2"><CaveIcon className="w-[1.06rem] h-[1.06rem]" /> {frenName}&apos;s caves</span>}
       onClose={onClose}
       maxWidth="max-w-sm"
     >
@@ -28,7 +29,7 @@ function CavesListModal({ caves, myIds, frenName, onClose, onOpenCave }) {
                     canOpen ? 'hover:bg-black/[0.03] dark:hover:bg-white/[0.03]' : 'opacity-90 cursor-default'
                   }`}
                 >
-                  <CaveGlyph className="w-8 h-8 shrink-0" />
+                  <CaveCoverThumb coverUrl={c.coverUrl} className="w-10 h-10" />
                   <div className="min-w-0 flex-1">
                     <p className="frens-title-sm truncate">{c.name}</p>
                     <p className="text-xs frens-muted inline-flex items-center gap-1 flex-wrap">
@@ -87,16 +88,11 @@ export default function ProfileCavesPublic({ userId, frenName = 'this fren', onN
         type="button"
         onClick={() => setOpen(true)}
         disabled={loading}
-        className="frens-btn-outline w-11 h-11 rounded-full flex flex-col items-center justify-center gap-0.5 relative shrink-0"
+        className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex flex-col items-center justify-center gap-0.5 relative shrink-0 text-black dark:text-white"
         title={`${frenName}'s caves`}
         aria-label={`${frenName}'s caves`}
       >
-        <CaveIcon className="w-5 h-5" />
-        {!loading && caves.length > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
-            {caves.length > 9 ? '9+' : caves.length}
-          </span>
-        )}
+        <CaveIcon className="w-[1.06rem] h-[1.06rem]" />
       </button>
 
       {open && (

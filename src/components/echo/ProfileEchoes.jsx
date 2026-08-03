@@ -7,48 +7,56 @@ import { requestEchoFocus } from '../../lib/notificationNav'
 
 import { AuraCount } from '../AuraButton'
 import { EchoKindLabel } from './EchoMeta'
+import ProfileShareToggle from '../ProfileShareToggle'
 
 function EchoesProfileModal({ echoes, onClose, onOpenEcho }) {
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2"><EchoIcon className="w-5 h-4" /> Your echoes</span>}
+      title={<span className="inline-flex items-center gap-2"><EchoIcon className="w-[1.06rem] h-[0.85rem]" /> Your aftersounds</span>}
       onClose={onClose}
       maxWidth="max-w-sm"
     >
-      {echoes.length === 0 ? (
-        <p className="text-sm frens-muted text-center py-6">
-          No public echoes on your profile yet. Leave a <strong>world</strong> echo on the map to share it here.
+      <div className="space-y-3">
+        <ProfileShareToggle
+          showcaseKey="echoes"
+          label="Show aftersounds on my profile"
+          hint="You always open aftersounds here or on the map. When on, other frens see this icon on your profile."
+        />
+        {echoes.length === 0 ? (
+          <p className="text-sm frens-muted text-center py-6">
+            No public aftersounds yet. Leave a <strong>world</strong> aftersound on the map to list it here.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {echoes.map((e) => (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpenEcho(e.id)}
+                  className="w-full text-left border frens-border rounded-xl p-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <EchoKindLabel kind={e.kind} short className="frens-title-sm" />
+                    {(e.auraCount ?? 0) > 0 && (
+                      <AuraCount count={e.auraCount ?? 0} />
+                    )}
+                  </div>
+                  {e.label ? (
+                    <p className="text-xs frens-body-text mt-1 truncate">{e.label}</p>
+                  ) : null}
+                  <p className="text-xs frens-muted mt-1">
+                    {e.createdAt ? new Date(e.createdAt).toLocaleDateString() : 'recent'}
+                    {' '}· on the map
+                  </p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-[11px] frens-hint text-center">
+          Private memories stay off the public list. World aftersounds can appear when sharing is on.
         </p>
-      ) : (
-        <ul className="space-y-2">
-          {echoes.map((e) => (
-            <li key={e.id}>
-              <button
-                type="button"
-                onClick={() => onOpenEcho(e.id)}
-                className="w-full text-left border frens-border rounded-xl p-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <EchoKindLabel kind={e.kind} short className="frens-title-sm" />
-                  {(e.auraCount ?? 0) > 0 && (
-                    <AuraCount count={e.auraCount ?? 0} />
-                  )}
-                </div>
-                {e.label ? (
-                  <p className="text-xs frens-body-text mt-1 truncate">{e.label}</p>
-                ) : null}
-                <p className="text-xs frens-muted mt-1">
-                  {e.createdAt ? new Date(e.createdAt).toLocaleDateString() : 'recent'}
-                  {' '}· on your profile & map
-                </p>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className="text-[11px] frens-hint text-center mt-4">
-        Public echoes stay until you delete them. Private memories stay off your profile.
-      </p>
+      </div>
     </Modal>
   )
 }
@@ -88,16 +96,11 @@ export default function ProfileEchoes({ userId, onNavigate, onOpenEcho }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="frens-btn-outline w-11 h-11 rounded-full flex items-center justify-center relative shrink-0"
-        title="Your echoes"
-        aria-label="Your echoes"
+        className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex items-center justify-center relative shrink-0 text-black dark:text-white"
+        title="Your aftersounds"
+        aria-label="Your aftersounds"
       >
-        <EchoIcon className="w-5 h-4" />
-        {echoes.length > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
-            {echoes.length > 9 ? '9+' : echoes.length}
-          </span>
-        )}
+        <EchoIcon className="w-[1.06rem] h-[0.85rem]" />
       </button>
 
       {open && (

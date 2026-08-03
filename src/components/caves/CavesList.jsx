@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import CaveIcon, { CaveGlyph } from './CaveIcon'
+import CaveIcon from './CaveIcon'
+import { CaveCoverThumb } from './CaveCover'
 import { searchPublicCaves, joinPublicCave, CavesNotInstalledError } from '../../lib/caves'
 
 export default function CavesList({
@@ -132,9 +133,7 @@ export default function CavesList({
                     onClick={() => onOpenCave(cave.id)}
                     className="w-full text-left border frens-border rounded-xl p-4 flex items-center gap-3 hover:frens-surface transition"
                   >
-                    <span className="w-12 h-12 shrink-0 rounded-xl frens-avatar-ring flex items-center justify-center text-xl">
-                      <CaveGlyph className="w-6 h-6" />
-                    </span>
+                    <CaveCoverThumb coverUrl={cave.coverUrl} className="w-12 h-12" />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-2">
                         <span className="frens-title-sm truncate">{cave.name}</span>
@@ -186,9 +185,7 @@ export default function CavesList({
               {publicCaves.map((cave) => (
                 <li key={cave.id}>
                   <div className="border frens-border rounded-xl p-4 flex items-center gap-3">
-                    <span className="w-12 h-12 shrink-0 rounded-xl frens-avatar-ring flex items-center justify-center text-xl">
-                      <CaveGlyph className="w-6 h-6" />
-                    </span>
+                    <CaveCoverThumb coverUrl={cave.coverUrl} className="w-12 h-12" />
                     <span className="min-w-0 flex-1">
                       <span className="frens-title-sm truncate block">{cave.name}</span>
                       <span className="block text-xs frens-muted">

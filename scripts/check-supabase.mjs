@@ -52,6 +52,18 @@ console.log('list_feed_posts RPC:', feedPosts.error?.message || 'ok', feedPosts.
 const showQuota = await supabase.rpc('get_show_to_frens_quota')
 console.log('get_show_to_frens_quota RPC:', showQuota.error?.message || 'ok', showQuota.error?.code || '')
 
+const moderation = await supabase.rpc('get_my_account_status')
+console.log('get_my_account_status RPC:', moderation.error?.message || 'ok', moderation.error?.code || '')
+
+const searchProfiles = await supabase.rpc('search_profiles', { p_query: 'test', p_limit: 1 })
+console.log('search_profiles RPC:', searchProfiles.error?.message || 'ok', searchProfiles.error?.code || '')
+
+const listReports = await supabase.rpc('list_platform_reports', { p_status: 'open' })
+console.log('list_platform_reports RPC:', listReports.error?.message || 'ok', listReports.error?.code || '')
+
+const dms = await supabase.rpc('list_my_dm_threads')
+console.log('list_my_dm_threads RPC:', dms.error?.message || 'ok', dms.error?.code || '')
+
 const session = await supabase.auth.getSession()
 console.log('browser session (cli):', session.data.session ? 'yes' : 'no')
 
@@ -97,4 +109,24 @@ if (showQuota.error?.code === 'PGRST202') {
   process.exit(1)
 }
 
+if (moderation.error?.code === 'PGRST202') {
+  console.log('\nPlatform moderation patch missing.')
+  console.log('Fix: run supabase-patch-platform-moderation.sql in Supabase SQL Editor')
+  process.exit(1)
+}
+
+if (searchProfiles.error?.code === 'PGRST202') {
+  console.log('\nPeople search patch missing.')
+  console.log('Fix: run supabase-patch-search-profiles.sql in Supabase SQL Editor')
+  process.exit(1)
+}
+
+if (dms.error?.code === 'PGRST202') {
+  console.log('\nDMs patch missing.')
+  console.log('Fix: run supabase-patch-dms.sql in Supabase SQL Editor')
+  process.exit(1)
+}
+
 console.log('\nDatabase setup looks OK from this machine.')
+console.log('Beta 100: also run supabase-patch-beta-100-security.sql on production.')
+console.log('Full checklist: BETA-100.md')

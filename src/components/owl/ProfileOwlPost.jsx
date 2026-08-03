@@ -1,7 +1,7 @@
 import FoldsLettersIcon from './FoldsLettersIcon'
 
 /** P.S. mark — own profile (inbox) or other fren (send letter when open). */
-export default function ProfileOwlPost({ open, pendingCount = 0, onClick }) {
+export default function ProfileOwlPost({ open, badgeCount = 0, onClick }) {
   const label = 'P.S.'
   const title = open ? 'P.S.' : 'P.S. closed'
 
@@ -9,24 +9,22 @@ export default function ProfileOwlPost({ open, pendingCount = 0, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`group/folds frens-btn-outline w-11 h-11 rounded-full flex items-center justify-center relative shrink-0 transition ${
-        open ? 'ring-2 ring-black dark:ring-white' : 'opacity-50'
-      }`}
+      className="group/folds frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex items-center justify-center relative shrink-0 transition text-black dark:text-white"
       title={title}
       aria-label={title}
     >
-      <FoldsLettersIcon className="w-5 h-5 group-hover/folds:hidden" />
+      <FoldsLettersIcon className="w-[1.06rem] h-[1.06rem] group-hover/folds:hidden" />
       <span
         aria-hidden
         className="hidden group-hover/folds:block text-[11px] font-medium tracking-tight leading-none"
       >
         {label}
       </span>
-      {pendingCount > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-black text-white text-[9px] frens-badge-count flex items-center justify-center">
-          {pendingCount > 9 ? '9+' : pendingCount}
+      {badgeCount ? (
+        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
+          {badgeCount}
         </span>
-      )}
+      ) : null}
     </button>
   )
 }

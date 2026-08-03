@@ -1,6 +1,7 @@
 /** Letter format — structured JSON in `body` (v1/v2) with plain-text fallback. */
 
 import { normalizeOwlFontId, OWL_DEFAULT_FONT, owlFontStack } from './owlLetterFonts'
+import { clampLetterFontSize } from './letterMetrics'
 import { DEFAULT_IMAGE_LAYOUT } from './letterImageLayout'
 
 export { OWL_FONT_OPTIONS, OWL_FONT_CATEGORIES, owlFontsByCategory } from './owlLetterFonts'
@@ -13,7 +14,7 @@ export function newLetterBlockId() {
 }
 
 export function createLetterBlock(overrides = {}) {
-  return {
+  const block = {
     id: newLetterBlockId(),
     x: 8,
     y: 10,
@@ -31,6 +32,8 @@ export function createLetterBlock(overrides = {}) {
     kind: null,
     ...overrides,
   }
+  block.fontSize = clampLetterFontSize(block.fontSize)
+  return block
 }
 
 function blocksFromLegacy(letter) {
@@ -297,7 +300,7 @@ export function letterBlockStyle(block) {
     left: `${block.x}%`,
     top: `${block.y}%`,
     width: `${block.w}%`,
-    fontSize: `${block.fontSize}px`,
+    fontSize: `${clampLetterFontSize(block.fontSize)}px`,
     fontFamily,
     fontWeight: block.bold ? 700 : 400,
     fontStyle: block.italic ? 'italic' : 'normal',

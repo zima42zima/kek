@@ -9,7 +9,7 @@ export default function LettersStatus({
 }) {
   const label = open ? 'Accepting letters' : 'Not accepting letters'
   const hint = open
-    ? 'Send a sealed letter via P.S.'
+    ? 'Send a letter through P.S.'
     : 'Not accepting letters right now'
 
   const inner = (

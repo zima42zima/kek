@@ -4,15 +4,8 @@ import {
   ensureOwlLetterFonts,
   preloadOwlFont,
 } from '../../lib/owlLetterFonts'
+import { LETTER_SIZE_STEPS, LETTER_MAX_FONT_SIZE } from '../../lib/letterStudio'
 import LetterFontMenu from './LetterFontMenu'
-
-const SIZE_STEPS = [
-  { id: 'tiny', px: 10 },
-  { id: 'small', px: 14 },
-  { id: 'medium', px: 20 },
-  { id: 'large', px: 32 },
-  { id: 'huge', px: 48 },
-]
 
 function ToolBtn({ active, disabled, title, onClick, children, className = '' }) {
   return (
@@ -102,17 +95,18 @@ function FontMenu({ value, onChange, previewText, onClose }) {
 
 function SizeMenu({ value, onChange, onClose }) {
   return (
-    <div className="letter-tool-menu">
-      {SIZE_STEPS.map((s) => (
+    <div className="letter-tool-menu letter-tool-menu--sizes">
+      {LETTER_SIZE_STEPS.map((px) => (
         <button
-          key={s.id}
+          key={px}
           type="button"
-          onClick={() => { onChange(s.px); onClose() }}
-          className={`letter-tool-menu__item letter-tool-menu__item--row ${value === s.px ? 'letter-tool-menu__item--active' : ''}`}
+          onClick={() => { onChange(px); onClose() }}
+          className={`letter-tool-menu__item letter-tool-menu__item--row ${value === px ? 'letter-tool-menu__item--active' : ''}`}
         >
-          {s.px}px
+          {px}px
         </button>
       ))}
+      <p className="letter-tool-menu__meta">Max {LETTER_MAX_FONT_SIZE}px — one letter ≈ A4 wide</p>
     </div>
   )
 }
@@ -280,4 +274,4 @@ export default function LetterToolbar({
   )
 }
 
-export { SIZE_STEPS }
+export { LETTER_SIZE_STEPS }

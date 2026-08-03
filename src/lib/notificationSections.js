@@ -20,18 +20,19 @@ export const NOTIFICATION_SECTIONS = [
       'mention',
       'dm',
       'owl_letter',
+      'platform_report',
     ]),
   },
   {
     id: 'community',
     label: 'Community',
     hint: 'Caves and rabbit hole threads',
-    types: new Set(['cave', 'cave_add', 'rabbit_reply', 'rabbit_follow']),
+    types: new Set(['cave', 'cave_add', 'cave_deleted', 'rabbit_reply', 'rabbit_follow']),
   },
   {
     id: 'places',
-    label: 'Echo',
-    hint: 'Nearby echoes, published spots, and friends-only drops',
+    label: 'Aftersound',
+    hint: 'Nearby aftersounds, published spots, and friends-only drops',
     types: new Set(['echo', 'echo_follow', 'echo_published', 'echo_friends', 'echo_aura']),
   },
 ]

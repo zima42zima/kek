@@ -12,23 +12,16 @@ export default function ProfilePlaylistsPublic({
   onCloseProfile,
 }) {
   const [playlistCount, setPlaylistCount] = useState(0)
-  const [trackCount, setTrackCount] = useState(0)
 
   useEffect(() => {
     if (!userId) return
     let cancelled = false
     listUserPlaylists(userId)
       .then((rows) => {
-        if (!cancelled) {
-          setPlaylistCount(rows.length)
-          setTrackCount(rows.reduce((n, p) => n + p.trackCount, 0))
-        }
+        if (!cancelled) setPlaylistCount(rows.length)
       })
       .catch(() => {
-        if (!cancelled) {
-          setPlaylistCount(0)
-          setTrackCount(0)
-        }
+        if (!cancelled) setPlaylistCount(0)
       })
     return () => { cancelled = true }
   }, [userId])
@@ -49,16 +42,11 @@ export default function ProfilePlaylistsPublic({
     <button
       type="button"
       onClick={openPlaylists}
-      className="frens-btn-outline w-11 h-11 rounded-full flex items-center justify-center relative shrink-0"
+      className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex items-center justify-center relative shrink-0 text-black dark:text-white"
       title={`${frenName}'s playlists`}
       aria-label={`${frenName}'s playlists`}
     >
-      <PlaylistIcon className="w-5 h-5" />
-      {trackCount > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
-          {trackCount > 9 ? '9+' : trackCount}
-        </span>
-      )}
+      <PlaylistIcon className="w-[1.06rem] h-[1.06rem]" />
     </button>
   )
 }

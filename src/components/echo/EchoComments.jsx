@@ -47,14 +47,14 @@ export default function EchoComments({
 
   if (!echo.allowComments) {
     return (
-      <p className="text-xs frens-muted text-center py-2">Comments are off for this echo.</p>
+      <p className="text-xs frens-muted text-center py-2">Comments are off for this aftersound.</p>
     )
   }
 
   if (requireReviewed && !reviewed) {
     return (
       <p className="text-xs frens-muted text-center py-2">
-        Listen or watch the echo first, then you can comment.
+        Listen or watch the aftersound first, then you can comment.
       </p>
     )
   }
@@ -86,7 +86,7 @@ export default function EchoComments({
   return (
     <div className="space-y-3 border-t frens-border pt-3">
       <p className="text-xs frens-label">
-        {canCompose ? 'Comments' : 'Comments on your echo'}
+        {canCompose ? 'Comments' : 'Comments on your aftersound'}
       </p>
 
       {comments.length === 0 ? (

@@ -8,16 +8,21 @@ import {
   createCaveRemote,
   syncCaveRemote,
   sendCaveMessageRemote,
+  setCaveCoverRemote,
+  deleteCaveRemote,
+  setCaveRolesRemote,
   setCaveProfileHidden,
   addCaveMember,
   assignCaveTitleRemote,
   assignCaveModRoleRemote,
   toggleCaveMessagePinRemote,
   hideCaveMessageRemote,
+  deleteCaveMessageRemote,
   toggleCaveMessageReaction,
   applyReactionToggle,
   CavesNotInstalledError,
 } from '../lib/caves'
+import { DEFAULT_CAVE_ROLES, normalizeCaveRoles } from '../lib/caveRoles'
 
 const CavesContext = createContext(undefined)
 
@@ -215,7 +220,7 @@ export function CavesProvider({ children }) {
     })
   }, [caves, loaded, meId, pushLocal])
 
-  function createCave(name) {
+  function createCave(name, { coverUrl = null } = {}) {
     const id = `cave-${Date.now()}`
     const p = profileRef.current
     const newCave = {
@@ -227,6 +232,8 @@ export function CavesProvider({ children }) {
       emojiPacks: [],
       hiddenOnProfile: false,
       access: 'invite',
+      coverUrl: coverUrl || null,
+      roles: DEFAULT_CAVE_ROLES.map((r) => ({ ...r })),
       members: [{
         id: meId,
         name: p?.frenName || 'you',
@@ -239,13 +246,71 @@ export function CavesProvider({ children }) {
     setCaves((prev) => [newCave, ...prev])
     if (remote) {
       createCaveRemote(id, name)
-        .then(() => syncCaveRemote(newCave))
+        .then(async () => {
+          await syncCaveRemote(newCave)
+          if (coverUrl) {
+            try {
+              await setCaveCoverRemote(id, coverUrl)
+            } catch { /* cover column/RPC optional until SQL patch */ }
+          }
+        })
         .catch((err) => {
           if (err instanceof CavesNotInstalledError) setRemote(false)
           else console.error('Could not create cave on server:', err.message)
         })
     }
     return id
+  }
+
+  async function setCaveCover(caveId, coverUrl) {
+    updateCave(caveId, (c) => ({ ...c, coverUrl: coverUrl || null }))
+    if (!remote) return { ok: true }
+    try {
+      await setCaveCoverRemote(caveId, coverUrl || null)
+      return { ok: true }
+    } catch (err) {
+      if (err instanceof CavesNotInstalledError) {
+        // Keep local cover even if RPC missing
+        return { ok: true, localOnly: true }
+      }
+      console.error('Could not set cave cover:', err.message)
+      return { ok: false, message: err.message || 'Could not save cover.' }
+    }
+  }
+
+  async function deleteCave(caveId) {
+    const cave = cavesRef.current.find((c) => c.id === caveId)
+    if (!cave) return { ok: false, message: 'Cave not found.' }
+    if (cave.ownerId !== meId) {
+      return { ok: false, message: 'Only the owner can delete this cave.' }
+    }
+
+    // Optimistic remove from local state
+    setCaves((prev) => prev.filter((c) => c.id !== caveId))
+
+    if (!remote) return { ok: true }
+    try {
+      await deleteCaveRemote(caveId)
+      window.dispatchEvent(new CustomEvent('frens:notifications-refreshed'))
+      return { ok: true }
+    } catch (err) {
+      // Restore if server delete failed
+      setCaves((prev) => {
+        if (prev.some((c) => c.id === caveId)) return prev
+        return [cave, ...prev]
+      })
+      if (err instanceof CavesNotInstalledError) {
+        // Local-only delete succeeded; members won't get remote notifs
+        setCaves((prev) => prev.filter((c) => c.id !== caveId))
+        return {
+          ok: true,
+          localOnly: true,
+          message: 'Cave removed here. Run supabase-patch-delete-cave.sql so members get notified.',
+        }
+      }
+      console.error('Could not delete cave:', err.message)
+      return { ok: false, message: err.message || 'Could not delete cave.' }
+    }
   }
 
   function updateCave(caveId, updater) {
@@ -346,6 +411,7 @@ export function CavesProvider({ children }) {
     const em = (emoji || '').trim()
     if (!em || messageId == null) return
     if (String(messageId).startsWith('tmp-')) return
+    const mid = String(messageId)
 
     let prevReactions = []
     setCaves((prev) =>
@@ -354,9 +420,9 @@ export function CavesProvider({ children }) {
         return {
           ...c,
           messages: (c.messages || []).map((m) => {
-            if (m.id !== messageId) return m
-            prevReactions = m.reactions || []
-            return { ...m, reactions: applyReactionToggle(m.reactions, em) }
+            if (String(m.id) !== mid) return m
+            prevReactions = Array.isArray(m.reactions) ? m.reactions : []
+            return { ...m, reactions: applyReactionToggle(prevReactions, em) }
           }),
         }
       }),
@@ -372,7 +438,9 @@ export function CavesProvider({ children }) {
             : {
                 ...c,
                 messages: (c.messages || []).map((m) =>
-                  m.id === messageId ? { ...m, reactions } : m,
+                  String(m.id) === mid
+                    ? { ...m, reactions: Array.isArray(reactions) ? reactions : [] }
+                    : m,
                 ),
               },
         ),
@@ -385,7 +453,7 @@ export function CavesProvider({ children }) {
             : {
                 ...c,
                 messages: (c.messages || []).map((m) =>
-                  m.id === messageId ? { ...m, reactions: prevReactions } : m,
+                  String(m.id) === mid ? { ...m, reactions: prevReactions } : m,
                 ),
               },
         ),
@@ -427,6 +495,25 @@ export function CavesProvider({ children }) {
         ? 'Roles need supabase-patch-cave-roles.sql in Supabase.'
         : (err.message || 'Could not assign title.')
       return { ok: false, message }
+    }
+  }
+
+  async function setCaveRoles(caveId, rolesInput) {
+    const roles = normalizeCaveRoles(rolesInput)
+    updateCave(caveId, (c) => ({ ...c, roles }))
+    if (!remote) return { ok: true }
+    try {
+      await setCaveRolesRemote(caveId, roles)
+      // Also push full cave so sync_cave keeps roles if set_cave_roles missing older columns
+      const cave = cavesRef.current.find((c) => c.id === caveId)
+      if (cave) await syncCaveRemote({ ...cave, roles }).catch(() => {})
+      return { ok: true }
+    } catch (err) {
+      if (err instanceof CavesNotInstalledError) {
+        return { ok: true, localOnly: true }
+      }
+      console.error('Could not save cave roles:', err.message)
+      return { ok: false, message: err.message || 'Could not save roles.' }
     }
   }
 
@@ -514,16 +601,56 @@ export function CavesProvider({ children }) {
     }
   }
 
+  async function deleteCaveMessage(caveId, messageId) {
+    if (messageId == null) return
+    const id = String(messageId)
+    let snapshot = null
+    setCaves((prev) =>
+      prev.map((c) => {
+        if (c.id !== caveId) return c
+        snapshot = c.messages || []
+        return {
+          ...c,
+          messages: (c.messages || []).filter((m) => String(m.id) !== id),
+        }
+      }),
+    )
+    if (id.startsWith('tmp-') || !remote) return
+    try {
+      await deleteCaveMessageRemote(caveId, messageId)
+      await syncRemoteCaves()
+    } catch (err) {
+      if (snapshot) {
+        setCaves((prev) =>
+          prev.map((c) => (c.id === caveId ? { ...c, messages: snapshot } : c)),
+        )
+      }
+      if (!(err instanceof CavesNotInstalledError)) {
+        console.error('Could not delete message:', err.message)
+      }
+    }
+  }
+
   async function sendCaveMessage(caveId, fields, author) {
+    const tmpId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const parentId = fields.parentId ?? fields.replyToId ?? null
+    const replyPreview = fields.replyPreview
+      || (parentId && fields.replyToName
+        ? { authorName: fields.replyToName, text: fields.replyToText || '' }
+        : null)
     const optimistic = {
-      id: `tmp-${Date.now()}`,
+      id: tmpId,
       ts: 'just now',
       authorId: author.authorId,
       authorName: author.authorName,
       avatarType: author.avatarType,
       avatarUrl: author.avatarUrl,
       reactions: [],
-      ...fields,
+      parentId,
+      replyPreview,
+      text: fields.text,
+      image: fields.image,
+      sticker: fields.sticker,
     }
     setCaves((prev) =>
       prev.map((c) =>
@@ -532,16 +659,51 @@ export function CavesProvider({ children }) {
     )
     if (!remote) return
     try {
-      await sendCaveMessageRemote(caveId, {
+      const mid = await sendCaveMessageRemote(caveId, {
         text: fields.text,
         image: fields.image,
         sticker: fields.sticker,
         authorName: author.authorName,
         avatarType: author.avatarType,
         avatarUrl: author.avatarUrl,
+        parentId,
       })
+      // Promote optimistic row to real id so sync merge won't leave a duplicate.
+      if (mid != null) {
+        setCaves((prev) =>
+          prev.map((c) => {
+            if (c.id !== caveId) return c
+            return {
+              ...c,
+              messages: (c.messages || []).map((m) =>
+                m.id === tmpId ? { ...m, id: mid } : m,
+              ),
+            }
+          }),
+        )
+      } else {
+        setCaves((prev) =>
+          prev.map((c) => {
+            if (c.id !== caveId) return c
+            return {
+              ...c,
+              messages: (c.messages || []).filter((m) => m.id !== tmpId),
+            }
+          }),
+        )
+      }
       await syncRemoteCaves()
     } catch (err) {
+      // Roll back optimistic bubble on failure
+      setCaves((prev) =>
+        prev.map((c) => {
+          if (c.id !== caveId) return c
+          return {
+            ...c,
+            messages: (c.messages || []).filter((m) => m.id !== tmpId),
+          }
+        }),
+      )
       if (err instanceof CavesNotInstalledError) setRemote(false)
       else console.error('Could not send cave message:', err.message)
     }
@@ -585,6 +747,9 @@ export function CavesProvider({ children }) {
     remote,
     createCave,
     updateCave,
+    setCaveCover,
+    setCaveRoles,
+    deleteCave,
     setCaveHidden,
     setCaveAccess,
     inviteToCave,
@@ -593,6 +758,7 @@ export function CavesProvider({ children }) {
     assignCaveModRole,
     pinCaveMessage,
     hideCaveMessage,
+    deleteCaveMessage,
     sendCaveMessage,
     pendingOpenId,
     requestOpenCave,

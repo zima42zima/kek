@@ -58,6 +58,7 @@ function mapRow(row, anonymousOwlLetterIds = new Set()) {
     rabbitPreview: row.rabbit_preview || '',
     owlLetterId: row.owl_letter_id || null,
     owlLetterAnonymous: owlAnon,
+    platformReportId: row.platform_report_id || null,
     echoId: row.echo_id || null,
     cityLabel: row.echo_city_label || null,
     read: row.read ?? false,

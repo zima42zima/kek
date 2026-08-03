@@ -3,7 +3,7 @@ import { formatLetterDate } from '../../lib/owlLetterFormat'
 import { owlFontFamilyStyle, owlFontStack } from '../../lib/owlLetterFonts'
 import { fieldPlainText, sanitizeFieldHtml } from '../../lib/letterFieldRichText'
 import { DEFAULT_IMAGE_LAYOUT, measureLetterPageOverflow } from '../../lib/letterImageLayout'
-import { STANDARD_FIELD_DEFAULTS } from '../../lib/letterStudio'
+import { STANDARD_FIELD_DEFAULTS, clampLetterFontSize } from '../../lib/letterStudio'
 import LetterSheetImage from './LetterSheetImage'
 import PsLetterStamp from './PsLetterStamp'
 
@@ -17,7 +17,7 @@ const FIELDS = [
 function fieldStyle(letter, id) {
   const defaults = STANDARD_FIELD_DEFAULTS[id] || {}
   const o = letter.styleOverrides?.[id] || {}
-  const fontSize = o.fontSize ?? defaults.fontSize
+  const fontSize = clampLetterFontSize(o.fontSize ?? defaults.fontSize)
   const bold = o.bold ?? defaults.bold
   return {
     ...owlFontFamilyStyle(letter.font),

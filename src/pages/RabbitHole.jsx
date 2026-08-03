@@ -1,20 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { ProfileAvatar } from '../components/FrogLogo'
+import { ProfileAvatar, ThoughtMark } from '../components/FrogLogo'
 import Modal from '../components/Modal'
 import RichText from '../components/RichText'
 import FrenHandle from '../components/FrenHandle'
 import PinnedLabel from '../components/PinnedLabel'
-import { OPTION_ACTIVE } from '../components/icons/UiIcons'
 import PillComposer from '../components/PillComposer'
 import { appendGifUrlToText, prepareCommentText } from '../lib/imageAttach'
 import { insertAtCaret } from '../lib/insertText'
-import rabbitholeIcon from '../assets/icons/rabbit.png'
+import rabbitholeIcon from '../assets/icons/rabbithole.svg'
 import {
   RABBIT_RULES,
-  RABBIT_TAGS,
   RABBIT_SORTS,
-  rabbitTagLabel,
   displayAuthor,
 } from '../lib/rabbitHoleConstants'
 import {
@@ -34,11 +31,19 @@ import {
   RabbitHoleNotInstalledError,
 } from '../lib/rabbitHole'
 
-function TagBadge({ tag, small = false }) {
-  if (!tag) return null
+/** Photo when set; otherwise the same solid mark used in front of feed text posts (not monad). */
+function RhAvatar({ profile, className = 'w-8 h-8' }) {
+  if (
+    (profile?.avatarType === 'photo' && (profile?.avatarUrl || profile?.avatarPreview))
+  ) {
+    return <ProfileAvatar profile={profile} className={className} logoClassName="w-5 h-auto" />
+  }
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border frens-border ${small ? 'text-[10px] px-2 py-0.5' : 'text-xs px-2.5 py-0.5'} frens-muted`}>
-      {rabbitTagLabel(tag)}
+    <span
+      className={`${className} shrink-0 inline-flex items-center justify-center`}
+      aria-hidden
+    >
+      <ThoughtMark className="w-[8px] h-[8px]" />
     </span>
   )
 }
@@ -52,7 +57,7 @@ function RulesBanner() {
         onClick={() => setOpen((v) => !v)}
         className="w-full px-4 py-3 text-left flex items-center justify-between gap-2"
       >
-        <span className="text-sm font-medium">Burrow rules</span>
+        <span className="text-sm font-medium">Rules</span>
         <span className="text-xs frens-muted">{open ? 'hide' : 'show'}</span>
       </button>
       {open ? (
@@ -81,15 +86,23 @@ function TopicRow({ topic, viewerId, isMod, onOpen }) {
       }`}
     >
       <div className="flex items-start gap-3">
-        <ProfileAvatar profile={author} className="w-9 h-9 shrink-0" logoClassName="w-5 h-auto" />
+        <RhAvatar profile={author} className="w-9 h-9" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            {topic.pinned ? <PinnedLabel className="frens-badge-count" /> : null}
-            <TagBadge tag={topic.tag} small />
-            {topic.hidden && isMod ? <span className="text-[10px] text-red-500">hidden</span> : null}
-          </div>
+          {(topic.pinned || (topic.hidden && isMod)) ? (
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              {topic.pinned ? <PinnedLabel className="frens-badge-count" /> : null}
+              {topic.hidden && isMod ? <span className="text-[10px] text-red-500">hidden</span> : null}
+            </div>
+          ) : null}
           <h3 className="frens-title-sm leading-snug">{topic.title}</h3>
-          {preview ? <p className="text-xs frens-muted mt-1 line-clamp-2">{preview}</p> : null}
+          {preview ? (
+            <div className="flex items-start gap-2 mt-1 min-w-0">
+              <span className="h-[1.35em] shrink-0 inline-flex items-center" aria-hidden>
+                <ThoughtMark className="w-[6px] h-[6px]" />
+              </span>
+              <p className="text-xs frens-muted line-clamp-2 min-w-0">{preview}</p>
+            </div>
+          ) : null}
           <div className="flex items-center gap-3 mt-2 text-[11px] frens-muted">
             <span>{author.frenName}</span>
             <span>·</span>
@@ -106,7 +119,6 @@ function TopicRow({ topic, viewerId, isMod, onOpen }) {
 function NewTopicModal({ profile, onClose, onCreated }) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
-  const [tag, setTag] = useState('debate')
   const [anonymous, setAnonymous] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -121,7 +133,7 @@ function NewTopicModal({ profile, onClose, onCreated }) {
       const id = await createTopic({
         title: title.trim(),
         body: await prepareCommentText(body.trim(), { prefix: 'rabbit-hole' }),
-        tag,
+        tag: null,
         anonymous,
         frenName: profile?.frenName || 'a fren',
         avatarType: profile?.avatarType || 'frog',
@@ -149,14 +161,6 @@ function NewTopicModal({ profile, onClose, onCreated }) {
             className="frens-input"
             maxLength={200}
           />
-        </div>
-        <div>
-          <label htmlFor="rh-tag" className="block frens-label mb-1">Flair</label>
-          <select id="rh-tag" value={tag} onChange={(e) => setTag(e.target.value)} className="frens-input">
-            {RABBIT_TAGS.map((t) => (
-              <option key={t.id} value={t.id}>{t.label}</option>
-            ))}
-          </select>
         </div>
         <div>
           <label htmlFor="rh-body" className="block frens-label mb-1">Context (optional)</label>
@@ -309,19 +313,27 @@ function TopicDetail({ topicId, userId, isMod, onBack, onDeleted }) {
 
   return (
     <div className="space-y-4">
-      <button type="button" onClick={onBack} className="frens-muted text-sm hover:underline">← back to the burrow</button>
+      <button type="button" onClick={onBack} className="frens-muted text-sm hover:underline">← back to topics</button>
 
       <article className="border frens-border rounded-xl p-4 bg-gradient-to-br from-black/[0.02] to-transparent dark:from-white/[0.03]">
         <div className="flex items-start gap-3">
-          <ProfileAvatar profile={author} className="w-10 h-10 shrink-0" logoClassName="w-6 h-auto" />
+          <RhAvatar profile={author} className="w-10 h-10" />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              {topic.pinned ? <PinnedLabel className="frens-badge-count" /> : null}
-              <TagBadge tag={topic.tag} />
-            </div>
+            {topic.pinned ? (
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <PinnedLabel className="frens-badge-count" />
+              </div>
+            ) : null}
             <h2 className="frens-title-lg leading-snug">{topic.title}</h2>
             <p className="text-[11px] frens-muted mt-1">{author.frenName} · {relativeLabel(topic.createdAt)}</p>
-            {topic.body ? <RichText text={topic.body} className="frens-post-text mt-3" variant="timeline" /> : null}
+            {topic.body ? (
+              <div className="flex items-start gap-2 mt-3 min-w-0">
+                <span className="h-[1.5em] shrink-0 inline-flex items-center" aria-hidden>
+                  <ThoughtMark className="w-[6px] h-[6px]" />
+                </span>
+                <RichText text={topic.body} className="frens-post-text min-w-0 flex-1" variant="timeline" />
+              </div>
+            ) : null}
 
             <div className="flex flex-wrap gap-2 mt-3">
               <button type="button" onClick={handleFollow} disabled={busy} className={`text-xs px-3 py-1.5 rounded-full border frens-border ${topic.iFollow ? 'bg-black/10 dark:bg-white/10' : ''}`}>
@@ -348,9 +360,14 @@ function TopicDetail({ topicId, userId, isMod, onBack, onDeleted }) {
         </p>
         {replies.map((reply) => {
           const replyAuthor = displayAuthor(reply, userId, isMod)
+          const hasPhoto =
+            replyAuthor.avatarType === 'photo' &&
+            (replyAuthor.avatarUrl || replyAuthor.avatarPreview)
           return (
             <div key={reply.id} className="flex gap-3 rounded-xl p-3 bg-black/[0.03] dark:bg-white/[0.03]">
-              <ProfileAvatar profile={replyAuthor} className="w-8 h-8 shrink-0" logoClassName="w-5 h-auto" />
+              {hasPhoto ? (
+                <ProfileAvatar profile={replyAuthor} className="w-8 h-8 shrink-0" logoClassName="w-5 h-auto" />
+              ) : null}
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2 mb-1 flex-wrap">
                   <FrenHandle className="text-xs">{replyAuthor.frenName}</FrenHandle>
@@ -360,7 +377,12 @@ function TopicDetail({ topicId, userId, isMod, onBack, onDeleted }) {
                     <button type="button" onClick={() => deleteReply(reply.id).then(load)} disabled={busy} className="text-[10px] frens-action">Delete</button>
                   ) : null}
                 </div>
-                <RichText text={reply.body} className="text-sm frens-body-text" />
+                <div className="flex items-start gap-2 min-w-0">
+                  <span className="h-[1.5em] shrink-0 inline-flex items-center" aria-hidden>
+                    <ThoughtMark className="w-[6px] h-[6px]" />
+                  </span>
+                  <RichText text={reply.body} className="text-sm frens-body-text min-w-0 flex-1" />
+                </div>
               </div>
             </div>
           )
@@ -408,7 +430,6 @@ export default function RabbitHole({ topicId: urlTopicId = null, onTopicChange }
   const [showNew, setShowNew] = useState(false)
   const [activeTopicId, setActiveTopicId] = useState(urlTopicId)
   const [sort, setSort] = useState('active')
-  const [tagFilter, setTagFilter] = useState(null)
   const [isMod, setIsMod] = useState(false)
 
   useEffect(() => {
@@ -423,7 +444,7 @@ export default function RabbitHole({ topicId: urlTopicId = null, onTopicChange }
   function loadTopics() {
     setLoading(true)
     setError('')
-    listTopics({ sort, tag: tagFilter })
+    listTopics({ sort, tag: null })
       .then(setTopics)
       .catch((err) => {
         if (err instanceof RabbitHoleNotInstalledError) {
@@ -446,7 +467,7 @@ export default function RabbitHole({ topicId: urlTopicId = null, onTopicChange }
   useEffect(() => {
     if (!activeTopicId) loadTopics()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sort, tagFilter, activeTopicId])
+  }, [sort, activeTopicId])
 
   if (activeTopicId) {
     return (
@@ -478,7 +499,7 @@ export default function RabbitHole({ topicId: urlTopicId = null, onTopicChange }
             />
             <div>
               <h2 className="frens-title-lg">Rabbit Hole</h2>
-              <p className="text-xs frens-muted">Debates, memes, curiosities — follow threads you care about</p>
+              <p className="text-xs frens-muted">Threads you care about — open one, or start your own</p>
             </div>
           </div>
           <button type="button" onClick={() => setShowNew(true)} className="frens-btn-primary px-3 py-2 text-sm shrink-0">+ Topic</button>
@@ -500,26 +521,6 @@ export default function RabbitHole({ topicId: urlTopicId = null, onTopicChange }
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setTagFilter(null)}
-          className={`text-xs px-3 py-1.5 rounded-full border ${!tagFilter ? OPTION_ACTIVE : 'frens-border'}`}
-        >
-          All
-        </button>
-        {RABBIT_TAGS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTagFilter(t.id)}
-            className={`text-xs px-3 py-1.5 rounded-full border ${tagFilter === t.id ? OPTION_ACTIVE : 'frens-border'}`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
       {needsSql ? (
         <div className="border border-amber-400/50 rounded-xl p-4 bg-amber-50 dark:bg-amber-950/20 text-xs text-amber-800 dark:text-amber-200">
           Run <code>supabase-patch-rabbit-hole.sql</code> in Supabase SQL Editor.
@@ -535,11 +536,11 @@ export default function RabbitHole({ topicId: urlTopicId = null, onTopicChange }
       {error ? <p className="text-xs text-red-500 dark:text-red-400">{error}</p> : null}
 
       {loading ? (
-        <p className="text-sm frens-muted text-center py-8">Loading the burrow…</p>
+        <p className="text-sm frens-muted text-center py-8">Loading topics…</p>
       ) : topics.length === 0 ? (
         <div className="border frens-border rounded-xl p-8 text-center">
-          <p className="text-sm frens-body-text mb-1">The burrow is quiet</p>
-          <p className="text-xs frens-muted mb-4">Start a topic — or change the filter.</p>
+          <p className="text-sm frens-body-text mb-1">No topics yet</p>
+          <p className="text-xs frens-muted mb-4">Start a topic to open a thread.</p>
           <button type="button" onClick={() => setShowNew(true)} className="frens-btn-outline px-4 py-2 text-sm">Start a topic</button>
         </div>
       ) : (

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import CaveCoverEditor from './CaveCover'
 
 export default function CreateCaveModal({ onCreate, onClose }) {
   const [name, setName] = useState('')
+  const [coverUrl, setCoverUrl] = useState(null)
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -17,7 +19,7 @@ export default function CreateCaveModal({ onCreate, onClose }) {
     e.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) return
-    onCreate?.(trimmed)
+    onCreate?.(trimmed, { coverUrl })
   }
 
   return (
@@ -27,7 +29,7 @@ export default function CreateCaveModal({ onCreate, onClose }) {
         if (e.target === e.currentTarget) onClose?.()
       }}
     >
-      <div className="frens-surface border frens-border rounded-2xl p-6 w-full max-w-sm shadow-xl">
+      <div className="frens-surface border frens-border rounded-2xl p-6 w-full max-w-sm shadow-xl max-h-[90vh] overflow-y-auto">
         <h2 className="frens-title-xl mb-1">Create a cave</h2>
         <p className="text-xs frens-muted mb-5">
           A cozy little room for you and your frens.
@@ -47,6 +49,17 @@ export default function CreateCaveModal({ onCreate, onClose }) {
               placeholder="the lily pad lounge"
               maxLength={40}
               className="frens-input py-3"
+            />
+          </div>
+
+          <div>
+            <span className="block frens-label mb-2">Cover photo (optional)</span>
+            <CaveCoverEditor
+              coverUrl={coverUrl}
+              editable
+              compact
+              onSave={(url) => setCoverUrl(url)}
+              onRemove={() => setCoverUrl(null)}
             />
           </div>
 

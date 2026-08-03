@@ -87,7 +87,7 @@ export default function SpatialEchoPlacer({
 
   function confirmPlacement() {
     if (!pin) {
-      setError('Tap the scene where your echo should live.')
+      setError('Tap the scene where your aftersound should live.')
       return
     }
     const anchor = createSpatialAnchor({
@@ -107,7 +107,7 @@ export default function SpatialEchoPlacer({
       <div className="text-center space-y-3 py-4">
         <p className="text-sm frens-body-text">
           {permission === 'denied'
-            ? 'Camera access is needed to pin a spatial echo.'
+            ? 'Camera access is needed to pin a spatial aftersound.'
             : 'Spatial placement needs a secure connection and camera.'}
         </p>
         <button type="button" onClick={onCancel} className="frens-btn-outline px-4 py-2 text-sm">
@@ -121,7 +121,7 @@ export default function SpatialEchoPlacer({
     <div className="space-y-3">
       <p className="text-xs frens-muted text-center inline-flex items-center justify-center gap-1">
         <LocationIcon className="w-3.5 h-3.5" />
-        Tap where your echo should appear when someone returns
+        Tap where your aftersound should appear when someone returns
       </p>
 
       <div
@@ -184,7 +184,7 @@ export default function SpatialEchoPlacer({
           disabled={permission !== 'granted'}
           className="frens-btn-primary flex-1 py-2.5 text-sm disabled:opacity-40"
         >
-          Pin echo here
+          Pin aftersound here
         </button>
       </div>
     </div>

@@ -145,7 +145,7 @@ export default function EchoView({
 
   return (
     <>
-      <Modal title={mine ? 'Your echo' : 'A fren left an echo'} onClose={onClose} maxWidth="max-w-sm">
+      <Modal title={mine ? 'Your aftersound' : 'A fren left an aftersound'} onClose={onClose} maxWidth="max-w-sm">
         <div className="flex items-center gap-3 mb-4">
           <ProfileAvatar profile={echo} className="w-11 h-11" logoClassName="w-7 h-auto" />
           <div className="min-w-0 flex-1">
@@ -200,7 +200,7 @@ export default function EchoView({
             </p>
             <p className="text-[11px] frens-muted mt-0.5">
               {mine
-                ? 'See where you pinned this echo'
+                ? 'See where you pinned this aftersound'
                 : 'Open your camera to find the pinned spot'}
             </p>
           </button>
@@ -221,7 +221,7 @@ export default function EchoView({
                 type="button"
                 onClick={() => navigateRange(-1)}
                 disabled={!hasPrev}
-                aria-label="Previous echo in range"
+                aria-label="Previous aftersound in range"
                 className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/45 text-white text-lg leading-none disabled:opacity-25"
               >
                 ‹
@@ -230,7 +230,7 @@ export default function EchoView({
                 type="button"
                 onClick={() => navigateRange(1)}
                 disabled={!hasNext}
-                aria-label="Next echo in range"
+                aria-label="Next aftersound in range"
                 className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/45 text-white text-lg leading-none disabled:opacity-25"
               >
                 ›

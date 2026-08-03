@@ -21,34 +21,24 @@ function ThemeIcon({ src }) {
   )
 }
 
+/**
+ * One control: shows moon in dark mode, sun in light mode.
+ * Click switches to the other theme.
+ */
 export default function ThemeToggle({ className = '' }) {
-  const { theme, setTheme } = useTheme()
-
-  const btnClass =
-    'frens-action w-9 h-9 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition shrink-0'
+  const { theme, toggleTheme } = useTheme()
+  const isDark = theme === 'dark'
 
   return (
-    <div className={`inline-flex items-center gap-3 ${className}`}>
-      <button
-        type="button"
-        onClick={() => setTheme('light')}
-        aria-label="Light mode"
-        aria-pressed={theme === 'light'}
-        title="Light mode"
-        className={`${btnClass} ${theme === 'light' ? 'ring-1 ring-black dark:ring-white' : ''}`}
-      >
-        <ThemeIcon src={sunIcon} />
-      </button>
-      <button
-        type="button"
-        onClick={() => setTheme('dark')}
-        aria-label="Dark mode"
-        aria-pressed={theme === 'dark'}
-        title="Dark mode"
-        className={`${btnClass} ${theme === 'dark' ? 'ring-1 ring-black dark:ring-white' : ''}`}
-      >
-        <ThemeIcon src={moonIcon} />
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? 'Light mode' : 'Dark mode'}
+      className={`frens-action w-9 h-9 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition shrink-0 ${className}`}
+    >
+      {/* Dark → moon (tap for light). Light → sun (tap for dark). */}
+      <ThemeIcon src={isDark ? moonIcon : sunIcon} />
+    </button>
   )
 }

@@ -56,19 +56,19 @@ export default function PsHubModal({ onClose, onSettingsChange, initialSection =
       maxWidth="max-w-md"
     >
       <p className="text-xs frens-muted -mt-2 mb-5">
-        Two pockets — sealed letters to frens, or folds you share on your profile.
+        Two pockets — letters for frens, or folds on A4.
       </p>
       <div className="grid gap-3">
         <ChoiceCard
-          title="LETTERS"
+          title="Letters"
           icon={LettersSectionIcon}
-          hint="Sealed mail to a fren — read only when printed."
+          hint="pocket to pocket"
           onClick={() => setSection('letters')}
         />
         <ChoiceCard
-          title="FOLDS"
-          icon={FoldsSectionIcon}
-          hint="Typographic zines — layout pages and share on your profile."
+          title="Folds"
+          icon={(p) => <FoldsSectionIcon className="w-[1.15rem] h-[1.15rem]" {...p} />}
+          hint="Zines, stories, prints & posters — JPG/PDF for A4."
           onClick={() => setSection('folds')}
         />
       </div>

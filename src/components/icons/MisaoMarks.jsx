@@ -23,13 +23,22 @@ function Mark({ className = 'w-5 h-5', children, ...rest }) {
   )
 }
 
-/** Home / world — ring + core (monad echo). */
+/** Home — house mark (matches assets/icons/home.svg). */
 export function HomeMark({ className }) {
   return (
-    <Mark className={className}>
-      <circle cx="12" cy="12" r="7.5" />
-      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
-    </Mark>
+    <svg
+      viewBox="0 0 719 789"
+      fill="currentColor"
+      stroke="none"
+      className={`inline-block shrink-0 align-middle ${className || 'w-4 h-4'}`}
+      aria-hidden
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M370.11 5.26476L708.684 267.618C715.105 273.163 718.32 280.022 718.32 288.204V762.558C718.32 769.575 715.981 775.698 711.312 780.954C706.047 785.912 699.775 788.409 692.478 788.409H497.568C490.551 788.409 484.568 785.912 479.601 780.945C474.345 775.689 471.717 769.566 471.717 762.549V472.155H247.032V762.549C247.032 769.566 244.553 775.689 239.577 780.945C234.619 785.912 228.487 788.409 221.19 788.409H26.28C19.272 788.409 13.14 785.912 7.884 780.945C2.628 775.689 0 769.566 0 762.549V288.195C0 279.724 3.36384 273.023 10.074 268.056L337.698 5.256C342.656 1.752 348.061 0 353.904 0C360.027 0.00876 365.432 1.752 370.11 5.26476ZM327.177 582.102C335.937 573.631 346.598 569.409 359.16 569.409C372.3 569.409 383.101 573.631 391.572 582.102C400.919 591.44 405.597 602.39 405.597 614.952C405.597 627.514 400.928 638.306 391.572 647.355C383.101 656.404 372.3 660.942 359.16 660.942C346.598 660.942 335.946 656.404 327.186 647.355C318.137 638.306 313.617 627.505 313.617 614.952C313.617 602.399 318.128 591.449 327.177 582.102Z"
+      />
+    </svg>
   )
 }
 
@@ -57,13 +66,18 @@ export function EchoMark({ className }) {
   return <SquareMark className={className} />
 }
 
-/** Rabbit Hole — core + dashed orbit. */
+/** Rabbit Hole — solid mark (matches assets/icons/rabbithole.svg). */
 export function RabbitMark({ className }) {
   return (
-    <Mark className={className}>
-      <circle cx="12" cy="12" r="3.5" />
-      <circle cx="12" cy="12" r="7.5" strokeDasharray="1.2 2.4" />
-    </Mark>
+    <svg
+      viewBox="0 0 675 677"
+      fill="currentColor"
+      stroke="none"
+      className={`inline-block shrink-0 align-middle ${className || 'w-4 h-4'}`}
+      aria-hidden
+    >
+      <path d="M98.8535 99.0789C2.33769 195.897 -26.5718 341.564 25.7511 468.037C77.9671 594.519 200.975 677 337.499 677C474.024 677 597.037 594.517 649.247 468.037C701.573 341.556 672.662 195.889 576.145 99.0789C444.343 -33.0263 230.667 -33.0263 98.8535 99.0789Z" />
+    </svg>
   )
 }
 

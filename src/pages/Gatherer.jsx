@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { fetchProfileForUser, getSupabaseProjectRef } from '../lib/profile'
 import { linkLabel } from '../lib/urls'
 import GathererIcon from '../components/gatherer/GathererIcon'
+import ProfileShareToggle from '../components/ProfileShareToggle'
 import {
   addMoodboardItemFromFile,
   addMoodboardItemFromUrl,
@@ -15,6 +16,7 @@ import {
   removeGalleryItem,
   reorderMoodboardItems,
   updateMoodboard,
+  setMoodboardCover,
   GalleryNotInstalledError,
 } from '../lib/gallery'
 
@@ -38,26 +40,44 @@ function MoodboardsSqlBanner() {
   )
 }
 
-function MoodboardRow({ board, editable, onOpen }) {
+function MoodboardCoverThumb({ coverUrl, name }) {
+  const [broken, setBroken] = useState(false)
+  if (coverUrl && !broken) {
+    return (
+      <img
+        src={coverUrl}
+        alt=""
+        className="w-12 h-12 rounded-xl object-cover shrink-0 border frens-border bg-black/5 dark:bg-white/5"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setBroken(true)}
+      />
+    )
+  }
+  return (
+    <span
+      className="w-12 h-12 rounded-xl border frens-border bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0"
+      aria-hidden
+      title={name}
+    >
+      <GathererIcon className="w-5 h-5 opacity-70" />
+    </span>
+  )
+}
+
+function MoodboardRow({ board, onOpen }) {
   return (
     <button
       type="button"
       onClick={() => onOpen(board)}
-      className="w-full text-left border frens-border rounded-xl p-4 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
+      className="w-full text-left border frens-border rounded-xl p-3.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
     >
       <div className="flex items-center gap-3">
-        <span className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
-          <GathererIcon className="w-5 h-5" />
-        </span>
+        <MoodboardCoverThumb coverUrl={board.coverUrl} name={board.name} />
         <div className="min-w-0 flex-1">
           <h3 className="frens-title-sm truncate">{board.name}</h3>
           <p className="text-xs frens-muted mt-0.5">
             {board.itemCount === 1 ? '1 image' : `${board.itemCount} images`}
-            {editable ? (
-              <span className="ml-2">
-                · {board.isPublic ? 'Public' : 'Private'}
-              </span>
-            ) : null}
           </p>
         </div>
         <span className="text-xs frens-muted">→</span>
@@ -72,6 +92,8 @@ function MoodboardTile({
   total,
   editing,
   editable,
+  isCover,
+  onSetCover,
   onRemove,
   onMoveEarlier,
   onMoveLater,
@@ -116,16 +138,14 @@ function MoodboardTile({
         </a>
       )}
 
-      {label && !editing ? (
-        <figcaption className="text-[10px] frens-muted truncate mt-1 px-0.5">
-          <a href={href} target="_blank" rel="noreferrer" className="hover:underline">
-            {label}
-          </a>
-        </figcaption>
+      {isCover ? (
+        <span className="absolute top-2 left-2 text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-black text-white dark:bg-white dark:text-black">
+          Cover
+        </span>
       ) : null}
 
       {editable && editing ? (
-        <div className="flex items-center justify-center gap-1 mt-1.5">
+        <div className="flex flex-wrap items-center justify-center gap-1 mt-1.5">
           <button
             type="button"
             disabled={index === 0}
@@ -151,16 +171,39 @@ function MoodboardTile({
           >
             →
           </button>
+          <button
+            type="button"
+            disabled={isCover}
+            onClick={() => onSetCover?.(item)}
+            className="frens-btn-outline px-2 h-8 rounded-full text-[11px] disabled:opacity-40"
+          >
+            {isCover ? 'Cover' : 'Use as cover'}
+          </button>
         </div>
       ) : editable && !editing ? (
-        <button
-          type="button"
-          onClick={() => onRemove(item.id)}
-          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white text-xs opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-          aria-label="Remove"
-        >
-          ×
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => onRemove(item.id)}
+            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white text-xs opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+            aria-label="Remove"
+          >
+            ×
+          </button>
+          {!isCover && onSetCover ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onSetCover(item)
+              }}
+              className="absolute bottom-2 left-2 px-2 h-7 rounded-full bg-black/70 text-white text-[10px] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+            >
+              Cover
+            </button>
+          ) : null}
+        </>
       ) : null}
     </figure>
   )
@@ -185,9 +228,10 @@ export default function Gatherer({
   const [needsGallerySql, setNeedsGallerySql] = useState(false)
   const [moodboardsInstalled, setMoodboardsInstalled] = useState(null)
   const [newBoardName, setNewBoardName] = useState('')
-  const [newBoardPublic, setNewBoardPublic] = useState(true)
   const [editName, setEditName] = useState('')
   const [editPublic, setEditPublic] = useState(true)
+  const [listEditing, setListEditing] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [layoutEditing, setLayoutEditing] = useState(false)
   const fileRef = useRef(null)
 
@@ -251,7 +295,9 @@ export default function Gatherer({
   useEffect(() => {
     setSelected(null)
     setItems([])
+    setEditing(false)
     setLayoutEditing(false)
+    setListEditing(false)
     loadBoards()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
@@ -274,6 +320,7 @@ export default function Gatherer({
     setSelected(board)
     setEditName(board.name)
     setEditPublic(board.isPublic)
+    setEditing(false)
     setLayoutEditing(false)
     loadItems(board.id)
   }
@@ -281,8 +328,20 @@ export default function Gatherer({
   function backToList() {
     setSelected(null)
     setItems([])
+    setEditing(false)
     setLayoutEditing(false)
     loadBoards()
+  }
+
+  function exitEditMode() {
+    const trimmed = editName.trim()
+    if (trimmed && trimmed !== selected.name) {
+      persistBoardMeta(trimmed, editPublic)
+    } else {
+      setEditName(selected.name)
+    }
+    setLayoutEditing(false)
+    setEditing(false)
   }
 
   async function persistBoardMeta(name, isPublic) {
@@ -307,9 +366,8 @@ export default function Gatherer({
     setBusy(true)
     setError('')
     try {
-      const id = await createMoodboard(newBoardName, newBoardPublic)
+      const id = await createMoodboard(newBoardName, true)
       setNewBoardName('')
-      setNewBoardPublic(true)
       await loadBoards()
       const created = (await listUserMoodboards(userId)).find((b) => b.id === id)
       if (created) openBoard(created)
@@ -366,6 +424,26 @@ export default function Gatherer({
     } finally {
       setBusy(false)
       if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  async function handleSetCover(item) {
+    if (!selected || !item?.id || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await setMoodboardCover(selected.id, item.id, { imageUrl: item.imageUrl })
+      const next = {
+        ...selected,
+        coverUrl: item.imageUrl || selected.coverUrl,
+        coverItemId: item.id,
+      }
+      setSelected(next)
+      setBoards((prev) => prev.map((b) => (b.id === selected.id ? { ...b, ...next } : b)))
+    } catch (err) {
+      setError(err.message || 'Could not set cover.')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -430,6 +508,8 @@ export default function Gatherer({
   }
 
   if (selected) {
+    const tileEditable = editable && (editing || layoutEditing)
+
     return (
       <div className="space-y-4">
         {moodboardsInstalled === false ? <MoodboardsSqlBanner /> : null}
@@ -443,36 +523,43 @@ export default function Gatherer({
             ←
           </button>
           <div className="min-w-0 flex-1">
-            {editable && !legacyBoard ? (
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                onBlur={() => {
-                  const trimmed = editName.trim()
-                  if (!trimmed || trimmed === selected.name) {
-                    setEditName(selected.name)
-                    return
-                  }
-                  persistBoardMeta(trimmed, editPublic)
-                }}
-                maxLength={48}
-                className="frens-input w-full frens-title-lg"
-                aria-label="Moodboard name"
-              />
-            ) : (
-              <h2 className="frens-title-lg truncate">{selected.name}</h2>
-            )}
-            <p className="text-xs frens-muted mt-0.5">
-              {editable
-                ? 'Tap images to visit the source · use Edit layout to reorder'
-                : `${ownerName}'s moodboard`}
-            </p>
+            <h2 className="frens-title-lg truncate">{selected.name}</h2>
+            {!editing && items.length > 0 ? (
+              <p className="text-xs frens-muted mt-0.5">
+                {items.length === 1 ? '1 image' : `${items.length} images`}
+              </p>
+            ) : null}
           </div>
+          {editable && !legacyBoard ? (
+            <button
+              type="button"
+              onClick={() => (editing ? exitEditMode() : setEditing(true))}
+              className={`frens-btn-outline px-3 py-1.5 text-xs shrink-0 ${editing ? 'ring-2 ring-black/20 dark:ring-white/20' : ''}`}
+            >
+              {editing ? 'Done' : 'Edit'}
+            </button>
+          ) : null}
         </div>
 
-        {editable && !legacyBoard ? (
-          <div className="flex flex-wrap items-center gap-2 border frens-border rounded-xl p-3">
+        {editable && editing && !legacyBoard ? (
+          <div className="space-y-3 border frens-border rounded-xl p-3">
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={() => {
+                const trimmed = editName.trim()
+                if (!trimmed || trimmed === selected.name) {
+                  setEditName(selected.name)
+                  return
+                }
+                persistBoardMeta(trimmed, editPublic)
+              }}
+              maxLength={48}
+              className="frens-input w-full text-sm"
+              aria-label="Board name"
+              placeholder="Name"
+            />
             <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -482,58 +569,57 @@ export default function Gatherer({
                   setEditPublic(next)
                   persistBoardMeta(editName.trim() || selected.name, next)
                 }}
-                className="rounded"
+                className="ps-checkbox"
               />
-              <span>Public — other frens can see this board</span>
+              <span>Public</span>
             </label>
-            <button
-              type="button"
-              onClick={() => setLayoutEditing((v) => !v)}
-              className={`frens-btn-outline px-3 py-1.5 text-xs ml-auto ${layoutEditing ? 'ring-2 ring-[#6BC06B]' : ''}`}
-            >
-              {layoutEditing ? 'Done editing' : 'Edit layout'}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={handleDeleteBoard}
-              className="text-xs text-red-500 dark:text-red-400 disabled:opacity-50"
-            >
-              Delete board
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {items.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setLayoutEditing((v) => !v)}
+                  className={`frens-btn-outline px-3 py-1.5 text-xs ${layoutEditing ? 'ring-2 ring-black/20 dark:ring-white/20' : ''}`}
+                >
+                  {layoutEditing ? 'Done reordering' : 'Reorder'}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={busy}
+                onClick={handleDeleteBoard}
+                className="text-xs text-red-500 dark:text-red-400 hover:underline disabled:opacity-50 ml-auto"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         ) : null}
 
-        {editable && !layoutEditing ? (
-          <form onSubmit={handleAddUrl} className="space-y-2 border frens-border rounded-xl p-3">
-            <p className="text-xs frens-hint">
-              Paste a Cosmos or Pinterest link — previews like in posts.
-            </p>
+        {editable && editing && !layoutEditing ? (
+          <form onSubmit={handleAddUrl} className="flex flex-wrap gap-2">
             <input
               type="url"
               value={urlDraft}
               onChange={(e) => setUrlDraft(e.target.value)}
-              placeholder="https://www.cosmos.so/… or Pinterest pin"
-              className="frens-input w-full text-sm"
+              placeholder="Paste link"
+              className="frens-input flex-1 min-w-[10rem] text-sm"
             />
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy || !urlDraft.trim()}
-                className="frens-btn-outline px-3 py-2 text-sm shrink-0 disabled:opacity-50"
-              >
-                {busy ? 'Adding…' : 'Add link'}
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={busy}
-                className="frens-btn-outline px-3 py-2 text-sm shrink-0 disabled:opacity-50"
-              >
-                Upload photo
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={busy || !urlDraft.trim()}
+              className="frens-btn-outline px-3 py-2 text-sm shrink-0 disabled:opacity-50"
+            >
+              {busy ? '…' : 'Add'}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={busy}
+              className="frens-btn-outline px-3 py-2 text-sm shrink-0 disabled:opacity-50"
+            >
+              Upload
+            </button>
           </form>
         ) : null}
 
@@ -542,28 +628,33 @@ export default function Gatherer({
         {loading ? (
           <p className="text-sm frens-muted text-center py-8">Loading…</p>
         ) : items.length === 0 ? (
-          <div className="border frens-border rounded-xl p-8 text-center">
-            <p className="text-sm frens-muted">
-              {editable
-                ? 'Empty board — paste a link or upload a photo to start.'
-                : 'This moodboard is empty.'}
-            </p>
-          </div>
+          editable && editing ? (
+            <p className="text-sm frens-muted text-center py-8">Add a link or photo.</p>
+          ) : (
+            <p className="text-sm frens-muted text-center py-8">Empty.</p>
+          )
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {items.map((item, index) => (
-              <MoodboardTile
-                key={item.id}
-                item={item}
-                index={index}
-                total={items.length}
-                editing={layoutEditing}
-                editable={editable}
-                onRemove={handleRemove}
-                onMoveEarlier={moveEarlier}
-                onMoveLater={moveLater}
-              />
-            ))}
+            {items.map((item, index) => {
+              const isCover = selected?.coverItemId
+                ? selected.coverItemId === item.id
+                : Boolean(selected?.coverUrl && item.imageUrl === selected.coverUrl)
+              return (
+                <MoodboardTile
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  total={items.length}
+                  editing={layoutEditing}
+                  editable={tileEditable}
+                  isCover={isCover}
+                  onSetCover={editable && editing ? handleSetCover : undefined}
+                  onRemove={handleRemove}
+                  onMoveEarlier={moveEarlier}
+                  onMoveLater={moveLater}
+                />
+              )
+            })}
           </div>
         )}
       </div>
@@ -589,40 +680,45 @@ export default function Gatherer({
             <GathererIcon className="w-5 h-5" />
             Moodboards
           </h2>
-          <p className="text-xs frens-muted mt-0.5">
-            {editable
-              ? 'Named collections of pictures & GIFs — set each board public or private.'
-              : `${ownerName}'s public moodboards`}
-          </p>
+          {!editable ? (
+            <p className="text-xs frens-muted mt-0.5">{ownerName}</p>
+          ) : null}
         </div>
+        {editable ? (
+          <button
+            type="button"
+            onClick={() => setListEditing((v) => !v)}
+            className={`frens-btn-outline px-3 py-1.5 text-xs shrink-0 ${listEditing ? 'ring-2 ring-black/20 dark:ring-white/20' : ''}`}
+          >
+            {listEditing ? 'Done' : 'Edit'}
+          </button>
+        ) : null}
       </div>
 
+      {editable && listEditing ? (
+        <ProfileShareToggle
+          showcaseKey="moodboards"
+          label="Show on profile"
+          hint=""
+        />
+      ) : null}
+
       {editable && moodboardsInstalled ? (
-        <form onSubmit={handleCreateBoard} className="space-y-2 border frens-border rounded-xl p-3">
-          <p className="text-xs frens-hint">Name your moodboard before you add images.</p>
+        <form onSubmit={handleCreateBoard} className="flex gap-2">
           <input
             type="text"
             value={newBoardName}
             onChange={(e) => setNewBoardName(e.target.value)}
-            placeholder="e.g. CHILL, inspiration, green era"
+            placeholder="New board"
             maxLength={48}
-            className="frens-input w-full text-sm"
+            className="frens-input flex-1 text-sm"
           />
-          <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={newBoardPublic}
-              onChange={(e) => setNewBoardPublic(e.target.checked)}
-              className="rounded"
-            />
-            <span>Public — visible on your profile</span>
-          </label>
           <button
             type="submit"
             disabled={busy || !newBoardName.trim()}
-            className="frens-btn-outline px-3 py-2 text-sm disabled:opacity-50"
+            className="frens-btn-outline px-3 py-2 text-sm shrink-0 disabled:opacity-50"
           >
-            {busy ? 'Creating…' : 'Create moodboard'}
+            Create
           </button>
         </form>
       ) : null}
@@ -632,20 +728,15 @@ export default function Gatherer({
       {loading ? (
         <p className="text-sm frens-muted text-center py-8">Loading…</p>
       ) : boards.length === 0 ? (
-        <div className="border frens-border rounded-xl p-8 text-center">
-          <p className="text-sm frens-muted">
-            {editable
-              ? 'No moodboards yet — name one above and start gathering.'
-              : `${ownerName} hasn't shared any public moodboards yet.`}
-          </p>
-        </div>
+        <p className="text-sm frens-muted text-center py-8">
+          {editable ? 'Nothing here yet.' : 'Nothing shared yet.'}
+        </p>
       ) : (
         <div className="space-y-2">
           {boards.map((board) => (
             <MoodboardRow
               key={board.id}
               board={board}
-              editable={editable}
               onOpen={openBoard}
             />
           ))}

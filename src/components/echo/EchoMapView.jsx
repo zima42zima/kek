@@ -41,7 +41,7 @@ function markerHtml(echo) {
 function batHintHtml(cityWide = false) {
   const title = cityWide
     ? 'A city-wide meme spot is out there — explore to discover it'
-    : 'An echo is somewhere in this area — walk closer to discover it'
+    : 'An aftersound is somewhere in this area — walk closer to discover it'
   return `
     <div class="frens-echo-bat-hint" title="${title}">
       ${batGlyphHtml(18)}
@@ -50,7 +50,7 @@ function batHintHtml(cityWide = false) {
 
 function clusterHtml(count) {
   return `
-    <div class="frens-echo-cluster" title="${count} echoes here">
+    <div class="frens-echo-cluster" title="${count} aftersounds here">
       ${batGlyphHtml(20)}
       <span class="frens-echo-cluster-count">${count}</span>
     </div>`

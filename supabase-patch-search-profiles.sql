@@ -54,8 +54,10 @@ as $$
   limit (select n from lim);
 $$;
 
+-- Lock from public/anon (Postgres often grants EXECUTE to PUBLIC by default).
+revoke execute on function public.search_profiles(text, int) from public;
+revoke execute on function public.search_profiles(text, int) from anon;
 grant execute on function public.search_profiles(text, int) to authenticated;
-grant execute on function public.search_profiles(text, int) to anon;
 
 comment on function public.search_profiles(text, int) is
-  'Case-insensitive people search by fren_handle or silly_name.';
+  'Case-insensitive people search by fren_handle or silly_name (authenticated only).';

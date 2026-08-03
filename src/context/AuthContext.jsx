@@ -2,12 +2,14 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { setupRealtimeAuth } from '../lib/realtime'
 import { fetchProfileForUser } from '../lib/profile'
+import { getMyAccountStatus } from '../lib/platformModeration'
 
 const AuthContext = createContext(undefined)
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
+  const [accountStatus, setAccountStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [passwordRecovery, setPasswordRecovery] = useState(false)
 
@@ -20,6 +22,21 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function loadAccountStatus() {
+    try {
+      return await getMyAccountStatus()
+    } catch {
+      return null
+    }
+  }
+
+  async function loadUserBundle(user) {
+    const p = await loadProfile(user.id, user.email)
+    setProfile(p)
+    const status = await loadAccountStatus()
+    setAccountStatus(status)
+  }
+
   useEffect(() => {
     supabase.auth.getUser()
       .then(async ({ data: { user } }) => {
@@ -27,10 +44,10 @@ export function AuthProvider({ children }) {
           const { data: { session: currentSession } } = await supabase.auth.getSession()
           setupRealtimeAuth(currentSession?.access_token ?? null)
           setSession(currentSession)
-          const p = await loadProfile(user.id, user.email)
-          setProfile(p)
+          await loadUserBundle(user)
         } else {
           setSession(null)
+          setAccountStatus(null)
         }
         setLoading(false)
       })
@@ -43,10 +60,10 @@ export function AuthProvider({ children }) {
       setupRealtimeAuth(nextSession?.access_token ?? null)
       setSession(nextSession)
       if (nextSession?.user) {
-        const p = await loadProfile(nextSession.user.id, nextSession.user.email)
-        setProfile(p)
+        await loadUserBundle(nextSession.user)
       } else {
         setProfile(null)
+        setAccountStatus(null)
         setPasswordRecovery(false)
       }
     })
@@ -63,13 +80,22 @@ export function AuthProvider({ children }) {
 
     const p = await loadProfile(user.id, user.email)
     setProfile(p)
+    const status = await loadAccountStatus()
+    setAccountStatus(status)
     return p
+  }
+
+  async function refreshAccountStatus() {
+    const status = await loadAccountStatus()
+    setAccountStatus(status)
+    return status
   }
 
   async function signOut() {
     await supabase.auth.signOut()
     setSession(null)
     setProfile(null)
+    setAccountStatus(null)
     setPasswordRecovery(false)
   }
 
@@ -81,9 +107,11 @@ export function AuthProvider({ children }) {
     session,
     user: session?.user ?? null,
     profile,
+    accountStatus,
     loading,
     passwordRecovery,
     refreshProfile,
+    refreshAccountStatus,
     signOut,
     clearPasswordRecovery,
   }

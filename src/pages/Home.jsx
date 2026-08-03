@@ -22,21 +22,28 @@ import Gatherer from './Gatherer'
 import UserProfileModal from '../components/UserProfileModal'
 import FollowListModal from '../components/FollowListModal'
 import messagesIcon from '../assets/icons/messages.svg'
-import homeIcon from '../assets/icons/world.png'
+import homeIcon from '../assets/icons/home.svg'
 import echoesIcon from '../assets/icons/echo.svg'
-import rabbitholeIcon from '../assets/icons/rabbit.png'
+import rabbitholeIcon from '../assets/icons/rabbithole.svg'
 import cavesIcon from '../assets/icons/caves.svg'
 import profileIcon from '../assets/icons/profile.svg'
 import { useDms } from '../context/DmsContext'
-import { consumePostFocus, consumeEchoFocus, consumeOpenPlaylists, consumeOpenGatherer } from '../lib/notificationNav'
+import {
+  consumePostFocus,
+  consumeEchoFocus,
+  consumeOpenPlaylists,
+  consumeOpenGatherer,
+  requestPostFocus,
+  requestEchoFocus,
+  requestEchoExplorePlace,
+} from '../lib/notificationNav'
 import { buildAppPath, goApp, isKnownAppPath, parseAppRoute } from '../lib/appNav'
 import { clearPostFromUrl } from '../lib/postShare'
-import { requestOpenTrail } from '../lib/trailNav'
 import { GlobalPlaylistPauseButton } from '../context/PlaylistPlaybackContext'
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: homeIcon },
-  { id: 'echoes', label: 'Echo', icon: echoesIcon },
+  { id: 'echoes', label: 'Aftersound', icon: echoesIcon },
   { id: 'rabbit', label: 'Rabbit Hole', icon: rabbitholeIcon },
   { id: 'messages', label: 'Messages', icon: messagesIcon },
   { id: 'caves', label: 'Caves', icon: cavesIcon },
@@ -44,8 +51,8 @@ const NAV_ITEMS = [
 ]
 
 /**
- * Pure black (light) / pure white (dark) — never gray.
- * CSS mask paints solid theme color through the glyph silhouette.
+ * Bottom-nav glyph — full 24×24 size, pure black/white.
+ * SVGs are centered in a shared box so icons stay aligned and proportional.
  */
 function NavIcon({ src }) {
   return (
@@ -68,8 +75,8 @@ function NavIcon({ src }) {
 
 function BottomNav({ active = 'home', onNavigate, dmUnread = 0 }) {
   return (
-    <nav className="shrink-0 border-t frens-border frens-surface">
-      <div className="flex justify-around items-center py-2 px-1 frens-content-max">
+    <nav className="shrink-0 frens-surface">
+      <div className="flex justify-around items-center py-2 px-0.5 frens-content-max">
         {NAV_ITEMS.map((item) => {
           const isActive = active === item.id
           const showBadge = item.id === 'messages' && dmUnread > 0
@@ -79,16 +86,16 @@ function BottomNav({ active = 'home', onNavigate, dmUnread = 0 }) {
               type="button"
               onClick={() => onNavigate?.(item.id)}
               aria-current={isActive ? 'page' : undefined}
-              className="relative flex flex-col items-center gap-1 px-1 py-1 rounded-lg transition min-w-[2.75rem]"
+              className="relative flex flex-col items-center justify-center gap-1 px-0.5 py-1 rounded-lg transition min-w-0 flex-1 max-w-[4.75rem]"
             >
               <NavIcon src={item.icon} />
               {showBadge && (
-                <span className="absolute top-0 right-1 min-w-[14px] h-3.5 px-0.5 rounded-full bg-black text-white dark:bg-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
+                <span className="absolute top-0.5 right-[16%] min-w-[14px] h-3.5 px-0.5 rounded-full bg-black text-white dark:bg-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
                   {dmUnread > 9 ? '9+' : dmUnread}
                 </span>
               )}
               <span
-                className={`text-[10px] leading-none text-black dark:text-white ${
+                className={`text-[10px] leading-tight text-center text-black dark:text-white truncate max-w-full ${
                   isActive ? 'font-medium' : 'font-normal'
                 }`}
               >
@@ -264,8 +271,8 @@ export default function Home() {
             type="button"
             onClick={() => setShowPeopleSearch(true)}
             className="w-9 h-9 rounded-full flex items-center justify-center text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10"
-            aria-label="Search people"
-            title="Search people"
+            aria-label="Search"
+            title="Search"
           >
             <SearchIcon className="w-5 h-5" />
           </button>
@@ -286,29 +293,20 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 overflow-y-auto flex flex-col">
-        <div className={`frens-content-max w-full ${panelDetailOpen ? '' : 'p-4'}`}>
+      <main
+        className={`flex-1 min-h-0 flex flex-col ${
+          panelDetailOpen ? 'overflow-hidden' : 'overflow-y-auto'
+        }`}
+      >
+        <div
+          className={`frens-content-max w-full ${
+            panelDetailOpen
+              ? 'flex-1 min-h-0 flex flex-col overflow-hidden'
+              : 'p-4'
+          }`}
+        >
           {activeTab === 'home' && (
             <>
-              {/* Posts | _log above compose — same order as Profile */}
-              <div className="flex items-center justify-between gap-2 px-1 mb-2 min-h-[2.25rem]">
-                <span
-                  className="text-sm px-3 py-1.5 rounded-full bg-black text-white dark:bg-white dark:text-black font-medium shrink-0"
-                  aria-current="page"
-                >
-                  Posts
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    requestOpenTrail()
-                    handleNavigate('profile')
-                  }}
-                  className="text-sm px-3 py-1.5 rounded-full frens-muted hover:text-black dark:hover:text-white transition shrink-0"
-                >
-                  _log
-                </button>
-              </div>
               <PostComposer collapsible />
               <ShowToFrensQuotaHint />
 
@@ -448,6 +446,28 @@ export default function Home() {
           open={showPeopleSearch}
           onClose={() => setShowPeopleSearch(false)}
           onSelectUser={setViewUserId}
+          onSelectPost={(post) => {
+            if (!post?.id) return
+            requestPostFocus({ postId: post.id })
+            handleOpenPost({ postId: post.id })
+            goApp(navigate, { tab: 'home', postId: post.id })
+          }}
+          onSelectEcho={(echo) => {
+            if (!echo?.id) return
+            requestEchoFocus(echo.id)
+            handleOpenEcho(echo.id)
+          }}
+          onSelectPlace={(place) => {
+            if (!place?.lat || !place?.lon) return
+            requestEchoExplorePlace({
+              id: place.placeKey || null,
+              label: place.placeLabel || place.cityLabel || 'Place',
+              lat: place.lat,
+              lon: place.lon,
+              zoom: 13,
+            })
+            goApp(navigate, { tab: 'echoes' })
+          }}
         />
       )}
 

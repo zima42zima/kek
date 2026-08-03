@@ -9,6 +9,8 @@ import {
   LETTER_LAYOUTS,
   LETTER_SIZE_STEPS,
   LETTER_TEXT_ROLES,
+  clampLetterFontSize,
+  LETTER_MAX_FONT_SIZE,
   roleForBlock,
 } from '../../lib/letterStudio'
 
@@ -138,7 +140,7 @@ export default function LetterBlockToolbar({
         active={menu === 'size'}
         onClick={() => setMenu((m) => (m === 'size' ? null : 'size'))}
       >
-        <span className="letter-tool__size">{block.fontSize}</span>
+        <span className="letter-tool__size">{clampLetterFontSize(block.fontSize)}</span>
         <ChevronDownIcon />
       </ToolBtn>
 
@@ -233,12 +235,13 @@ export default function LetterBlockToolbar({
               key={px}
               type="button"
               onMouseDown={(e) => e.preventDefault()}
-              className={`letter-tool-menu__item letter-tool-menu__item--row ${block.fontSize === px ? 'letter-tool-menu__item--active' : ''}`}
+              className={`letter-tool-menu__item letter-tool-menu__item--row ${clampLetterFontSize(block.fontSize) === px ? 'letter-tool-menu__item--active' : ''}`}
               onClick={() => { onPatch?.({ fontSize: px }); setMenu(null) }}
             >
               {px}px
             </button>
           ))}
+          <p className="letter-tool-menu__meta">Max {LETTER_MAX_FONT_SIZE}px — one letter ≈ A4 wide</p>
         </DropdownMenu>
       )}
 

@@ -5,7 +5,7 @@ import { ECHO_DISCOVER_RADIUS_MIN_M, ECHO_PIN_OFFSET_MAX_M } from '../../lib/ech
 
 export default function EchoIntroModal({ onClose, onStart }) {
   return (
-    <Modal title="Echo" onClose={onClose} maxWidth="max-w-sm">
+    <Modal title="Aftersound" onClose={onClose} maxWidth="max-w-sm">
       <div className="space-y-4 text-center">
         <MapIcon className="w-12 h-12 mx-auto opacity-70" />
         <p className="text-sm frens-body-text">
@@ -13,10 +13,10 @@ export default function EchoIntroModal({ onClose, onStart }) {
         </p>
         <ol className="text-left text-xs frens-muted space-y-2 list-decimal list-inside">
           <li>Enable location — we scatter pins up to {ECHO_PIN_OFFSET_MAX_M}m from your spot</li>
-          <li>Drop a meme or photo — the main way to leave an echo</li>
+          <li>Drop a meme or photo — the main way to leave an aftersound</li>
           <li>Optionally leave voice or short glitchy video instead</li>
           <li>Choose who can find it and how close they must be (420m – city)</li>
-          <li>Scroll the in-range gallery when you walk into discoverable echoes</li>
+          <li>Scroll the in-range gallery when you walk into discoverable aftersounds</li>
           <li>Bats show approximate areas — nobody knows the exact spot</li>
         </ol>
         <p className="text-[11px] frens-hint text-left">

@@ -104,7 +104,7 @@ export async function forwardGeocode(query) {
   url.searchParams.set('limit', '8')
   url.searchParams.set('addressdetails', '1')
   const res = await fetch(url, {
-    headers: { 'Accept-Language': 'en', 'User-Agent': 'MISAO Echo Map' },
+    headers: { 'Accept-Language': 'en', 'User-Agent': 'MISAO Aftersound Map' },
   })
   if (!res.ok) throw new Error('place search failed')
   const rows = await res.json()

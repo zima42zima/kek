@@ -1,17 +1,18 @@
-import EmojiButton from './EmojiButton'
-import { PlusIcon } from './icons/UiIcons'
+import ReactionEmojiPicker from './ReactionEmojiPicker'
 
 /**
  * Pill emoji reactions + small + picker — shared by cave chat, DMs, comments, etc.
  * Home feed posts keep PostReactionButton (fire/thunder icons).
  *
  * Layout: tiny + sits beside the message (side); existing reaction chips sit under.
+ * Reactions use a simple native emoji grid (always works — no heavy picker chunk).
  */
 export default function EmojiReactions({
   reactions = [],
   mine = false,
   canReact = false,
   onReact,
+  onReply = null,
   extra = null,
   className = '',
   /** When true, only the + / extra controls (parent places them beside the bubble). */
@@ -19,14 +20,16 @@ export default function EmojiReactions({
   /** When true, only the reaction chips (parent places them under the bubble). */
   chipsOnly = false,
 }) {
-  const hasReactions = reactions.length > 0
-  if (!canReact && !hasReactions && !extra) return null
+  // Defensive: null/non-array reactions used to throw on .length and white-screen caves.
+  const list = Array.isArray(reactions) ? reactions.filter((r) => r && r.emoji) : []
+  const hasReactions = list.length > 0
+  if (!canReact && !hasReactions && !extra && !onReply) return null
 
   const chips = hasReactions ? (
     <div
       className={`flex flex-wrap items-center gap-0.5 ${mine ? 'justify-end' : 'justify-start'}`}
     >
-      {reactions.map((r) => (
+      {list.map((r) => (
         <button
           key={r.emoji}
           type="button"
@@ -46,15 +49,14 @@ export default function EmojiReactions({
     </div>
   ) : null
 
-  const controls = (canReact || extra) ? (
+  const controls = (canReact || extra || onReply) ? (
     <div className={`flex items-center gap-0.5 shrink-0 ${mine ? 'flex-row-reverse' : ''}`}>
-      {canReact ? (
-        <EmojiButton
-          onPick={onReact}
+      {canReact || onReply ? (
+        <ReactionEmojiPicker
+          onPick={canReact ? onReact : undefined}
+          onReply={onReply || undefined}
           direction="up"
           align={mine ? 'right' : 'left'}
-          label={<PlusIcon className="w-2.5 h-2.5" />}
-          className="frens-muted w-4 h-4 rounded-full border frens-border flex items-center justify-center opacity-55 hover:opacity-100 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition shrink-0"
         />
       ) : null}
       {extra}

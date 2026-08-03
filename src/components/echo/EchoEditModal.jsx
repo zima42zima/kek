@@ -27,13 +27,13 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
   }
 
   function handleDelete() {
-    if (!window.confirm('Delete this echo? This cannot be undone.')) return
+    if (!window.confirm('Delete this aftersound? This cannot be undone.')) return
     onDelete?.(echo.id)
     onClose?.()
   }
 
   return (
-    <Modal title="Edit echo" onClose={onClose} maxWidth="max-w-md">
+    <Modal title="Edit aftersound" onClose={onClose} maxWidth="max-w-md">
       <div className="space-y-4">
         <label className="block space-y-1">
           <span className="text-xs frens-muted">Label (only you see this)</span>
@@ -79,7 +79,7 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
                   className="rounded mt-0.5"
                 />
                 <span>
-                  Browsable from anywhere — frens can open this echo from the world map even when far away
+                  Browsable from anywhere — frens can open this aftersound from the world map even when far away
                 </span>
               </label>
             ) : null}
@@ -110,7 +110,7 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
           onClick={handleDelete}
           className="w-full py-2.5 text-sm text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/10 transition"
         >
-          Delete echo
+          Delete aftersound
         </button>
       </div>
     </Modal>

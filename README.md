@@ -1,12 +1,9 @@
 # MISAO — setup steps
 
 ## 1. Run the database schema
-In Supabase → SQL Editor, run in order:
-1. `supabase-fix-profile-permissions.sql` (or `supabase-schema.sql` on a fresh project)
-2. `supabase-patch-onboarding.sql` (invite gate + unique fren names)
-3. `supabase-patch-invite-share.sql` (if you already ran onboarding before this update)
+In Supabase → SQL Editor, run **`BETA-100.md`** core patch list (or at minimum steps 1–13 + founder).
 
-Verify: `npm run db:check`
+Quick verify: `npm run db:check`
 
 ## 2. Add your Supabase keys locally
 Copy `.env.example` to `.env` in the project folder and fill in:

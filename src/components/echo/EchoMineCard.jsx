@@ -124,7 +124,7 @@ export default function EchoMineCard({
           type="button"
           onClick={() => onView?.(echo)}
           className="relative shrink-0 w-[5.5rem] sm:w-[6rem] aspect-square bg-black/5 dark:bg-white/5 overflow-hidden border-r frens-border"
-          aria-label={isSaved ? `Open ${echo.authorName || 'echo'}` : (echo.label ? `Open ${echo.label}` : 'Open echo')}
+          aria-label={isSaved ? `Open ${echo.authorName || 'aftersound'}` : (echo.label ? `Open ${echo.label}` : 'Open aftersound')}
         >
           <EchoPreviewMedia echo={echo} ownerPreview={!isSaved && echo.mine} watchedPreview={isSaved} />
           {global ? <GlobalBadge compact /> : null}
@@ -180,7 +180,7 @@ export default function EchoMineCard({
         type="button"
         onClick={() => onView?.(echo)}
         className="relative block w-full aspect-[4/3] bg-black/5 dark:bg-white/5 text-left"
-        aria-label={isSaved ? `Open ${echo.authorName || 'echo'}` : (echo.label ? `Open ${echo.label}` : 'Open echo')}
+        aria-label={isSaved ? `Open ${echo.authorName || 'aftersound'}` : (echo.label ? `Open ${echo.label}` : 'Open aftersound')}
       >
         <EchoPreviewMedia echo={echo} ownerPreview={!isSaved && echo.mine} watchedPreview={isSaved} />
         <CardOverlay echo={echo} global={global} auraSlot={auraSlot} onNavigateWorld={onNavigateWorld} />

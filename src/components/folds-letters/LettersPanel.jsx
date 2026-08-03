@@ -186,7 +186,7 @@ export default function LettersPanel({ onBack, onExit, onSettingsChange }) {
                 ←
               </button>
             )}
-            LETTERS
+            Letters
           </span>
         )}
         onClose={onExit}
@@ -200,21 +200,15 @@ export default function LettersPanel({ onBack, onExit, onSettingsChange }) {
         }
       >
         {!openLetter && !inCompose && (
-          <p className="text-[11px] frens-muted -mt-2 mb-3 tracking-wide">
-            Sealed — read only when printed.
-          </p>
-        )}
-
-        {!openLetter && !inCompose && (
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex gap-1 text-xs flex-wrap">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex gap-0.5 text-xs">
               {['inbox', 'sent', 'settings'].map((id) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => switchTab(id)}
-                  className={`rounded-full px-3 py-1 capitalize ${
-                    tab === id ? 'bg-black text-white dark:bg-white dark:text-black' : 'frens-btn-outline'
+                  className={`rounded-full px-3 py-1.5 capitalize transition ${
+                    tab === id ? 'bg-black text-white dark:bg-white dark:text-black' : 'text-frens-muted hover:text-inherit'
                   }`}
                 >
                   {id}
@@ -227,7 +221,7 @@ export default function LettersPanel({ onBack, onExit, onSettingsChange }) {
               onClick={openComposePicker}
               title="Write a new letter"
               aria-label="Write a new letter"
-              className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center frens-btn-outline"
+              className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center border frens-border hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition"
             >
               <FoldsLettersIcon className="w-[1.2rem] h-[1.2rem]" />
             </button>
@@ -264,31 +258,31 @@ export default function LettersPanel({ onBack, onExit, onSettingsChange }) {
             onAction={handleLetterAction}
           />
         ) : tab === 'settings' && settings ? (
-          <div className="space-y-1 border frens-border rounded-xl px-3 py-2 ps-settings">
+          <div className="space-y-0.5 border-t frens-border pt-3">
             <SettingToggle
               label="Accepting letters"
-              hint="Others can send you sealed letters via P.S."
+              hint="Others can send you letters through P.S."
               checked={settings.enabled}
               disabled={savingSettings}
               onChange={(enabled) => patchSettings({ enabled })}
             />
             <SettingToggle
               label="Accept anonymous letters"
-              hint="Senders can hide their name on the envelope."
+              hint="Senders can hide their name."
               checked={settings.acceptAnonymous}
               disabled={savingSettings || !settings.enabled}
               onChange={(acceptAnonymous) => patchSettings({ acceptAnonymous })}
             />
             <SettingToggle
-              label="Require approval before printing"
-              hint="Each letter waits for you before it can be printed."
+              label="Require approval first"
+              hint="You approve before they can open, print, or save."
               checked={settings.requirePreapproval}
               disabled={savingSettings || !settings.enabled}
               onChange={(requirePreapproval) => patchSettings({ requirePreapproval })}
             />
             <SettingToggle
               label="Only letters from frens I follow"
-              hint="Restrict who can send you letters."
+              hint="Restrict who can write to you."
               checked={settings.onlyFollowing}
               disabled={savingSettings || !settings.enabled}
               onChange={(onlyFollowing) => patchSettings({ onlyFollowing })}
@@ -303,7 +297,7 @@ export default function LettersPanel({ onBack, onExit, onSettingsChange }) {
         ) : sent.length === 0 ? (
           <p className="text-sm frens-muted text-center py-8">No sent letters yet.</p>
         ) : (
-          <ul className="border frens-border rounded-xl overflow-hidden divide-y divide-[var(--frens-outline)] max-h-[52vh] overflow-y-auto">
+          <ul className="divide-y divide-[var(--frens-outline)] max-h-[52vh] overflow-y-auto -mx-1">
             {sent.map((letter) => (
               <SentRow key={letter.id} letter={letter} />
             ))}

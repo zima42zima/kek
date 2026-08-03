@@ -1,12 +1,24 @@
+import playlistIcon from '../../assets/icons/playlist.svg'
+
+/**
+ * Playlist / music note mark — monochrome via CSS mask (theme-colored).
+ */
 export default function PlaylistIcon({ className = 'w-5 h-5' }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
+    <span
       aria-hidden
-    >
-      <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z" />
-    </svg>
+      className={`inline-block shrink-0 align-middle ${className}`}
+      style={{
+        backgroundColor: 'currentColor',
+        maskImage: `url(${playlistIcon})`,
+        WebkitMaskImage: `url(${playlistIcon})`,
+        maskSize: 'contain',
+        WebkitMaskSize: 'contain',
+        maskRepeat: 'no-repeat',
+        WebkitMaskRepeat: 'no-repeat',
+        maskPosition: 'center',
+        WebkitMaskPosition: 'center',
+      }}
+    />
   )
 }

@@ -2,7 +2,7 @@ export const RABBIT_RULES = [
   'Be human — real takes welcome, cruelty is not.',
   'No harassment, hate, or non-consensual content.',
   'Memes, debates, weird curiosities — all fair game.',
-  'Founders can hide or pin topics to keep the burrow cozy.',
+  'Founders can hide or pin topics when needed.',
 ]
 
 export const RABBIT_TAGS = [

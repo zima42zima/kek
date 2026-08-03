@@ -282,11 +282,16 @@ export function PlayIcon({ className = 'w-4 h-4' }) {
 }
 
 export function MusicNoteIcon({ className = 'w-4 h-4' }) {
+  // Matches assets/icons/playlist.svg (RESOURCE FRENSAPP/playlist.svg)
   return (
-    <svg {...base} className={`inline-block align-middle ${className}`}>
-      <path d="M9 18V5l12-2v13" />
-      <circle cx="6" cy="18" r="3" />
-      <circle cx="18" cy="16" r="3" />
+    <svg
+      viewBox="0 0 402 470"
+      fill="currentColor"
+      stroke="none"
+      className={`inline-block shrink-0 align-middle ${className}`}
+      aria-hidden
+    >
+      <path d="M80.3594 68.8919V386.333C71.6357 381.332 61.7458 378.725 51.6906 378.775C23.1087 378.775 0 399.017 0 423.95C0 448.883 23.1087 469.125 51.6906 469.125C80.2725 469.125 102.773 449.231 103.208 424.645V144.299L378.688 85.2244V329.43C369.526 324.141 359.122 321.383 348.542 321.438C319.266 321.438 295.462 341.679 295.462 366.613C295.462 391.546 319.266 411.788 348.542 411.788C377.819 411.788 401.189 391.98 401.623 367.394V0L80.3594 68.8919Z" />
     </svg>
   )
 }

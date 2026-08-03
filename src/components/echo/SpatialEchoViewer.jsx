@@ -76,7 +76,7 @@ export default function SpatialEchoViewer({ echo, onPlay, onClose }) {
         )}
         {permission === 'denied' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white text-sm p-6 text-center gap-3">
-            <p>Allow camera to see this echo in space.</p>
+            <p>Allow camera to see this aftersound in space.</p>
             <button type="button" onClick={onClose} className="frens-btn-outline px-4 py-2 text-sm text-white border-white/40">
               Close
             </button>
@@ -89,7 +89,7 @@ export default function SpatialEchoViewer({ echo, onPlay, onClose }) {
               onClick={handlePinTap}
               className="spatial-echo-pin spatial-echo-pin--discover"
               style={{ left: `${pin.nx * 100}%`, top: `${pin.ny * 100}%` }}
-              aria-label="Play spatial echo"
+              aria-label="Play spatial aftersound"
             >
               <span className="spatial-echo-pin-pulse" aria-hidden />
               <EchoIcon className="w-10 h-8 drop-shadow-lg relative z-10" />

@@ -3,12 +3,13 @@ import { ProfileAvatar } from '../FrogLogo'
 import { prepareImageAttachment, finalizeImageUrl, finalizeGifUrl } from '../../lib/imageAttach'
 import { hasRichEmbeds } from '../../lib/urls'
 import { insertAtCaret } from '../../lib/insertText'
-import PillComposer from '../PillComposer'
+import ChatComposer from '../ChatComposer'
 import EmojiReactions from '../EmojiReactions'
-import { PinIcon, LinkIcon, UserPlusIcon } from '../icons/UiIcons'
+import { PinIcon, LinkIcon, UserPlusIcon, SearchIcon } from '../icons/UiIcons'
 import CaveAccessLabel from '../CaveAccessLabel'
 import PinnedLabel from '../PinnedLabel'
 import { CaveGlyph } from './CaveIcon'
+import CaveCoverEditor, { CaveCoverBanner, CaveCoverThumb } from './CaveCover'
 import AddMembersModal from './AddMembersModal'
 import { removeCaveMemberRemote, CavesNotInstalledError } from '../../lib/caves'
 import { useCaves } from '../../context/CavesContext'
@@ -16,14 +17,17 @@ import CaveRoleBadge from './CaveRoleBadge'
 import RichText from '../RichText'
 import { SharedImage, textBubbleClass } from '../SharedMedia'
 import {
-  CAVE_FUN_TITLES,
   MOD_ROLES,
+  DEFAULT_TITLE_ID,
   activeFunTitle,
   activeModRole,
+  getCaveRoles,
   isCaveKeeper,
   isCaveOwner,
   memberById,
 } from '../../lib/caveRoles'
+
+import CaveRolesEditor from './CaveRolesEditor'
 import CavePlaylists from './CavePlaylists'
 import { MusicNoteIcon } from '../icons/UiIcons'
 import FrensSelect from '../FrensSelect'
@@ -87,18 +91,58 @@ function InviteModal({ cave, onClose }) {
   )
 }
 
-function CaveEditor({ cave, currentUserId, onUpdateCave, onClose }) {
-  const { assignCaveTitle, assignCaveModRole } = useCaves()
+function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
+  const { assignCaveTitle, assignCaveModRole, setCaveCover, setCaveRoles, deleteCave } = useCaves()
   const [memberError, setMemberError] = useState('')
   const [roleError, setRoleError] = useState('')
   const [roleBusy, setRoleBusy] = useState('')
+  const [coverError, setCoverError] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showRolesEditor, setShowRolesEditor] = useState(false)
   const isOwner = isCaveOwner(cave, currentUserId)
   const isKeeper = isCaveKeeper(cave, currentUserId)
+  const caveRoles = getCaveRoles(cave)
+
+  async function saveCover(url) {
+    setCoverError('')
+    const result = await setCaveCover(cave.id, url)
+    if (!result?.ok) setCoverError(result?.message || 'Could not save cover.')
+  }
+
+  async function removeCover() {
+    setCoverError('')
+    const result = await setCaveCover(cave.id, null)
+    if (!result?.ok) setCoverError(result?.message || 'Could not remove cover.')
+  }
+
+  async function handleDeleteCave() {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+    setDeleteError('')
+    setDeleteBusy(true)
+    try {
+      const result = await deleteCave(cave.id)
+      if (!result?.ok) {
+        setDeleteError(result?.message || 'Could not delete cave.')
+        setDeleteBusy(false)
+        return
+      }
+      onClose?.()
+      onDeleted?.(cave.id)
+    } catch (err) {
+      setDeleteError(err.message || 'Could not delete cave.')
+      setDeleteBusy(false)
+    }
+  }
 
   async function setFunTitle(memberId, titleId) {
     setRoleError('')
     setRoleBusy(memberId)
-    const title = CAVE_FUN_TITLES.find((t) => t.id === titleId)
+    const title = caveRoles.find((t) => t.id === titleId)
     const weeks = title?.weeks ?? 2
     const result = await assignCaveTitle(cave.id, memberId, titleId, weeks)
     setRoleBusy('')
@@ -158,10 +202,37 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose }) {
         </p>
 
         {isKeeper ? (
-          <section className={isOwner ? 'mb-6' : ''}>
-            <h3 className="frens-label mb-1">Roles</h3>
+          <section className="mb-6">
+            <h3 className="frens-label mb-1">Cover photo</h3>
             <p className="text-xs frens-muted mb-3">
-              Fun titles, temporary co-keepers, and playlist DJs. Pin and hide spam from chat.
+              Optional. Shows in the caves list and at the top of this cave.
+            </p>
+            <CaveCoverEditor
+              coverUrl={cave.coverUrl}
+              editable
+              onSave={saveCover}
+              onRemove={removeCover}
+            />
+            {coverError ? (
+              <p className="text-xs text-red-500 dark:text-red-400 mt-2">{coverError}</p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {isKeeper ? (
+          <section className={isOwner ? 'mb-6' : ''}>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <h3 className="frens-label">Roles</h3>
+              <button
+                type="button"
+                onClick={() => setShowRolesEditor(true)}
+                className="text-xs frens-action shrink-0"
+              >
+                Edit roles
+              </button>
+            </div>
+            <p className="text-xs frens-muted mb-3">
+              Assign from this cave&apos;s catalog (max 12). Edit names, marks, and add roles with +.
             </p>
             {roleError ? (
               <p className="text-xs text-red-500 dark:text-red-400 mb-2">{roleError}</p>
@@ -170,9 +241,10 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose }) {
               {cave.members.map((m) => {
                 const isSelf = m.id === currentUserId
                 const isMemberOwner = m.id === cave.ownerId
-                const title = activeFunTitle(m)
+                const title = activeFunTitle(m, cave)
                 const mod = activeModRole(m)
                 const busy = roleBusy === m.id || roleBusy === `${m.id}-mod`
+                const titleValue = caveRoles.some((r) => r.id === title.id) ? title.id : DEFAULT_TITLE_ID
                 return (
                   <li key={m.id} className="border frens-border rounded-xl px-3 py-3 space-y-2">
                     <div className="flex items-center gap-2">
@@ -182,19 +254,22 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose }) {
                           {m.name} {isSelf && <span className="frens-muted text-xs font-normal">(you)</span>}
                           {isMemberOwner && <span className="frens-muted text-xs font-normal"> · founder</span>}
                         </p>
-                        <CaveRoleBadge member={m} />
+                        <CaveRoleBadge member={m} cave={cave} />
                       </div>
                     </div>
                     {!isMemberOwner ? (
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <label className="block">
-                          <span className="text-[10px] frens-muted uppercase tracking-wide">Fun title</span>
+                          <span className="text-[10px] frens-muted uppercase tracking-wide">Role</span>
                           <FrensSelect
-                            value={title.id}
+                            value={titleValue}
                             disabled={busy}
                             onChange={(id) => setFunTitle(m.id, id)}
-                            ariaLabel="Fun title"
-                            options={CAVE_FUN_TITLES.map((t) => ({ value: t.id, label: t.label }))}
+                            ariaLabel="Cave role"
+                            options={caveRoles.map((t) => ({
+                              value: t.id,
+                              label: `${t.emoji || ''} ${t.label}`.trim(),
+                            }))}
                           />
                         </label>
                         {isOwner ? (
@@ -223,8 +298,16 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose }) {
           </section>
         ) : null}
 
+        {showRolesEditor ? (
+          <CaveRolesEditor
+            roles={caveRoles}
+            onSave={(roles) => setCaveRoles(cave.id, roles)}
+            onClose={() => setShowRolesEditor(false)}
+          />
+        ) : null}
+
         {isOwner ? (
-          <section>
+          <section className="mb-6">
             <h3 className="frens-label mb-2">Members</h3>
             {memberError ? (
               <p className="text-xs text-red-500 dark:text-red-400 mb-2">{memberError}</p>
@@ -238,7 +321,7 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose }) {
                     <span className="text-sm truncate flex-1">
                       {m.name} {isSelf && <span className="frens-muted text-xs">(you)</span>}
                     </span>
-                    <CaveRoleBadge member={m} compact />
+                    <CaveRoleBadge member={m} cave={cave} compact />
                     {!isSelf && (
                       <>
                         <button type="button" onClick={() => kick(m.id)} className="text-xs frens-action">
@@ -255,14 +338,69 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose }) {
             </ul>
           </section>
         ) : null}
+
+        {isOwner ? (
+          <section className="border-t frens-border pt-5">
+            <h3 className="frens-label mb-1 text-red-600 dark:text-red-400">Delete cave</h3>
+            <p className="text-xs frens-muted mb-3">
+              Permanently removes this cave and its messages. Everyone who was in it gets a notification.
+            </p>
+            {deleteError ? (
+              <p className="text-xs text-red-500 dark:text-red-400 mb-2">{deleteError}</p>
+            ) : null}
+            {confirmDelete ? (
+              <div className="space-y-2">
+                <p className="text-xs frens-body-text">
+                  Delete <span className="font-medium">{cave.name}</span>? This cannot be undone.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={deleteBusy}
+                    onClick={handleDeleteCave}
+                    className="flex-1 text-sm py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 transition"
+                  >
+                    {deleteBusy ? 'Deleting…' : 'Yes, delete forever'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleteBusy}
+                    onClick={() => setConfirmDelete(false)}
+                    className="frens-btn-outline flex-1 py-2.5 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDeleteCave}
+                className="w-full text-sm py-2.5 rounded-xl border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10 transition"
+              >
+                Delete this cave
+              </button>
+            )}
+          </section>
+        ) : null}
       </div>
     </div>
   )
 }
 
-function CaveModMenu({ message, mine, onPin, onHide }) {
+/** ··· menu: author delete + optional keeper pin/hide (separate actions). */
+function MessageOptionsMenu({
+  message,
+  mine,
+  canModerate,
+  onDelete,
+  onPin,
+  onHide,
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const showDelete = Boolean(mine && onDelete)
+  const showMod = Boolean(canModerate && (onPin || onHide) && !message.hidden)
 
   useEffect(() => {
     if (!open) return undefined
@@ -272,6 +410,8 @@ function CaveModMenu({ message, mine, onPin, onHide }) {
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
+
+  if (!showDelete && !showMod && !(canModerate && message.pinned && onPin)) return null
 
   return (
     <div ref={ref} className="relative shrink-0">
@@ -286,17 +426,31 @@ function CaveModMenu({ message, mine, onPin, onHide }) {
       </button>
       {open ? (
         <div
-          className={`absolute bottom-full mb-1 ${mine ? 'right-0' : 'left-0'} frens-surface border frens-border rounded-lg shadow-lg py-1 min-w-[8rem] z-20`}
+          className={`absolute bottom-full mb-1 ${mine ? 'right-0' : 'left-0'} frens-surface border frens-border rounded-lg shadow-lg py-1 min-w-[8.5rem] z-20`}
         >
-          <button
-            type="button"
-            onClick={() => { setOpen(false); onPin?.() }}
-            className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10 inline-flex items-center gap-1.5"
-          >
-            <PinIcon className="w-3 h-3" />
-            {message.pinned ? 'Unpin' : 'Pin'}
-          </button>
-          {!message.hidden ? (
+          {showDelete ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                if (window.confirm('Delete this message?')) onDelete?.()
+              }}
+              className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10 text-red-600 dark:text-red-400"
+            >
+              Delete
+            </button>
+          ) : null}
+          {canModerate && onPin ? (
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onPin?.() }}
+              className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10 inline-flex items-center gap-1.5"
+            >
+              <PinIcon className="w-3 h-3" />
+              {message.pinned ? 'Unpin' : 'Pin'}
+            </button>
+          ) : null}
+          {canModerate && onHide && !message.hidden ? (
             <button
               type="button"
               onClick={() => { setOpen(false); onHide?.() }}
@@ -311,77 +465,144 @@ function CaveModMenu({ message, mine, onPin, onHide }) {
   )
 }
 
+function messageSearchText(m) {
+  return [m.authorName, m.text, m.replyPreview?.text, m.replyPreview?.authorName]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
 function ChatMessage({
   message,
   member,
   mine,
   caveId,
+  cave = null,
   canModerate,
   onReact,
   onPin,
   onHide,
+  onDelete,
+  onReply,
+  replies = [],
+  highlight = false,
+  nested = false,
 }) {
   const canReact = caveId && message.id != null && !String(message.id).startsWith('tmp-')
-  const canMod = canModerate && canReact && !message.hidden
+  const canMod = canModerate && canReact
+  const canOwnDelete = Boolean(mine && onDelete && message.id != null)
+  const showMenu = canOwnDelete || canMod
+  const replyCount = replies.length
 
   return (
-    <div className={`flex gap-2 ${mine ? 'flex-row-reverse' : ''} ${message.hidden ? 'opacity-50' : ''}`}>
-      <ProfileAvatar profile={message} className="w-8 h-8 shrink-0" logoClassName="w-5 h-auto" />
-      <div className={`min-w-0 max-w-[78%] ${mine ? 'items-end text-right' : ''} flex flex-col`}>
-        <div className={`flex items-center gap-1.5 mb-0.5 ${mine ? 'flex-row-reverse' : ''}`}>
-          <span className="text-[11px] frens-muted">
-            {message.authorName} · {message.ts}
-          </span>
-          {member ? <CaveRoleBadge member={member} compact /> : null}
-          {message.pinned ? <PinIcon className="w-3 h-3" title="Pinned" /> : null}
-          {message.hidden ? <span className="text-[10px] frens-muted">(hidden)</span> : null}
-        </div>
-        <div className={`flex items-end gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
-          <div className="min-w-0">
-            {message.sticker ? (
-              <span className="text-4xl leading-none">{message.sticker}</span>
-            ) : (
-              <>
-                {message.image ? (
-                  <SharedImage src={message.image} className={message.text ? 'mb-1' : ''} />
-                ) : null}
-                {message.text ? (
-                  hasRichEmbeds(message.text) ? (
-                    <RichText text={message.text} />
-                  ) : (
-                    <div className={textBubbleClass(mine)}>
+    <div
+      id={message.id != null ? `cave-msg-${message.id}` : undefined}
+      className={`w-full ${highlight ? 'rounded-xl ring-1 ring-black/15 dark:ring-white/20 bg-black/[0.02] dark:bg-white/[0.03] p-1 -mx-1' : ''}`}
+    >
+      <div className={`flex gap-2 ${mine ? 'flex-row-reverse' : ''} ${message.hidden ? 'opacity-50' : ''}`}>
+        <ProfileAvatar
+          profile={message}
+          className={`${nested ? 'w-7 h-7' : 'w-8 h-8'} shrink-0`}
+          logoClassName={nested ? 'w-4 h-auto' : 'w-5 h-auto'}
+        />
+        <div className={`min-w-0 max-w-[78%] flex flex-col ${mine ? 'items-end text-right' : ''}`}>
+          <div className={`flex items-center gap-1.5 mb-0.5 ${mine ? 'flex-row-reverse' : ''}`}>
+            <span className="text-[11px] frens-muted">
+              {message.authorName} · {message.ts}
+            </span>
+            {member ? <CaveRoleBadge member={member} cave={cave} compact /> : null}
+            {message.pinned ? <PinIcon className="w-3 h-3" /> : null}
+            {message.hidden ? <span className="text-[10px] frens-muted">(hidden)</span> : null}
+          </div>
+          {message.replyPreview ? (
+            <div className={`mb-1 text-[10px] frens-muted border-l-2 frens-border pl-2 py-0.5 max-w-full ${mine ? 'border-l-0 border-r-2 pr-2 pl-0' : ''}`}>
+              <span className="font-medium">{message.replyPreview.authorName}</span>
+              {message.replyPreview.text ? (
+                <span className="opacity-80"> — {String(message.replyPreview.text).slice(0, 80)}</span>
+              ) : null}
+            </div>
+          ) : null}
+          <div className={`flex items-end gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
+            <div className="min-w-0">
+              {message.sticker ? (
+                <span className="text-4xl leading-none">{message.sticker}</span>
+              ) : (
+                <>
+                  {message.image ? (
+                    <SharedImage src={message.image} className={message.text ? 'mb-1' : ''} />
+                  ) : null}
+                  {message.text ? (
+                    hasRichEmbeds(message.text) ? (
                       <RichText text={message.text} />
-                    </div>
-                  )
-                ) : null}
-              </>
-            )}
+                    ) : (
+                      <div className={textBubbleClass(mine)}>
+                        <RichText text={message.text} />
+                      </div>
+                    )
+                  ) : null}
+                </>
+              )}
+            </div>
+            <EmojiReactions
+              reactions={message.reactions || []}
+              mine={mine}
+              canReact={canReact}
+              onReact={onReact}
+              onReply={canReact && onReply ? () => onReply(message) : null}
+              controlsOnly
+              extra={showMenu ? (
+                <MessageOptionsMenu
+                  message={message}
+                  mine={mine}
+                  canModerate={canMod}
+                  onDelete={canOwnDelete ? onDelete : null}
+                  onPin={canMod ? onPin : null}
+                  onHide={canMod ? onHide : null}
+                />
+              ) : null}
+            />
           </div>
           <EmojiReactions
-            reactions={message.reactions}
+            reactions={message.reactions || []}
             mine={mine}
             canReact={canReact}
             onReact={onReact}
-            controlsOnly
-            extra={canMod ? (
-              <CaveModMenu message={message} mine={mine} onPin={onPin} onHide={onHide} />
-            ) : null}
+            chipsOnly
           />
         </div>
-        <EmojiReactions
-          reactions={message.reactions}
-          mine={mine}
-          canReact={canReact}
-          onReact={onReact}
-          chipsOnly
-        />
       </div>
+
+      {!nested && replyCount > 0 ? (
+        <div className={`mt-1.5 ${mine ? 'mr-4 sm:mr-6 pr-3 border-r-2' : 'ml-4 sm:ml-6 pl-3 border-l-2'} frens-border space-y-2`}>
+          <p className="text-[10px] frens-muted tracking-wide">
+            {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+          </p>
+          {replies.map((r) => (
+            <ChatMessage
+              key={r.id}
+              message={r}
+              member={r._member}
+              mine={r._mine}
+              caveId={caveId}
+              canModerate={canModerate}
+              onReact={r._onReact}
+              onPin={r._onPin}
+              onHide={r._onHide}
+              onDelete={r._onDelete}
+              onReply={onReply}
+              nested
+              highlight={r._highlight}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }
 
-export default function CaveDetail({ cave, currentUserId, currentUserProfile, onUpdateCave, onSendMessage, onBack }) {
-  const { reactToCaveMessage, pinCaveMessage, hideCaveMessage } = useCaves()
+
+export default function CaveDetail({ cave, currentUserId, currentUserProfile, onUpdateCave, onSendMessage, onBack, onDeleted }) {
+  const { reactToCaveMessage, pinCaveMessage, hideCaveMessage, deleteCaveMessage } = useCaves()
   const [draft, setDraft] = useState('')
   const [showInvite, setShowInvite] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
@@ -389,16 +610,45 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
   const [caveView, setCaveView] = useState(() => readStoredCaveView(cave.id))
   const [imageBusy, setImageBusy] = useState(false)
   const [imageError, setImageError] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [replyTo, setReplyTo] = useState(null)
+  const [expandedThreads, setExpandedThreads] = useState(() => new Set())
   const fileInputRef = useRef(null)
   const scrollRef = useRef(null)
   const textareaRef = useRef(null)
+  const searchInputRef = useRef(null)
   const chromeRef = useRef(null)
   const rootRef = useRef(null)
+  const sendingRef = useRef(false)
 
   const isKeeper = isCaveKeeper(cave, currentUserId)
   const visibleMessages = (cave.messages || []).filter((m) => !m.hidden || isKeeper)
-  const pinned = visibleMessages.filter((m) => m.pinned)
-  const chatMessages = visibleMessages.filter((m) => !m.pinned)
+  const q = searchQuery.trim().toLowerCase()
+  const searchHitIds = q
+    ? new Set(visibleMessages.filter((m) => messageSearchText(m).includes(q)).map((m) => String(m.id)))
+    : null
+
+  // Threads: roots + replies under parent
+  const repliesByParent = new Map()
+  visibleMessages.forEach((m) => {
+    if (m.parentId == null || m.parentId === '') return
+    const key = String(m.parentId)
+    if (!repliesByParent.has(key)) repliesByParent.set(key, [])
+    repliesByParent.get(key).push(m)
+  })
+  const rootMessages = visibleMessages.filter((m) => m.parentId == null || m.parentId === '')
+  const pinned = rootMessages.filter((m) => m.pinned)
+  let chatMessages = rootMessages.filter((m) => !m.pinned)
+  if (searchHitIds) {
+    // Keep roots that match or have a matching reply; auto-expand those threads
+    chatMessages = chatMessages.filter((m) => {
+      const id = String(m.id)
+      if (searchHitIds.has(id)) return true
+      const kids = repliesByParent.get(id) || []
+      return kids.some((r) => searchHitIds.has(String(r.id)))
+    })
+  }
 
   useEffect(() => {
     setCaveView(readStoredCaveView(cave.id))
@@ -440,26 +690,109 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
 
   function pushMessage(fields) {
     const auth = author()
+    const payload = { ...fields }
+    if (replyTo?.id != null) {
+      payload.parentId = replyTo.id
+      payload.replyPreview = {
+        authorName: replyTo.authorName || 'a fren',
+        text: (replyTo.text || '').slice(0, 120),
+      }
+    }
     if (onSendMessage) {
-      onSendMessage(fields, auth)
+      onSendMessage(payload, auth)
       return
     }
     onUpdateCave((c) => ({
       ...c,
       messages: [
         ...c.messages,
-        { id: Date.now(), ts: 'just now', ...auth, ...fields },
+        { id: Date.now(), ts: 'just now', ...auth, ...payload },
       ],
     }))
   }
 
   function handleSend(e) {
-    e.preventDefault()
+    e?.preventDefault?.()
     const text = draft.trim()
-    if (!text) return
+    if (!text || sendingRef.current) return
+    sendingRef.current = true
+    const parent = replyTo
     pushMessage({ text })
     setDraft('')
+    setReplyTo(null)
+    if (parent?.id != null) {
+      setExpandedThreads((prev) => {
+        const next = new Set(prev)
+        next.add(String(parent.id))
+        return next
+      })
+    }
+    // Allow next send after React applies draft clear (avoids double Enter/submit).
+    requestAnimationFrame(() => {
+      sendingRef.current = false
+    })
   }
+
+  function startReply(message) {
+    // Reply to a reply still threads under the original root
+    if (message.parentId != null) {
+      setReplyTo({
+        id: message.parentId,
+        authorName: message.replyPreview?.authorName || message.authorName,
+        text: message.replyPreview?.text || message.text || '',
+      })
+      setExpandedThreads((prev) => new Set(prev).add(String(message.parentId)))
+    } else {
+      setReplyTo({
+        id: message.id,
+        authorName: message.authorName,
+        text: message.text || (message.image ? '[image]' : '') || (message.sticker ? message.sticker : ''),
+      })
+      setExpandedThreads((prev) => new Set(prev).add(String(message.id)))
+    }
+    requestAnimationFrame(() => textareaRef.current?.focus())
+  }
+
+  function toggleThread(messageId) {
+    const key = String(messageId)
+    setExpandedThreads((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function decorateReplies(parentId) {
+    const kids = repliesByParent.get(String(parentId)) || []
+    return kids.map((r) => ({
+      ...r,
+      _member: memberById(cave, r.authorId),
+      _mine: r.authorId === currentUserId,
+      _onReact: (emoji) => reactToCaveMessage(cave.id, r.id, emoji),
+      _onPin: () => pinCaveMessage(cave.id, r.id),
+      _onHide: () => hideCaveMessage(cave.id, r.id),
+      _onDelete: () => deleteCaveMessage(cave.id, r.id),
+    }))
+  }
+
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen])
+
+  // Auto-expand threads that match search
+  useEffect(() => {
+    if (!searchHitIds || searchHitIds.size === 0) return
+    setExpandedThreads((prev) => {
+      const next = new Set(prev)
+      repliesByParent.forEach((kids, parentId) => {
+        if (kids.some((r) => searchHitIds.has(String(r.id))) || searchHitIds.has(String(parentId))) {
+          next.add(String(parentId))
+        }
+      })
+      return next
+    })
+  }, [searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleImage(e) {
     const file = e.target.files?.[0]
@@ -474,6 +807,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
       const { dataUrl, blob } = await prepareImageAttachment(file, { maxDimension: 1200 })
       const image = await finalizeImageUrl({ image: dataUrl, blob, prefix: 'caves' })
       pushMessage({ image })
+      setReplyTo(null)
     } catch (err) {
       setImageError(err.message || 'Could not process that image.')
     } finally {
@@ -490,6 +824,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
     if (!url) return
     const image = await finalizeGifUrl(url, { prefix: 'caves' })
     pushMessage({ image })
+    setReplyTo(null)
   }
 
   function switchCaveView(view) {
@@ -498,19 +833,16 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
   }
 
   return (
-    // Full-bleed: Home already drops content padding when a cave is open.
-    // Do not use negative margin here — it overflows the scrollport and
-    // makes sticky playlist chrome jump / clip.
-    <div ref={rootRef} className="flex flex-col min-h-[calc(100dvh-8rem)] w-full">
+    // Fill shell between app header and bottom nav; composer docks under messages.
+    <div ref={rootRef} className="flex flex-col h-full min-h-0 w-full overflow-hidden">
       {/* Compact cave chrome */}
-      <div ref={chromeRef} className="sticky top-0 z-20 frens-surface shrink-0">
+      <div ref={chromeRef} className="shrink-0 z-20 frens-surface">
+        <CaveCoverBanner coverUrl={cave.coverUrl} className="border-b frens-border" />
         <div className="px-3 pt-2 pb-1 flex items-center gap-2">
           <button type="button" onClick={onBack} className="frens-muted text-lg px-1 shrink-0" aria-label="Back to caves">
             ‹
           </button>
-          <span className="w-8 h-8 rounded-lg frens-avatar-ring flex items-center justify-center shrink-0">
-            <CaveGlyph className="w-4 h-4" />
-          </span>
+          <CaveCoverThumb coverUrl={cave.coverUrl} className="w-8 h-8" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium truncate leading-tight">{cave.name}</p>
             <p className="text-[11px] frens-muted leading-tight flex items-center gap-1">
@@ -554,6 +886,18 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
           </div>
           <button
             type="button"
+            onClick={() => setSearchOpen((v) => !v)}
+            className={`frens-action w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 shrink-0 ${
+              searchOpen || searchQuery ? 'text-black dark:text-white' : ''
+            }`}
+            aria-label="Search conversation"
+            title="Search conversation"
+            aria-pressed={searchOpen}
+          >
+            <SearchIcon className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => setShowAdd(true)}
             className="frens-action w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 shrink-0"
             aria-label="Add members"
@@ -571,85 +915,156 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
             <LinkIcon className="w-4 h-4" />
           </button>
         </div>
+        {searchOpen || searchQuery ? (
+          <div className="px-3 pb-2">
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 frens-muted pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search this cave…"
+                className="frens-input w-full text-sm py-2 pl-9 pr-8"
+                autoComplete="off"
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(''); setSearchOpen(false) }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs frens-muted px-1"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div
-        className={caveView === 'chat' ? '' : 'hidden'}
+        className={
+          caveView === 'chat'
+            ? 'flex flex-col flex-1 min-h-0'
+            : 'hidden'
+        }
         aria-hidden={caveView !== 'chat'}
       >
-      {/* Chat */}
-      <div className="flex flex-col justify-end min-h-[10rem] p-3 space-y-3">
-        {pinned.length > 0 ? (
-          <div className="rounded-xl p-2 space-y-2 bg-black/[0.02] dark:bg-white/[0.02]">
-            <p className="text-[10px] frens-muted uppercase tracking-wide px-1 inline-flex items-center gap-1">
-              <PinIcon className="w-3 h-3" />
-              Pinned
-            </p>
-            {pinned.map((m) => (
+        {/* Messages — only scroll region */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 pt-3 pb-3 space-y-3">
+          {pinned.length > 0 && !q ? (
+            <div className="rounded-xl p-2 space-y-2 bg-black/[0.02] dark:bg-white/[0.02]">
+              <p className="text-[10px] frens-muted uppercase tracking-wide px-1 inline-flex items-center gap-1">
+                <PinIcon className="w-3 h-3" />
+                Pinned
+              </p>
+              {pinned.map((m) => (
+                <ChatMessage
+                  key={`pin-${m.id}`}
+                  message={m}
+                  member={memberById(cave, m.authorId)}
+                  mine={m.authorId === currentUserId}
+                  caveId={cave.id}
+                  cave={cave}
+                  canModerate={isKeeper}
+                  onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
+                  onPin={() => pinCaveMessage(cave.id, m.id)}
+                  onHide={() => hideCaveMessage(cave.id, m.id)}
+                  onDelete={() => deleteCaveMessage(cave.id, m.id)}
+                  onReply={startReply}
+                  replies={decorateReplies(m.id)}
+                  expanded={expandedThreads.has(String(m.id))}
+                  onToggleThread={toggleThread}
+                />
+              ))}
+            </div>
+          ) : null}
+          {visibleMessages.length === 0 ? (
+            <div className="py-16 flex flex-col items-center justify-center text-center">
+              <p className="text-sm frens-body-text mb-1">Quiet in here</p>
+              <p className="text-xs frens-muted">Say hi to start the cave.</p>
+            </div>
+          ) : chatMessages.length === 0 && q ? (
+            <div className="py-12 text-center">
+              <p className="text-sm frens-muted">No messages match “{searchQuery.trim()}”</p>
+            </div>
+          ) : (
+            chatMessages.map((m) => (
               <ChatMessage
-                key={`pin-${m.id}`}
+                key={m.id}
                 message={m}
                 member={memberById(cave, m.authorId)}
                 mine={m.authorId === currentUserId}
                 caveId={cave.id}
+                cave={cave}
                 canModerate={isKeeper}
                 onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
                 onPin={() => pinCaveMessage(cave.id, m.id)}
                 onHide={() => hideCaveMessage(cave.id, m.id)}
+                onDelete={() => deleteCaveMessage(cave.id, m.id)}
+                onReply={startReply}
+                replies={decorateReplies(m.id)}
+                expanded={expandedThreads.has(String(m.id)) || Boolean(q && (searchHitIds?.has(String(m.id)) || (repliesByParent.get(String(m.id)) || []).some((r) => searchHitIds?.has(String(r.id)))))}
+                onToggleThread={toggleThread}
+                highlight={Boolean(q && searchHitIds?.has(String(m.id)))}
               />
-            ))}
-          </div>
-        ) : null}
-        {visibleMessages.length === 0 ? (
-          <div className="py-16 flex flex-col items-center justify-center text-center">
-            <p className="text-sm frens-body-text mb-1">Quiet in here</p>
-            <p className="text-xs frens-muted">Say hi to start the cave.</p>
-          </div>
-        ) : (
-          chatMessages.map((m) => (
-            <ChatMessage
-              key={m.id}
-              message={m}
-              member={memberById(cave, m.authorId)}
-              mine={m.authorId === currentUserId}
-              caveId={cave.id}
-              canModerate={isKeeper}
-              onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
-              onPin={() => pinCaveMessage(cave.id, m.id)}
-              onHide={() => hideCaveMessage(cave.id, m.id)}
-            />
-          ))
-        )}
-        <div ref={scrollRef} aria-hidden className="h-px shrink-0" />
-      </div>
+            ))
+          )}
+          <div ref={scrollRef} aria-hidden className="h-px shrink-0" />
+        </div>
 
-      {/* Input bar */}
-      <div className="sticky bottom-0 z-20 frens-surface shrink-0 px-3 pt-2 pb-2.5">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,image/gif,.gif"
-          className="hidden"
-          onChange={handleImage}
-        />
-        <PillComposer
-          value={draft}
-          onChange={setDraft}
-          onSubmit={handleSend}
-          placeholder="message your cave..."
-          busy={imageBusy}
-          attachBusy={imageBusy}
-          error={imageError}
-          inputRef={textareaRef}
-          onPhoto={() => fileInputRef.current?.click()}
-          onEmoji={addEmoji}
-          onGif={sendGif}
-        />
-      </div>
+        {/* Composer — post-style row, docked above bottom nav */}
+        <div className="shrink-0 z-20 frens-surface px-3 pt-1.5 pb-2">
+          {replyTo ? (
+            <div className="mb-1.5 flex items-start gap-2 rounded-xl px-1 py-1.5 text-xs">
+              <div className="min-w-0 flex-1">
+                <p className="frens-muted">
+                  Replying to <span className="font-medium text-black dark:text-white">{replyTo.authorName}</span>
+                </p>
+                {replyTo.text ? (
+                  <p className="truncate frens-muted opacity-80 mt-0.5">{replyTo.text}</p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplyTo(null)}
+                className="frens-muted shrink-0 px-1"
+                aria-label="Cancel reply"
+              >
+                ✕
+              </button>
+            </div>
+          ) : null}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,image/gif,.gif"
+            className="hidden"
+            onChange={handleImage}
+          />
+          <ChatComposer
+            profile={currentUserProfile}
+            value={draft}
+            onChange={setDraft}
+            onSubmit={handleSend}
+            placeholder={replyTo ? `Reply to ${replyTo.authorName}…` : 'Say something…'}
+            sendLabel="Send"
+            busy={imageBusy}
+            attachBusy={imageBusy}
+            error={imageError}
+            inputRef={textareaRef}
+            onPhoto={() => fileInputRef.current?.click()}
+            onEmoji={addEmoji}
+            onGif={sendGif}
+          />
+        </div>
       </div>
 
       {caveView === 'playlists' ? (
-        <CavePlaylists cave={cave} currentUserId={currentUserId} />
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <CavePlaylists cave={cave} currentUserId={currentUserId} />
+        </div>
       ) : null}
 
       {showAdd && (
@@ -666,6 +1081,11 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
           currentUserId={currentUserId}
           onUpdateCave={onUpdateCave}
           onClose={() => setShowEditor(false)}
+          onDeleted={() => {
+            setShowEditor(false)
+            onDeleted?.(cave.id)
+            onBack?.()
+          }}
         />
       )}
     </div>

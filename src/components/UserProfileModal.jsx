@@ -3,6 +3,8 @@ import Modal from './Modal'
 import PostCard from './PostCard'
 import { ProfileAvatar } from './FrogLogo'
 import { useAuth } from '../context/AuthContext'
+import { filePlatformReport, suspendPlatformUser, ModerationNotInstalledError } from '../lib/platformModeration'
+import StaffInvestigateModal from './StaffInvestigateModal'
 import { usePosts } from '../context/PostsContext'
 import { useDms } from '../context/DmsContext'
 import { getProfileCard, SocialNotInstalledError } from '../lib/social'
@@ -17,9 +19,11 @@ import ProfilePlaylistsPublic from './playlists/ProfilePlaylistsPublic'
 import ProfileGathererPublic from './gatherer/ProfileGathererPublic'
 import SendLetterModal from './folds-letters/SendLetterModal'
 import ProfileOwlPost from './owl/ProfileOwlPost'
+import ProfileFoldsPublic from './folds-letters/ProfileFoldsPublic'
+import { loadShowcasePrefs, isShowcaseOn } from '../lib/profileShowcase'
 
 export default function UserProfileModal({ userId, onClose, onOpenList, onNavigate, onOpenProfile, onOpenEcho, onOpenPlaylists, onOpenGatherer }) {
-  const { user } = useAuth()
+  const { user, accountStatus } = useAuth()
   const { setFollow, postsByUser, loadPostsForUser } = usePosts()
   const { openConversationWithUser } = useDms()
   const [card, setCard] = useState(null)
@@ -28,6 +32,12 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
   const [following, setFollowing] = useState(false)
   const [followers, setFollowers] = useState(0)
   const [showSendLetter, setShowSendLetter] = useState(false)
+  const [showcase, setShowcase] = useState(null)
+  const [modBusy, setModBusy] = useState(false)
+  const [modMsg, setModMsg] = useState('')
+  const [showInvestigate, setShowInvestigate] = useState(false)
+
+  const isPlatformStaff = Boolean(accountStatus?.isPlatformStaff)
 
   const isMe = user?.id && userId && user.id === userId
 
@@ -35,13 +45,18 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
     let cancelled = false
     setLoading(true)
     setError('')
-    getProfileCard(userId)
-      .then((c) => {
+    setShowcase(null)
+    Promise.all([
+      getProfileCard(userId),
+      loadShowcasePrefs(userId),
+    ])
+      .then(([c, sc]) => {
         if (cancelled) return
         if (!c) { setError('This fren could not be found.'); return }
         setCard(c)
         setFollowing(c.iFollow)
         setFollowers(c.followers)
+        setShowcase(sc)
       })
       .catch((err) => {
         if (cancelled) return
@@ -75,6 +90,46 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
     })
     onNavigate?.('messages')
     onClose?.()
+  }
+
+  async function handleReportProfile() {
+    if (!card || modBusy) return
+    const reason = window.prompt(`Report ${card.frenName}? Optional reason:`, '')
+    if (reason === null) return
+    setModBusy(true)
+    setModMsg('')
+    try {
+      await filePlatformReport({
+        kind: 'profile',
+        refId: userId,
+        reportedUserId: userId,
+        preview: card.frenName,
+        reason,
+      })
+      setModMsg('Reported ✓')
+    } catch (err) {
+      setModMsg(err instanceof ModerationNotInstalledError
+        ? 'Reports need the moderation SQL patch.'
+        : (err.message || 'Could not report.'))
+    } finally {
+      setModBusy(false)
+    }
+  }
+
+  async function handleStaffSuspend() {
+    if (!card || modBusy) return
+    const reason = window.prompt(`Suspend ${card.frenName}? Optional reason:`, '')
+    if (reason === null) return
+    setModBusy(true)
+    setModMsg('')
+    try {
+      await suspendPlatformUser(userId, reason)
+      setModMsg('User suspended.')
+    } catch (err) {
+      setModMsg(err.message || 'Could not suspend.')
+    } finally {
+      setModBusy(false)
+    }
   }
 
   const theirPosts = postsByUser(userId)
@@ -151,30 +206,90 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
             </div>
 
             {!isMe && (
-              <div className="flex items-center gap-2 mt-3">
-                <span className="text-xs frens-muted mr-1">Connect</span>
-                <ProfileCavesPublic userId={userId} frenName={card.frenName} onNavigate={onNavigate} />
-                <ProfileEchoesPublic
-                  userId={userId}
-                  frenName={card.frenName}
-                  onNavigate={onNavigate}
-                  onOpenEcho={onOpenEcho}
-                  onCloseProfile={onClose}
-                />
-                <ProfilePlaylistsPublic
-                  userId={userId}
-                  frenName={card.frenName}
-                  onOpenPlaylists={onOpenPlaylists}
-                  onCloseProfile={onClose}
-                />
-                <ProfileGathererPublic
-                  userId={userId}
-                  frenName={card.frenName}
-                  onOpenGatherer={onOpenGatherer}
-                  onNavigate={onNavigate}
-                  onCloseProfile={onClose}
-                />
+              <div className="flex flex-wrap items-center gap-3 mt-3 pt-2 border-t frens-border">
+                <button
+                  type="button"
+                  disabled={modBusy}
+                  onClick={handleReportProfile}
+                  className="text-[11px] frens-muted hover:underline disabled:opacity-50"
+                >
+                  Report profile
+                </button>
+                {isPlatformStaff ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={modBusy}
+                      onClick={() => setShowInvestigate(true)}
+                      className="text-[11px] frens-muted hover:underline disabled:opacity-50"
+                    >
+                      Investigate
+                    </button>
+                    <button
+                      type="button"
+                      disabled={modBusy}
+                      onClick={handleStaffSuspend}
+                      className="text-[11px] text-red-500 dark:text-red-400 hover:underline disabled:opacity-50"
+                    >
+                      Suspend user
+                    </button>
+                  </>
+                ) : null}
+                {modMsg ? <span className="text-[11px] frens-muted">{modMsg}</span> : null}
               </div>
+            )}
+
+            {!isMe && showcase && (
+              (() => {
+                const showCaves = isShowcaseOn(showcase, 'caves')
+                const showEchoes = isShowcaseOn(showcase, 'echoes')
+                const showPlaylists = isShowcaseOn(showcase, 'playlists')
+                const showMoodboards = isShowcaseOn(showcase, 'moodboards')
+                const showFolds = isShowcaseOn(showcase, 'folds')
+                const any =
+                  showCaves || showEchoes || showPlaylists || showMoodboards || showFolds
+                if (!any) return null
+                return (
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    {showCaves ? (
+                      <ProfileCavesPublic userId={userId} frenName={card.frenName} onNavigate={onNavigate} />
+                    ) : null}
+                    {showEchoes ? (
+                      <ProfileEchoesPublic
+                        userId={userId}
+                        frenName={card.frenName}
+                        onNavigate={onNavigate}
+                        onOpenEcho={onOpenEcho}
+                        onCloseProfile={onClose}
+                      />
+                    ) : null}
+                    {showPlaylists ? (
+                      <ProfilePlaylistsPublic
+                        userId={userId}
+                        frenName={card.frenName}
+                        onOpenPlaylists={onOpenPlaylists}
+                        onCloseProfile={onClose}
+                      />
+                    ) : null}
+                    {showMoodboards ? (
+                      <ProfileGathererPublic
+                        userId={userId}
+                        frenName={card.frenName}
+                        onOpenGatherer={onOpenGatherer}
+                        onNavigate={onNavigate}
+                        onCloseProfile={onClose}
+                      />
+                    ) : null}
+                    {showFolds ? (
+                      <ProfileFoldsPublic
+                        userId={userId}
+                        frenName={card.frenName}
+                        onCloseProfile={onClose}
+                      />
+                    ) : null}
+                  </div>
+                )
+              })()
             )}
           </div>
 
@@ -196,6 +311,12 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
           onClose={() => setShowSendLetter(false)}
         />
       )}
+      {showInvestigate ? (
+        <StaffInvestigateModal
+          userId={userId}
+          onClose={() => setShowInvestigate(false)}
+        />
+      ) : null}
     </>
   )
 }

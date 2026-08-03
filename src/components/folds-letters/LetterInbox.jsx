@@ -27,19 +27,11 @@ function LengthMark({ lengthLabel }) {
   )
 }
 
-function ChevronIcon({ className = 'w-3 h-3' }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
-      <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function PrintIcon({ className = 'w-4 h-4' }) {
+function ArchiveIcon({ className = 'w-4 h-4' }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className} aria-hidden>
-      <path d="M7 9V4h10v5M7 16H5V9h14v7h-2" strokeLinecap="round" strokeLinejoin="round" />
-      <rect x="7" y="14" width="10" height="6" rx="0.5" />
+      <path d="M4 7h16v12H4zM8 7V5h8v2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 11h4M10 15h4" strokeLinecap="round" />
     </svg>
   )
 }
@@ -47,12 +39,12 @@ function PrintIcon({ className = 'w-4 h-4' }) {
 function InboxSection({ title, count, children }) {
   if (!count) return null
   return (
-    <section className="mb-3">
-      <h3 className="text-[10px] uppercase tracking-[0.18em] frens-muted px-1 mb-1.5 flex items-center gap-2">
+    <section className="mb-4 last:mb-0">
+      <h3 className="text-[10px] uppercase tracking-[0.14em] frens-muted px-1 mb-1 flex items-center gap-1.5">
         <span>{title}</span>
-        <span className="opacity-60">{count}</span>
+        <span className="opacity-50">{count}</span>
       </h3>
-      <ul className="border frens-border rounded-xl overflow-hidden divide-y divide-[var(--frens-outline)]">
+      <ul className="divide-y divide-[var(--frens-outline)]">
         {children}
       </ul>
     </section>
@@ -68,24 +60,19 @@ function InboxRow({ letter, onOpen }) {
       <button
         type="button"
         onClick={() => onOpen(letter)}
-        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition ${
-          isAnon ? 'bg-black/[0.015] dark:bg-white/[0.02]' : ''
-        }`}
+        className="w-full flex items-center gap-3 px-1 py-2.5 text-left hover:opacity-80 transition"
       >
-        <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center border frens-border ${
-          isAnon ? 'border-dashed' : ''
-        }`}>
-          {isAnon ? <FoldsLettersIcon className="w-4 h-4 opacity-80" /> : <FoldsLettersIcon className="w-4 h-4" />}
-        </span>
         <span className="min-w-0 flex-1 flex items-center gap-2">
-          <span className={`text-sm truncate ${isAnon ? 'frens-muted italic' : 'font-medium'}`}>
+          {isAnon && (
+            <FoldsLettersIcon className="w-3.5 h-3.5 shrink-0 opacity-50" />
+          )}
+          <span className={`text-sm truncate ${isAnon ? 'frens-muted italic' : ''}`}>
             {label}
           </span>
           <LengthMark lengthLabel={letter.lengthLabel} />
         </span>
         <StatusDot status={letter.status} />
-        <span className="text-[10px] frens-muted shrink-0 tabular-nums w-10 text-right">{letter.timestamp}</span>
-        <ChevronIcon className="w-3 h-3 frens-muted shrink-0" />
+        <span className="text-[10px] frens-muted shrink-0 tabular-nums">{letter.timestamp}</span>
       </button>
     </li>
   )
@@ -93,37 +80,23 @@ function InboxRow({ letter, onOpen }) {
 
 function LetterDetail({ letter, busy, onBack, onAction }) {
   const isAnon = letter.anonymous
-  const sealed = letter.status !== 'printed' && letter.status !== 'declined'
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <button type="button" onClick={onBack} className="text-xs frens-muted hover:underline">
         ← Inbox
       </button>
 
-      <div className={`flex items-start gap-3 p-4 border frens-border rounded-xl ${isAnon ? 'border-dashed' : ''}`}>
-        <span className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center border frens-border ${
-          isAnon ? 'border-dashed' : ''
-        }`}>
-          {isAnon ? <FoldsLettersIcon className="w-5 h-5 opacity-80" /> : <FoldsLettersIcon className="w-5 h-5" />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className={`text-base ${isAnon ? 'frens-muted italic' : 'font-medium'}`}>
-            {isAnon ? 'Anonymous letter' : letter.fromDisplay}
-          </p>
-          <div className="flex items-center gap-2 mt-1.5 text-xs frens-muted">
-            <StatusDot status={letter.status} />
-            <LengthMark lengthLabel={letter.lengthLabel} />
-            <span>{letter.timestamp}</span>
-          </div>
+      <div className="space-y-1">
+        <p className={`text-base ${isAnon ? 'frens-muted italic' : 'font-medium'}`}>
+          {isAnon ? 'Anonymous letter' : letter.fromDisplay}
+        </p>
+        <div className="flex items-center gap-2 text-xs frens-muted">
+          <StatusDot status={letter.status} />
+          <LengthMark lengthLabel={letter.lengthLabel} />
+          <span>{letter.timestamp}</span>
         </div>
       </div>
-
-      {sealed && (
-        <p className="text-[11px] frens-muted text-center px-4">
-          Sealed on screen — open only through print.
-        </p>
-      )}
 
       <div className="flex flex-col gap-2">
         {letter.status === 'pending' && (
@@ -154,9 +127,12 @@ function LetterDetail({ letter, busy, onBack, onAction }) {
               onClick={() => onAction('print', letter)}
               className="w-full frens-btn-primary py-2.5 text-sm disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
-              <PrintIcon />
-              Print letter
+              <ArchiveIcon />
+              Print or save PDF
             </button>
+            <p className="text-[11px] frens-muted text-center px-2">
+              Opens your print dialog — choose a printer or Save as PDF for your archive.
+            </p>
             <button
               type="button"
               disabled={busy}
@@ -177,18 +153,15 @@ function LetterDetail({ letter, busy, onBack, onAction }) {
 
 function SentRow({ letter }) {
   return (
-    <li className="flex items-center gap-2.5 px-3 py-2.5">
-      <span className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center border frens-border">
-        <FoldsLettersIcon className="w-4 h-4 opacity-60" />
-      </span>
+    <li className="flex items-center gap-3 px-1 py-2.5">
       <span className="min-w-0 flex-1 text-sm truncate">→ {letter.toName}</span>
       {letter.anonymous && (
-        <span className="text-[9px] uppercase tracking-wider frens-muted border border-dashed frens-border px-1.5 py-0.5 rounded">
+        <span className="text-[9px] uppercase tracking-wider frens-muted opacity-70">
           anon
         </span>
       )}
       <StatusDot status={letter.status} />
-      <span className="text-[10px] frens-muted shrink-0">{letter.timestamp}</span>
+      <span className="text-[10px] frens-muted shrink-0 tabular-nums">{letter.timestamp}</span>
     </li>
   )
 }

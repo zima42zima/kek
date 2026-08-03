@@ -4,18 +4,63 @@ import { prepareImageAttachment, finalizeImageUrl, finalizeGifUrl } from '../../
 import { sanitizeVideo } from '../../lib/media'
 import { uploadMedia, StorageNotInstalledError } from '../../lib/storage'
 import { insertAtCaret } from '../../lib/insertText'
-import PillComposer from '../PillComposer'
+import ChatComposer from '../ChatComposer'
 import EmojiReactions from '../EmojiReactions'
 import { PhoneIcon, VideoCallIcon } from '../icons/UiIcons'
 import { useDmCalls } from '../../context/DmCallsContext'
 import { useDms } from '../../context/DmsContext'
+import { useAuth } from '../../context/AuthContext'
 import RichText from '../RichText'
 import FrenHandle from '../FrenHandle'
 import { SharedImage, SharedVideo, textBubbleClass } from '../SharedMedia'
 
 const MAX_VIDEO_MB = 25
 
-function DmBubble({ message, mine, canReact, onReact }) {
+function DmMessageMenu({ onDelete }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return undefined
+    function onDoc(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
+
+  if (!onDelete) return null
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="frens-action w-5 h-5 rounded-full flex items-center justify-center text-[10px] leading-none frens-muted hover:bg-black/5 dark:hover:bg-white/10"
+        aria-label="Message options"
+        aria-expanded={open}
+      >
+        ···
+      </button>
+      {open ? (
+        <div className="absolute bottom-full right-0 mb-1 frens-surface border frens-border rounded-lg shadow-lg py-1 min-w-[8rem] z-20">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              if (window.confirm('Delete this message?')) onDelete()
+            }}
+            className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10 text-red-600 dark:text-red-400"
+          >
+            Delete
+          </button>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function DmBubble({ message, mine, canReact, onReact, onDelete }) {
   const hasText = Boolean(message.text?.trim())
   const hasMedia = Boolean(message.image || message.video)
 
@@ -52,6 +97,7 @@ function DmBubble({ message, mine, canReact, onReact }) {
             canReact={canReact}
             onReact={onReact}
             controlsOnly
+            extra={mine ? <DmMessageMenu onDelete={onDelete} /> : null}
           />
         </div>
         <EmojiReactions
@@ -68,7 +114,8 @@ function DmBubble({ message, mine, canReact, onReact }) {
 
 export default function DmThread({ thread, messages, currentUserId, onSend, onBack }) {
   const { startCall, inCall } = useDmCalls()
-  const { reactToDmMessage } = useDms()
+  const { reactToDmMessage, deleteDmMessage } = useDms()
+  const { profile } = useAuth()
   const [draft, setDraft] = useState('')
   const [mediaBusy, setMediaBusy] = useState(false)
   const [mediaError, setMediaError] = useState('')
@@ -83,6 +130,16 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
     frenName: thread.otherName,
     avatarType: thread.otherAvatarType,
     avatarUrl: thread.otherAvatarUrl,
+  }
+
+  function addEmoji(emoji) {
+    setDraft((prev) => insertAtCaret(textareaRef.current, prev, emoji))
+  }
+
+  async function sendGif(url) {
+    if (!url) return
+    const image = await finalizeGifUrl(url, { prefix: 'dms' })
+    onSend?.({ image })
   }
 
   useEffect(() => {
@@ -153,16 +210,6 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
     }
   }
 
-  function addEmoji(emoji) {
-    setDraft((prev) => insertAtCaret(textareaRef.current, prev, emoji))
-  }
-
-  async function sendGif(url) {
-    if (!url) return
-    const image = await finalizeGifUrl(url, { prefix: 'dms' })
-    onSend?.({ image })
-  }
-
   async function placeCall(type) {
     setCallError('')
     const result = await startCall({
@@ -177,9 +224,9 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
   }
 
   return (
-    // Full-bleed when parent drops padding (same as caves)
-    <div className="flex flex-col min-h-[calc(100dvh-8rem)] w-full">
-      <div className="sticky top-0 z-20 frens-surface shrink-0 px-3 pt-2 pb-2 flex items-center gap-2">
+    // Fill shell between app header and bottom nav; composer docks above icon bar.
+    <div className="flex flex-col h-full min-h-0 w-full overflow-hidden">
+      <div className="shrink-0 z-20 frens-surface px-3 pt-2 pb-2 flex items-center gap-2 border-b frens-border">
         <button type="button" onClick={onBack} className="frens-muted text-lg px-1" aria-label="Back">
           ‹
         </button>
@@ -216,7 +263,7 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
         <p className="shrink-0 text-xs text-red-500 dark:text-red-400 px-3 py-1">{callError}</p>
       ) : null}
 
-      <div className="mt-auto px-3 py-3 space-y-3.5">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 space-y-3.5">
         {messages.length === 0 ? (
           <div className="py-16 flex flex-col items-center justify-center text-center">
             <p className="text-sm frens-body-text mb-1 font-light">Say hi to {thread.otherName}</p>
@@ -230,20 +277,27 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
               mine={m.senderId === currentUserId}
               canReact={m.id != null && !String(m.id).startsWith('tmp-')}
               onReact={(emoji) => reactToDmMessage(thread.id, m.id, emoji)}
+              onDelete={
+                m.senderId === currentUserId
+                  ? () => deleteDmMessage(thread.id, m.id)
+                  : null
+              }
             />
           ))
         )}
         <div ref={bottomRef} aria-hidden className="h-px shrink-0" />
       </div>
 
-      <div className="sticky bottom-0 z-20 frens-surface shrink-0 px-3 pt-2 pb-2.5">
+      <div className="shrink-0 z-20 frens-surface px-3 pt-1.5 pb-2">
         <input ref={imageInputRef} type="file" accept="image/*,image/gif,.gif" className="hidden" onChange={handleImage} />
         <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideo} />
-        <PillComposer
+        <ChatComposer
+          profile={profile}
           value={draft}
           onChange={setDraft}
           onSubmit={handleSend}
-          placeholder="Leave a message…"
+          placeholder="Say something…"
+          sendLabel="Send"
           busy={mediaBusy}
           attachBusy={mediaBusy}
           error={mediaError}

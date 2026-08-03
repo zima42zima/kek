@@ -2,49 +2,55 @@ import { useState } from 'react'
 import { useCaves } from '../../context/CavesContext'
 import { cavesVisibleOnProfile } from '../../lib/caves'
 import Modal from '../Modal'
-import CaveIcon, { CaveGlyph } from './CaveIcon'
+import CaveIcon from './CaveIcon'
+import { CaveCoverThumb } from './CaveCover'
 import CaveAccessLabel from '../CaveAccessLabel'
 import CavesManager from './CavesManager'
+import ProfileShareToggle from '../ProfileShareToggle'
 
 function CavesProfileModal({ caves, onClose, onOpenCave, onManage }) {
   const visible = cavesVisibleOnProfile(caves)
 
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2"><CaveIcon className="w-5 h-5" /> Your caves</span>}
+      title={<span className="inline-flex items-center gap-2"><CaveIcon className="w-[1.06rem] h-[1.06rem]" /> Your caves</span>}
       onClose={onClose}
       maxWidth="max-w-sm"
     >
-      {visible.length === 0 ? (
-        <p className="text-sm frens-muted text-center py-4">
-          No caves shown on your profile yet.
-        </p>
-      ) : (
-        <ul className="space-y-2 mb-4">
-          {visible.map((c) => (
-            <li key={c.id}>
-              <button
-                type="button"
-                onClick={() => onOpenCave(c.id)}
-                className="w-full text-left border frens-border rounded-xl p-3 flex items-center gap-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
-              >
-                <CaveGlyph className="w-8 h-8 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="frens-title-sm truncate">{c.name}</p>
-                  <CaveAccessLabel access={c.access} />
-                </div>
-                <span className="text-xs frens-action shrink-0">open</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className="text-xs frens-muted mb-3">
-        Public caves you share appear here for other frens. Invite-only caves stay off your profile.
-      </p>
-      <button type="button" onClick={onManage} className="frens-btn-outline w-full py-2.5 text-sm">
-        Manage which caves show
-      </button>
+      <div className="space-y-3">
+        <ProfileShareToggle
+          showcaseKey="caves"
+          label="Show caves on my profile"
+          hint="You always open caves here. When on, other frens also see this icon on your profile."
+        />
+        {visible.length === 0 ? (
+          <p className="text-sm frens-muted text-center py-4">
+            No caves listed yet — join or create one, then manage visibility below.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {visible.map((c) => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpenCave(c.id)}
+                  className="w-full text-left border frens-border rounded-xl p-3 flex items-center gap-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
+                >
+                  <CaveCoverThumb coverUrl={c.coverUrl} className="w-10 h-10" />
+                  <div className="min-w-0 flex-1">
+                    <p className="frens-title-sm truncate">{c.name}</p>
+                    <CaveAccessLabel access={c.access} />
+                  </div>
+                  <span className="text-xs frens-action shrink-0">open</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button type="button" onClick={onManage} className="frens-btn-outline w-full py-2.5 text-sm">
+          Manage which caves show
+        </button>
+      </div>
     </Modal>
   )
 }
@@ -68,16 +74,11 @@ export default function ProfileCaves({ onNavigate }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="frens-btn-outline w-11 h-11 rounded-full flex items-center justify-center relative shrink-0"
+        className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex items-center justify-center relative shrink-0 text-black dark:text-white"
         title="Your caves"
         aria-label="Your caves"
       >
-        <CaveIcon className="w-5 h-5" />
-        {visible.length > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
-            {visible.length > 9 ? '9+' : visible.length}
-          </span>
-        )}
+        <CaveIcon className="w-[1.06rem] h-[1.06rem]" />
       </button>
 
       {open && !manage && (

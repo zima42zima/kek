@@ -7,7 +7,7 @@ export default function EchoSearchRadiusSelect({ value, onChange, cityLabel, cla
     <div className={`space-y-1.5 ${className}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs frens-muted">
-          Search {cityLabel ? `near ${cityLabel}` : 'your area'}
+          Search range
         </p>
         <span className="text-[10px] frens-hint shrink-0">{formatRangeM(value)}</span>
       </div>
@@ -35,7 +35,7 @@ export function EchoDiscoverRadiusPicker({ value, onChange, className = '' }) {
     <div className={`space-y-2 ${className}`}>
       <p className="text-sm frens-body-text text-center">How close must someone be?</p>
       <p className="text-xs frens-muted text-center -mt-1">
-        Frens discover your echo when they walk within this range. Exact pin stays hidden.
+        Frens discover your aftersound when they walk within this range. Exact pin stays hidden.
       </p>
       <div className="grid gap-2">
         {ECHO_RANGE_PRESETS.map((preset) => (

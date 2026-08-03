@@ -19,6 +19,7 @@ import {
   styleFromBlock,
   syncLetterChrome,
   syncStandardLetterBlocks,
+  clampLetterFontSize,
 } from '../../lib/letterStudio'
 import { preloadOwlFont } from '../../lib/owlLetterFonts'
 import {
@@ -127,16 +128,22 @@ export default function LetterStudioComposer({
 
   function patchSelected(patch) {
     if (!selectedId) return
-    updateBlocks((blocks) => blocks.map((b) => (b.id === selectedId ? { ...b, ...patch } : b)))
+    const next = patch.fontSize !== undefined
+      ? { ...patch, fontSize: clampLetterFontSize(patch.fontSize) }
+      : patch
+    updateBlocks((blocks) => blocks.map((b) => (b.id === selectedId ? { ...b, ...next } : b)))
   }
 
   function applyToolbarPatch(patch) {
+    const sized = patch.fontSize !== undefined
+      ? { ...patch, fontSize: clampLetterFontSize(patch.fontSize) }
+      : patch
     if (isFold) {
-      setPendingStyle((prev) => ({ ...prev, ...patch }))
-      if (hasTextSelection) patchSelected(patch)
-      else if (patch.font) {
-        update({ font: patch.font })
-        preloadOwlFont(patch.font)
+      setPendingStyle((prev) => ({ ...prev, ...sized }))
+      if (hasTextSelection) patchSelected(sized)
+      else if (sized.font) {
+        update({ font: sized.font })
+        preloadOwlFont(sized.font)
       }
       return
     }
@@ -145,7 +152,7 @@ export default function LetterStudioComposer({
     const fieldEl = fieldRefs.current[field]
     const hasInlineSelection = Boolean(fieldEl && selectionInElement(fieldEl))
 
-    if (hasInlineSelection && applyPatchToSelection(fieldEl, patch)) {
+    if (hasInlineSelection && applyPatchToSelection(fieldEl, sized)) {
       const plain = fieldEl.innerText.replace(/\u00A0/g, ' ').replace(/\n$/, '')
       update((prev) => ({
         ...prev,
@@ -153,21 +160,21 @@ export default function LetterStudioComposer({
         fieldHtml: { ...(prev.fieldHtml || {}), [field]: fieldEl.innerHTML },
       }))
       setSelectionTick((n) => n + 1)
-      if (patch.font) preloadOwlFont(patch.font)
+      if (sized.font) preloadOwlFont(sized.font)
       return
     }
 
     update((prev) => {
       const nextOverrides = { ...(prev.styleOverrides || {}) }
       const fieldOverrides = { ...(nextOverrides[field] || {}) }
-      const { font, ...fieldPatch } = patch
+      const { font, ...fieldPatch } = sized
       Object.assign(fieldOverrides, fieldPatch)
       if (font) preloadOwlFont(font)
       nextOverrides[field] = fieldOverrides
       return { ...prev, styleOverrides: nextOverrides }
     })
-    if (patch.font) {
-      setPendingStyle((prev) => ({ ...prev, font: patch.font }))
+    if (sized.font) {
+      setPendingStyle((prev) => ({ ...prev, font: sized.font }))
     }
   }
 

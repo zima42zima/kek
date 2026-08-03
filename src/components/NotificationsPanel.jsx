@@ -6,6 +6,7 @@ import { useCaves } from '../context/CavesContext'
 import { relativeTime } from '../lib/notifications'
 import { linkifyText } from '../lib/linkText'
 import { requestOpenPsPanel } from '../lib/psNav'
+import { requestOpenFounderConsole } from '../lib/founderNav'
 import FoldsLettersIcon from './owl/FoldsLettersIcon'
 import { isNotificationClickable, requestPostFocus, requestEchoFocus } from '../lib/notificationNav'
 import {
@@ -70,14 +71,21 @@ function NotifText({ n }) {
           {name} added you to <span className="frens-stat">{n.caveName || 'a cave'}</span>
         </span>
       )
+    case 'cave_deleted':
+      return (
+        <span>
+          {name} deleted the cave{' '}
+          <span className="frens-stat">{n.caveName || 'you were in'}</span>
+        </span>
+      )
     case 'echo_aura':
-      return <span>{name} gave aura to your echo</span>
+      return <span>{name} gave aura to your aftersound</span>
     case 'echo':
-      return <span>{name} left an echo near you — tap to listen</span>
+      return <span>{name} left an aftersound near you — tap to listen</span>
     case 'echo_follow':
       return (
         <span>
-          {name} left an echo in {n.cityLabel || 'your area'} — a bat is flying nearby
+          {name} left an aftersound in {n.cityLabel || 'your area'} — a bat is flying nearby
         </span>
       )
     case 'echo_published':
@@ -89,7 +97,7 @@ function NotifText({ n }) {
     case 'echo_friends':
       return (
         <span>
-          {name} left a friends-only echo{n.cityLabel ? ` near ${n.cityLabel}` : ''} — tap to open
+          {name} left a friends-only aftersound{n.cityLabel ? ` near ${n.cityLabel}` : ''} — tap to open
         </span>
       )
     case 'dm':
@@ -113,9 +121,17 @@ function NotifText({ n }) {
       )
     case 'owl_letter':
       return n.owlLetterAnonymous ? (
-        <span>A sealed letter arrived — tap to open P.S.</span>
+        <span>A letter arrived — open P.S.</span>
       ) : (
-        <span>{name} sent you a sealed letter</span>
+        <span>{name} sent you a letter</span>
+      )
+    case 'fold_received':
+      return <span>{name} sent you a fold</span>
+    case 'platform_report':
+      return (
+        <span>
+          New report — <span className="frens-stat">{n.rabbitPreview || 'review in Founder console'}</span>
+        </span>
       )
     default:
       return <span>{name} {n.text ? linkifyText(n.text) : null}</span>
@@ -263,6 +279,18 @@ export default function NotificationsPanel({
       onClose?.()
       return
     }
+    if (n.type === 'fold_received') {
+      requestOpenPsPanel('folds')
+      onNavigate?.('profile')
+      onClose?.()
+      return
+    }
+    if (n.type === 'platform_report') {
+      requestOpenFounderConsole()
+      onNavigate?.('profile')
+      onClose?.()
+      return
+    }
     if ((n.type === 'cave' || n.type === 'cave_add') && n.caveId) {
       if (n.type === 'cave_add') {
         await joinCaveFromInvite(n.caveId)
@@ -315,7 +343,7 @@ export default function NotificationsPanel({
               <p className="text-xs frens-hint mt-1 px-6">
                 {section === 'personal' && 'Follows, aura, comments, and DMs show up here.'}
                 {section === 'community' && 'Cave posts and rabbit hole replies land here.'}
-                {section === 'places' && 'Echo activity — nearby drops and published spots — shows here.'}
+                {section === 'places' && 'Aftersound activity — nearby drops and published spots — shows here.'}
               </p>
             </div>
           ) : (

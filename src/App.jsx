@@ -8,6 +8,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import { BrowserRouter } from 'react-router-dom'
 import Home from './pages/Home'
+import SuspendedAccount from './pages/SuspendedAccount'
 import {
   PENDING_BOOTSTRAP_KEY,
   PENDING_INVITE_KEY,
@@ -26,7 +27,7 @@ function clearSignupDraft() {
 }
 
 function App() {
-  const { session, loading, profile, refreshProfile, passwordRecovery, clearPasswordRecovery } = useAuth()
+  const { session, loading, profile, accountStatus, passwordRecovery, clearPasswordRecovery, refreshProfile } = useAuth()
   const [screen, setScreen] = useState('invite')
   const [inviteCode, setInviteCode] = useState(null)
   const [bootstrapSignup, setBootstrapSignup] = useState(false)
@@ -100,6 +101,10 @@ function App() {
         }}
       />
     )
+  }
+
+  if (session?.user && accountStatus?.suspended) {
+    return <SuspendedAccount />
   }
 
   if (session?.user && screen === 'home') {

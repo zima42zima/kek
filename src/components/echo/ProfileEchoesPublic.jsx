@@ -11,13 +11,13 @@ import { EchoKindLabel } from './EchoMeta'
 function EchoesListModal({ echoes, frenName, onClose, onFindOnMap }) {
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2"><EchoIcon className="w-5 h-4" /> {frenName}&apos;s echoes</span>}
+      title={<span className="inline-flex items-center gap-2"><EchoIcon className="w-[1.06rem] h-[0.85rem]" /> {frenName}&apos;s aftersounds</span>}
       onClose={onClose}
       maxWidth="max-w-sm"
     >
       {echoes.length === 0 ? (
         <p className="text-sm frens-muted text-center py-6">
-          No public echoes on profile yet — check the map when you&apos;re nearby.
+          No public aftersounds on profile yet — check the map when you&apos;re nearby.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -47,7 +47,7 @@ function EchoesListModal({ echoes, frenName, onClose, onFindOnMap }) {
         </ul>
       )}
       <p className="text-[11px] frens-hint text-center mt-4">
-        Echoes stay on the map until deleted — walk within ~80m to listen.
+        Aftersounds stay on the map until deleted — walk within ~80m to listen.
       </p>
     </Modal>
   )
@@ -104,16 +104,11 @@ export default function ProfileEchoesPublic({ userId, frenName = 'this fren', on
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="frens-btn-outline w-11 h-11 rounded-full flex flex-col items-center justify-center gap-0.5 relative shrink-0"
-        title={`${frenName}'s echoes`}
-        aria-label={`${frenName}'s echoes`}
+        className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex flex-col items-center justify-center gap-0.5 relative shrink-0 text-black dark:text-white"
+        title={`${frenName}'s aftersounds`}
+        aria-label={`${frenName}'s aftersounds`}
       >
-        <EchoIcon className="w-5 h-4" />
-        {echoes.length > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
-            {echoes.length > 9 ? '9+' : echoes.length}
-          </span>
-        )}
+        <EchoIcon className="w-[1.06rem] h-[0.85rem]" />
       </button>
 
       {open && (

@@ -30,7 +30,7 @@ function SafetyNotice({ visibility }) {
   return (
     <div className="rounded-xl border border-amber-500/40 bg-amber-500/8 px-3 py-2.5 text-left">
       <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
-        Public echoes can reveal you were here
+        Public aftersounds can reveal you were here
       </p>
       <p className="text-[11px] frens-muted mt-1">
         Pin is scattered up to {ECHO_PIN_OFFSET_MAX_M}m — exact GPS stays private.
@@ -141,7 +141,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
           senseFilter: null,
         })
       } catch (err) {
-        setPublishError(err.message || 'Could not publish echo.')
+        setPublishError(err.message || 'Could not publish aftersound.')
       } finally {
         setPublishing(false)
       }
@@ -160,7 +160,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
         senseFilter: recording.kind === 'video' ? (recording.senseFilter || senseFilter) : null,
       })
     } catch (err) {
-      setPublishError(err.message || 'Could not publish echo.')
+      setPublishError(err.message || 'Could not publish aftersound.')
     } finally {
       setPublishing(false)
     }
@@ -180,13 +180,13 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
 
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2">Leave an echo <EchoIcon className="w-5 h-4" /></span>}
+      title={<span className="inline-flex items-center gap-2">Leave an aftersound <EchoIcon className="w-5 h-4" /></span>}
       onClose={onClose}
       maxWidth="max-w-sm"
     >
       {step === 'type' && (
         <div className="space-y-3">
-          <p className="text-sm frens-body-text text-center">How are you echoing?</p>
+          <p className="text-sm frens-body-text text-center">What kind of aftersound?</p>
 
           <div className="space-y-2">
             {[FEATURED_TYPE, ...ALT_TYPES].map((t) => (
@@ -292,7 +292,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
 
       {step === 'place' && (
         <div className="space-y-3">
-          <p className="text-sm frens-body-text text-center">Place your echo</p>
+          <p className="text-sm frens-body-text text-center">Place your aftersound</p>
           <p className="text-xs frens-muted text-center -mt-1">
             Drag the pin in the {ECHO_PIN_OFFSET_MAX_M}m circle — GPS stays private.
           </p>
@@ -334,7 +334,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
               className="frens-btn-primary flex-1 py-2.5 text-sm disabled:opacity-40"
             >
               {isImage
-                ? (publishing ? 'Publishing…' : 'Publish echo')
+                ? (publishing ? 'Publishing…' : 'Publish aftersound')
                 : 'Continue'}
             </button>
           </div>
@@ -426,7 +426,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
                 ? 'Publishing…'
                 : needsPinStep
                   ? 'Continue'
-                  : 'Publish echo'}
+                  : 'Publish aftersound'}
             </button>
           </div>
         </div>
@@ -474,7 +474,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
               disabled={!readyToPublish || publishing}
               className="frens-btn-primary flex-1 py-2.5 text-sm disabled:opacity-40"
             >
-              {publishing ? 'Publishing…' : 'Publish echo'}
+              {publishing ? 'Publishing…' : 'Publish aftersound'}
             </button>
           </div>
         </div>

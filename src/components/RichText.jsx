@@ -192,8 +192,17 @@ export default function RichText({
     <div className={className}>
       {inline ? (
         thoughtMark ? (
-          <div className="flex items-baseline gap-1.5 min-w-0">
-            <ThoughtMark />
+          <div className="flex items-start gap-2 min-w-0">
+            {/*
+              22px column matches POST_ACTION_BTN (aura under it).
+              h-[1.5em] = first line box → mark vertically centered with text.
+            */}
+            <span
+              className="w-[22px] h-[1.5em] shrink-0 inline-flex items-center justify-center leading-none"
+              aria-hidden
+            >
+              <ThoughtMark className="w-[6px] h-[6px] block" />
+            </span>
             <div className="min-w-0 flex-1">{inline}</div>
           </div>
         ) : (

@@ -7,6 +7,7 @@ import {
   sendDmMessageRemote,
   markDmRead,
   toggleDmMessageReaction,
+  deleteDmMessageRemote,
   DmsNotInstalledError,
 } from '../lib/dms'
 import { applyEmojiReactionToggle } from '../lib/emojiReactions'
@@ -152,6 +153,35 @@ export function DmsProvider({ children }) {
     }
   }
 
+  async function deleteDmMessage(conversationId, messageId) {
+    if (messageId == null || !conversationId) return
+    const id = String(messageId)
+    let snapshot = null
+    setMessagesByConvo((prev) => {
+      snapshot = prev[conversationId] || []
+      return {
+        ...prev,
+        [conversationId]: snapshot.filter((m) => String(m.id) !== id),
+      }
+    })
+    if (id.startsWith('tmp-') || !remote) return
+    try {
+      await deleteDmMessageRemote(conversationId, messageId)
+      await loadMessages(conversationId)
+      await refreshThreads()
+    } catch (err) {
+      if (snapshot) {
+        setMessagesByConvo((prev) => ({
+          ...prev,
+          [conversationId]: snapshot,
+        }))
+      }
+      if (!(err instanceof DmsNotInstalledError)) {
+        console.error('Could not delete DM:', err.message)
+      }
+    }
+  }
+
   async function reactToDmMessage(conversationId, messageId, emoji) {
     const em = (emoji || '').trim()
     if (!em || messageId == null || !conversationId) return
@@ -201,6 +231,7 @@ export function DmsProvider({ children }) {
     openConversation,
     openConversationWithUser,
     sendDmMessage,
+    deleteDmMessage,
     reactToDmMessage,
     clearPendingOpen,
   }

@@ -101,7 +101,7 @@ export default function SendLetterModal({ recipient, onClose, onSent }) {
             disabled={sending || !letter || !owlLetterHasContent(letter)}
             className="w-full letter-btn-primary py-3 disabled:opacity-50"
           >
-            {sending ? 'Sending…' : 'Send sealed letter'}
+            {sending ? 'Sending…' : 'Send letter'}
           </button>
         </form>
       )}

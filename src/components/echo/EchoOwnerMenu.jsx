@@ -98,7 +98,7 @@ export default function EchoOwnerMenu({ mine, saved, onView, onShowOnMap, onEdit
         onClick={() => { close(); onView?.() }}
         className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 hover:bg-black/5 dark:hover:bg-white/10"
       >
-        View full echo
+        View full aftersound
       </button>
       {onShowOnMap ? (
         <button
@@ -137,7 +137,7 @@ export default function EchoOwnerMenu({ mine, saved, onView, onShowOnMap, onEdit
           onClick={() => { close(); onDelete?.() }}
           className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 text-red-600 dark:text-red-400 hover:bg-black/5 dark:hover:bg-white/10"
         >
-          Delete echo
+          Delete aftersound
         </button>
       ) : null}
     </div>
@@ -149,7 +149,7 @@ export default function EchoOwnerMenu({ mine, saved, onView, onShowOnMap, onEdit
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          aria-label="Echo options"
+          aria-label="Aftersound options"
           aria-expanded={open}
           aria-haspopup="menu"
           className="w-8 h-8 rounded-full flex items-center justify-center frens-action hover:bg-black/5 dark:hover:bg-white/10 transition"

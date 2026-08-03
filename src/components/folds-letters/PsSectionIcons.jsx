@@ -1,8 +1,8 @@
 import { LettersMarkIcon, FoldsMarkIcon } from './PsMarks'
 
-/** Fold / zine mark from provided artwork. */
-export function FoldsSectionIcon(props) {
-  return <FoldsMarkIcon title="Folds" {...props} />
+/** Fold / zine mark — same size classes as other profile hub icons. */
+export function FoldsSectionIcon({ className = 'w-[1.06rem] h-[1.06rem]', ...props }) {
+  return <FoldsMarkIcon title="Folds" className={className} {...props} />
 }
 
 /** Sealed letter — envelope from provided P.S. artwork. */

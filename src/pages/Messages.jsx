@@ -110,13 +110,15 @@ export default function Messages({ conversationId: urlConversationId = null, onC
 
   if (selectedThread) {
     return (
-      <DmThread
-        thread={selectedThread}
-        messages={messages}
-        currentUserId={user?.id}
-        onSend={(fields) => sendDmMessage(selectedId, fields)}
-        onBack={() => selectConversation(null)}
-      />
+      <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
+        <DmThread
+          thread={selectedThread}
+          messages={messages}
+          currentUserId={user?.id}
+          onSend={(fields) => sendDmMessage(selectedId, fields)}
+          onBack={() => selectConversation(null)}
+        />
+      </div>
     )
   }
 

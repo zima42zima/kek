@@ -61,8 +61,8 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
     syncRemoteCaves().finally(() => setLoadingCave(false))
   }, [selectedId, displayCave, syncRemoteCaves])
 
-  function handleCreate(name) {
-    const id = createCave(name)
+  function handleCreate(name, options = {}) {
+    const id = createCave(name, options)
     setShowCreate(false)
     selectCave(id)
   }
@@ -94,7 +94,7 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
   if (displayCave) {
     const caveId = displayCave.id
     return (
-      <div className="w-full">
+      <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
         <CaveDetail
           cave={displayCave}
           currentUserId={meId}
@@ -102,6 +102,10 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
           onUpdateCave={(updater) => updateCave(caveId, updater)}
           onSendMessage={(fields, author) => sendCaveMessage(caveId, fields, author)}
           onBack={() => selectCave(null)}
+          onDeleted={() => {
+            heldCaveRef.current = null
+            selectCave(null)
+          }}
         />
       </div>
     )

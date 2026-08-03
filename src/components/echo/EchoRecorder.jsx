@@ -235,7 +235,7 @@ export default function EchoRecorder({
         {baking ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-black">
             <EchoIcon className="w-8 h-6 mb-3 animate-pulse opacity-80" />
-            <p className="text-xs text-white/90 text-center">Baking glitch into your echo…</p>
+            <p className="text-xs text-white/90 text-center">Baking glitch into your aftersound…</p>
             <p className="text-[10px] text-white/50 mt-1">Saved video will match the preview</p>
           </div>
         ) : recordedUrl ? (
