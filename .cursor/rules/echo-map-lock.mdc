@@ -1,0 +1,33 @@
+---
+description: Echo Map locked baseline — do not regress discovery, collection, or focus behavior
+globs: src/pages/EchoMap.jsx,src/components/echo/**,src/lib/echo*.js,supabase-patch-echo*.sql
+alwaysApply: false
+---
+
+# Echo Map — locked baseline (env-onboarding, Jul 2026)
+
+Shipped and working. Extend carefully; do not rewrite core flows without explicit ask.
+
+## Product shape
+- Tabs: **Map · My Echoes · Collection · Log**
+- Meme/image is primary kind; audio/video optional
+- Visibility: **world** (map + optional global browse), **friends** (fren = follow either direction), **private** (owner only)
+- Pins hidden until discovered; bats show approximate areas until walk-in range
+
+## Must preserve
+- **Location**: auto-request on Map tab; `list_echoes_near` needs `userPos` (2.5 km cap)
+- **Fren graph**: load both `followingIds` and `followerIds`; pass `{ followingIds, followerIds }` to `canDiscoverEcho` / `canHintEcho`
+- **Focus deep-link**: consume `focusEchoId` once (`consumedFocusRef`); clear `?echo=` via `onClearEchoFocus` — never re-open modal on `echoes` refresh
+- **Collection**: persist `mediaPath`, not signed URLs; refresh signed URLs on Collection tab; **Remove from collection** in modal + card menu
+- **Exports**: keep `sortByDistance` in `echoRange.js` (build breaks if removed)
+- **Realtime**: merge inserts via `getEchoById` + `refreshServerEchoes`; do not swallow fetch errors silently in dev
+
+## SQL (Supabase, in order)
+1. `supabase-patch-echoes.sql` + `supabase-patch-echoes-images.sql`
+2. Echo browse patches `2a` → `2b` → `2c` → `2d`
+3. `supabase-patch-echo-range.sql`, `supabase-patch-echo-aura.sql`, `supabase-patch-echoes-read.sql`
+4. `supabase-patch-echo-publish-notify.sql` (notifications + Realtime + `get_echo`)
+
+## UI cleanup (keep)
+- No “stays until you delete” in echo view; delete only in Edit / owner menu
+- World icon tap → city blur, or exact spot when **place name + 420m** range (`echoMapNavTarget`)

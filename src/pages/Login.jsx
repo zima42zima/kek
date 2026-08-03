@@ -1,65 +1,110 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import ThemeControls from '../components/ThemeControls'
+import { friendlyLoginError } from '../lib/onboarding'
 
-export default function Login() {
+export default function Login({ onSuccess, onBack, onForgotPassword }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
 
   async function handleLogin(e) {
     e.preventDefault()
     setError('')
     setLoading(true)
 
-    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    })
 
     setLoading(false)
+
     if (loginError) {
-      setError(loginError.message)
+      setError(friendlyLoginError(loginError.message))
       return
     }
-    navigate('/home')
+
+    onSuccess?.(data.user)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="cave-card max-w-sm w-full">
-        <h2 className="text-2xl text-ember-400 mb-1">welcome back, fren</h2>
-        <p className="text-bone-300 text-sm mb-6">good to see you again.</p>
+    <div className="frens-screen relative">
+      <ThemeControls className="absolute top-4 right-4" />
 
-        <form onSubmit={handleLogin} className="space-y-3">
-          <input
-            type="email"
-            className="input-cave"
-            placeholder="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            className="input-cave"
-            placeholder="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button type="submit" className="btn-ember w-full" disabled={loading}>
-            {loading ? 'logging in...' : 'log in'}
+      <div className="w-full max-w-md">
+        <h1 className="text-3xl sm:text-4xl mb-2 text-center">Welcome back, fren</h1>
+        <p className="text-sm frens-muted text-center mb-8">
+          Log in with the email you signed up with.
+        </p>
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <label htmlFor="login-email" className="block frens-label mb-2">
+              Email
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              className="frens-input py-3"
+              required
+            />
+          </div>
+
+          <div>
+            <div className="flex items-baseline justify-between gap-2 mb-2">
+              <label htmlFor="login-password" className="block frens-label">
+                Password
+              </label>
+              {onForgotPassword && (
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  className="text-xs frens-muted underline hover:text-black dark:hover:text-white transition"
+                >
+                  Forgot password?
+                </button>
+              )}
+            </div>
+            <input
+              id="login-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              className="frens-input py-3"
+              required
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="frens-btn-primary w-full px-8 py-4 text-lg disabled:opacity-50"
+          >
+            {loading ? 'Logging in...' : 'Log in'}
           </button>
         </form>
 
-        {error && <p className="text-ember-500 text-sm mt-4">{error}</p>}
-
-        <p className="text-bone-300 text-xs mt-6">
-          new here?{' '}
-          <Link to="/" className="text-ember-400 underline">
-            you'll need an invite
-          </Link>
-        </p>
+        {onBack && (
+          <p className="text-center text-sm frens-muted mt-6">
+            <button
+              type="button"
+              onClick={onBack}
+              className="underline hover:text-black dark:hover:text-white transition"
+            >
+              Back to invite gate
+            </button>
+          </p>
+        )}
       </div>
     </div>
   )

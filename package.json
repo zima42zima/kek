@@ -1,15 +1,23 @@
 {
-  "name": "frens-app",
+  "name": "misao",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite",
+    "dev:https": "HTTPS=true vite --host 0.0.0.0",
+    "dev:ca": "node scripts/print-dev-ca.mjs",
+    "dev:lan": "node scripts/dev-lan.mjs",
+    "dev:tunnel": "node scripts/dev-tunnel.mjs",
+    "dev:ngrok": "node scripts/dev-ngrok.mjs",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "db:check": "node scripts/check-supabase.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
+    "emoji-picker-react": "^4.19.1",
+    "leaflet": "^1.9.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.23.0"
@@ -19,6 +27,7 @@
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
-    "vite": "^5.2.0"
+    "vite": "^5.2.0",
+    "vite-plugin-mkcert": "^2.1.0"
   }
 }

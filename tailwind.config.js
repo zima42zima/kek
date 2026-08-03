@@ -5,6 +5,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        frens: 'var(--frens-outline)',
         cave: {
           950: '#14130F',   // deepest background
           900: '#1C1A15',   // main background
@@ -26,11 +27,19 @@ export default {
         },
       },
       fontFamily: {
-        mono: ['"Space Mono"', 'ui-monospace', 'monospace'],
-        display: ['"Fredoka"', 'ui-rounded', 'sans-serif'],
+        // App chrome + body — MISAO Marks preview (relic / mono)
+        sans: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        display: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       borderRadius: {
         cave: '18px',
+      },
+      borderColor: {
+        frens: 'var(--frens-outline)',
+      },
+      divideColor: {
+        frens: 'var(--frens-outline)',
       },
     },
   },

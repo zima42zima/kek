@@ -3,15 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FRENS</title>
+    <title>MISAO</title>
+    <meta name="description" content="MISAO — a small, invite-only social pocket. No clout, no ads, just frens." />
+    <link rel="canonical" href="https://misao.app/" />
+    <meta property="og:title" content="MISAO" />
+    <meta property="og:description" content="A small, invite-only social pocket. No clout, no ads, just frens." />
+    <meta property="og:url" content="https://misao.app/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="MISAO" />
+    <meta name="twitter:description" content="A small, invite-only social pocket. No clout, no ads, just frens." />
+    <link rel="icon" type="image/svg+xml" href="/monad-logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&display=swap"
       rel="stylesheet"
     />
   </head>
-  <body class="bg-cave-900">
+  <body>
+    <script>
+      (function () {
+        var theme = localStorage.getItem('frens-theme')
+        if (theme !== 'light') document.documentElement.classList.add('dark')
+        var canvas = localStorage.getItem('frens-canvas-bg')
+        if (canvas && /^#[0-9a-f]{6}$/i.test(canvas)) {
+          document.documentElement.style.setProperty('--frens-canvas-bg', canvas)
+        }
+      })()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
