@@ -5,6 +5,7 @@ import { loadEchoSearchHistory, pushEchoSearchHistory, zoomForPlaceType } from '
 import { SearchIcon, GlobeIcon, LocationIcon } from '../icons/UiIcons'
 import EchoIcon from './EchoIcon'
 import nearMeIcon from '../../assets/icons/near-me.svg'
+import { maskImageStyle } from '../../lib/maskIcon'
 
 function NearMeIcon({ className = 'w-3.5 h-3.5' }) {
   return (
@@ -13,8 +14,7 @@ function NearMeIcon({ className = 'w-3.5 h-3.5' }) {
       className={`inline-block shrink-0 align-middle ${className}`}
       style={{
         backgroundColor: 'currentColor',
-        maskImage: `url(${nearMeIcon})`,
-        WebkitMaskImage: `url(${nearMeIcon})`,
+        ...maskImageStyle(nearMeIcon),
         maskSize: 'contain',
         WebkitMaskSize: 'contain',
         maskRepeat: 'no-repeat',

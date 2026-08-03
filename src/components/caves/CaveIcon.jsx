@@ -1,4 +1,5 @@
 import cavesIcon from '../../assets/icons/caves.svg'
+import { maskImageStyle } from '../../lib/maskIcon'
 
 // The exact caves icon from the dashboard nav, rendered as a monochrome masked
 // icon that takes the current theme color (black in light, white in dark).
@@ -7,7 +8,7 @@ export default function CaveIcon({ className = 'w-4 h-4' }) {
     <span
       aria-hidden
       className={`frens-mask-icon inline-block align-middle ${className}`}
-      style={{ maskImage: `url(${cavesIcon})`, WebkitMaskImage: `url(${cavesIcon})` }}
+      style={maskImageStyle(cavesIcon)}
     />
   )
 }

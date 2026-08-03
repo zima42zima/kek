@@ -5,12 +5,14 @@ import { blurCoord, clampToRadius } from '../../lib/geo'
 import { ECHO_PIN_OFFSET_MAX_M } from '../../lib/echoConstants'
 import { addEchoMapTiles } from '../../lib/mapTiles'
 import { batIcon } from './EchoIcon'
+import { maskUrl } from '../../lib/maskIcon'
 
 const MARKER_INK = '#1a1a1a'
 const ZONE_STROKE = '#888888'
 const ZONE_FILL = '#aaaaaa'
 
 function pinHtml() {
+  const mask = maskUrl(batIcon)
   return `
     <div style="
       width:28px;height:28px;border-radius:9999px;
@@ -19,8 +21,8 @@ function pinHtml() {
       box-shadow:0 2px 8px rgba(0,0,0,.15);">
       <span style="
         display:inline-block;width:14px;height:10px;background:${MARKER_INK};
-        -webkit-mask:url(${batIcon}) center/contain no-repeat;
-        mask:url(${batIcon}) center/contain no-repeat;"></span>
+        -webkit-mask:${mask} center/contain no-repeat;
+        mask:${mask} center/contain no-repeat;"></span>
     </div>`
 }
 

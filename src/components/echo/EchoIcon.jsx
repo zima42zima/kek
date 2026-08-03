@@ -1,5 +1,6 @@
 import echoIcon from '../../assets/icons/echo.svg'
 import batIcon from '../../assets/icons/echo.png'
+import { maskImageStyle } from '../../lib/maskIcon'
 
 /**
  * Echo brand mark for app UI — nav, buttons, headers.
@@ -12,8 +13,7 @@ export default function EchoIcon({ className = 'w-5 h-5' }) {
       className={`inline-block align-middle shrink-0 ${className}`}
       style={{
         backgroundColor: 'currentColor',
-        maskImage: `url(${echoIcon})`,
-        WebkitMaskImage: `url(${echoIcon})`,
+        ...maskImageStyle(echoIcon),
         maskSize: 'contain',
         WebkitMaskSize: 'contain',
         maskRepeat: 'no-repeat',
