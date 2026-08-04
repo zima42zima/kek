@@ -27,19 +27,18 @@ export default async function handler(req, res) {
     return
   }
 
-  const pathSegments = req.query?.path
-  const gifPath = Array.isArray(pathSegments)
-    ? `/${pathSegments.join('/')}`
-    : pathSegments
-      ? `/${pathSegments}`
-      : '/trending'
+  const url = new URL(req.url || '/', 'http://n')
+  const gifPath = resolveGifPath(req, url)
+  const search = new URLSearchParams(url.search)
 
-  const search = new URLSearchParams()
   for (const [k, v] of Object.entries(req.query || {})) {
     if (k === 'path' || k === 'api_key') continue
+    if (search.has(k)) continue
     if (Array.isArray(v)) v.forEach((item) => search.append(k, String(item)))
     else if (v != null) search.set(k, String(v))
   }
+
+  search.delete('api_key')
   search.set('api_key', key)
 
   const upstream = `https://api.giphy.com/v1/gifs${gifPath}?${search.toString()}`
@@ -59,4 +58,25 @@ export default async function handler(req, res) {
       data: [],
     }))
   }
+}
+
+function resolveGifPath(req, url) {
+  const fromQuery = req.query?.path
+  if (Array.isArray(fromQuery) && fromQuery.length > 0) {
+    return `/${fromQuery.map(String).join('/')}`
+  }
+  if (typeof fromQuery === 'string' && fromQuery.trim()) {
+    return `/${fromQuery.replace(/^\/+/, '')}`
+  }
+
+  const pathname = (url.pathname || '').replace(/\/+$/, '') || '/'
+  const prefix = '/api/giphy'
+  if (pathname.startsWith(`${prefix}/`)) {
+    return pathname.slice(prefix.length) || '/trending'
+  }
+  // Some runtimes mount the function so req.url is relative (e.g. /search?q=…).
+  if (pathname !== '/' && pathname !== prefix) {
+    return pathname.startsWith('/') ? pathname : `/${pathname}`
+  }
+  return '/trending'
 }
