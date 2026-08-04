@@ -136,7 +136,10 @@ export default function PostComments({
                       {user?.id === c.userId && (
                         <button
                           type="button"
-                          onClick={() => removeComment(postId, c.id)}
+                          onClick={() => {
+                            if (!window.confirm('Delete this comment? This can’t be undone.')) return
+                            removeComment(postId, c.id)
+                          }}
                           className="text-[10px] frens-action ml-auto shrink-0"
                         >
                           Delete
