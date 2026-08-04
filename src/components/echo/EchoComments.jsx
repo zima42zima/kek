@@ -89,11 +89,9 @@ export default function EchoComments({
         {canCompose ? 'Comments' : 'Comments on your aftersound'}
       </p>
 
-      {comments.length === 0 ? (
-        <p className="text-xs frens-muted">
-          {canCompose ? 'say something...' : 'No comments yet.'}
-        </p>
-      ) : (
+      {comments.length === 0 && !canCompose ? (
+        <p className="text-xs frens-muted">No comments yet.</p>
+      ) : comments.length > 0 ? (
         <ul className="space-y-3 max-h-48 overflow-y-auto">
           {comments.map((c) => {
             const uid = commentUserId(c)
@@ -141,14 +139,14 @@ export default function EchoComments({
             )
           })}
         </ul>
-      )}
+      ) : null}
 
       {canCompose && (
         <PillComposer
           value={draft}
           onChange={setDraft}
           onSubmit={submit}
-          placeholder="leave a comment..."
+          placeholder="say something"
           busy={busy}
           disabled={!canCompose}
           inputRef={inputRef}
