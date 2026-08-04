@@ -322,7 +322,7 @@ export default function EchoView({
           />
         )}
 
-        {mine && echo.allowComments && (echo.comments?.length > 0) && (
+        {mine && echo.allowComments && (
           <EchoComments
             echo={echo}
             reviewed
