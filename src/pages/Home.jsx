@@ -294,8 +294,8 @@ export default function Home() {
       </header>
 
       <main
-        className={`flex-1 min-h-0 flex flex-col ${
-          panelDetailOpen ? 'overflow-hidden' : 'overflow-y-auto'
+        className={`flex-1 min-h-0 flex flex-col overscroll-none ${
+          panelDetailOpen ? 'overflow-hidden' : 'overflow-y-auto frens-scroll'
         }`}
       >
         <div
