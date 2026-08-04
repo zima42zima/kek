@@ -22,10 +22,30 @@ function localHosts() {
 
 /** Server-side GIPHY proxy — browser fetches same-origin /api/giphy/* instead of api.giphy.com. */
 function giphyProxyPlugin() {
+  function readKey() {
+    const raw = process.env.GIPHY_API_KEY || process.env.VITE_GIPHY_KEY || ''
+    return String(raw).trim().replace(/^['"]|['"]$/g, '')
+  }
+
   async function handle(req, res) {
     const path = (req.url || '/').split('?')[0]
-    const qs = (req.url || '').includes('?') ? req.url.slice(req.url.indexOf('?')) : ''
-    const upstream = `https://api.giphy.com/v1/gifs${path}${qs}`
+    const search = new URLSearchParams((req.url || '').includes('?') ? req.url.slice(req.url.indexOf('?') + 1) : '')
+    const incomingKey = String(search.get('api_key') || '').trim()
+    const key = readKey() || incomingKey
+    search.delete('api_key')
+
+    if (!key) {
+      res.statusCode = 503
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({
+        meta: { status: 503, msg: 'Add GIPHY_API_KEY or VITE_GIPHY_KEY to .env and restart dev.' },
+        data: [],
+      }))
+      return
+    }
+
+    search.set('api_key', key)
+    const upstream = `https://api.giphy.com/v1/gifs${path}?${search.toString()}`
     try {
       const upstreamRes = await fetch(upstream, {
         headers: { Accept: 'application/json' },

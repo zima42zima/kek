@@ -178,7 +178,7 @@ export default function GifPicker({
     </>
   ) : (
     <p className="text-xs frens-muted text-center py-6">
-      GIF search needs a free GIPHY key. Add <code>VITE_GIPHY_KEY</code> to your <code>.env</code> and restart dev.
+      GIF search is unavailable right now. Check the GIPHY server key and try again.
     </p>
   )
 
