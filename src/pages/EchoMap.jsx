@@ -83,8 +83,11 @@ import {
   listEchoComments,
   addEchoComment,
   deleteEchoComment,
+  listEchoFeedReactions,
+  toggleEchoFeedReaction,
   EchoesNotInstalledError,
 } from '../lib/echoes'
+import { applyPostReactionToggle, normalizeReactions } from '../lib/postReactions'
 import { consumeEchoExplorePlace } from '../lib/notificationNav'
 
 function mergeWithWorld(mineEchoes, userId) {
@@ -133,6 +136,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   const [editEcho, setEditEcho] = useState(null)
   const [pendingDeleteEchoId, setPendingDeleteEchoId] = useState(null)
   const [commentsByEchoId, setCommentsByEchoId] = useState({})
+  const [reactionsByEchoId, setReactionsByEchoId] = useState({})
   const commentsFetchGen = useRef(0)
   const [sortBy, setSortBy] = useState('newest')
   const [mineView, setMineView] = useState(() => {
@@ -1314,7 +1318,6 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           const existing = prev[echoId] ?? []
           const byId = new Map()
           for (const c of comments) byId.set(String(c.id), c)
-          // Keep any optimistic/local comments a stale fetch would otherwise wipe.
           for (const c of existing) {
             const key = String(c.id)
             if (!byId.has(key)) byId.set(key, c)
@@ -1327,6 +1330,16 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       } catch (err) {
         if (!(err instanceof EchoesNotInstalledError)) {
           /* keep local comments if list fails */
+        }
+      }
+      try {
+        const reactions = normalizeReactions(await listEchoFeedReactions(echoId))
+        if (!cancelled) {
+          setReactionsByEchoId((prev) => ({ ...prev, [echoId]: reactions }))
+        }
+      } catch (err) {
+        if (!(err instanceof EchoesNotInstalledError)) {
+          /* keep empty reactions if not installed */
         }
       }
     })()
@@ -1479,6 +1492,27 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     }))
   }
 
+  async function toggleEchoReaction(echoId, reactionId) {
+    const id = (reactionId || '').trim()
+    if (!echoId || !id) return
+    setReactionsByEchoId((prev) => ({
+      ...prev,
+      [echoId]: applyPostReactionToggle(prev[echoId] ?? [], id),
+    }))
+    if (!backendReady) return
+    try {
+      const next = normalizeReactions(await toggleEchoFeedReaction(echoId, id))
+      setReactionsByEchoId((prev) => ({ ...prev, [echoId]: next }))
+    } catch (err) {
+      if (!(err instanceof EchoesNotInstalledError)) {
+        setReactionsByEchoId((prev) => ({
+          ...prev,
+          [echoId]: applyPostReactionToggle(prev[echoId] ?? [], id),
+        }))
+      }
+    }
+  }
+
   function handleReviewed(echo) {
     touchEchoHistory(echo, { interaction: 'viewed' })
   }
@@ -1492,6 +1526,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     ? {
         ...openEchoBase,
         comments: commentsByEchoId[openEchoBase.id] ?? openEchoBase.comments ?? [],
+        reactions: reactionsByEchoId[openEchoBase.id] ?? openEchoBase.reactions ?? [],
       }
     : null
   const openEchoNearby = openEcho && userPos
@@ -1853,6 +1888,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           onRemoveComment={removeComment}
           onToggleCommentReaction={toggleCommentReaction}
           onToggleComments={toggleComments}
+          onToggleReaction={userId ? toggleEchoReaction : undefined}
           onReviewed={handleReviewed}
           onDelete={openEcho.mine ? (id) => setPendingDeleteEchoId(id) : undefined}
         />

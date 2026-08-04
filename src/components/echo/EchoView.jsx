@@ -3,6 +3,7 @@ import Modal from '../Modal'
 import { ProfileAvatar } from '../FrogLogo'
 import EchoAuraButton, { EchoAuraCount } from './EchoAuraButton'
 import EchoComments from './EchoComments'
+import PostReactionButton from '../PostReactionButton'
 import FrenHandle from '../FrenHandle'
 import SpatialEchoViewer from './SpatialEchoViewer'
 import { ECHO_LOOK_FILTERS, ECHO_VOICE_FILTERS } from '../../lib/echoConstants'
@@ -42,6 +43,7 @@ export default function EchoView({
   onRemoveComment,
   onToggleCommentReaction,
   onToggleComments,
+  onToggleReaction,
   onReviewed,
   onDelete,
 }) {
@@ -55,6 +57,7 @@ export default function EchoView({
   const canRangeSwipe = rangeEchoes.length > 1 && rangeIndex >= 0
   const hasPrev = canRangeSwipe && rangeIndex > 0
   const hasNext = canRangeSwipe && rangeIndex < rangeEchoes.length - 1
+  const canReact = Boolean(onToggleReaction)
 
   const lookStyle = echo.kind === 'video' && echo.lookFilter
     ? { filter: lookFilterCss(echo.lookFilter) }
@@ -287,20 +290,26 @@ export default function EchoView({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 mb-3">
-          {mine ? (
-            <EchoAuraCount count={auraCount} />
-          ) : (
-            <EchoAuraButton
-              echoId={echo.id}
-              auraCount={auraCount}
-              iGaveAura={iGaveAura}
-              useRemote={useRemoteAura}
-              onAuraChange={onAuraChange ?? onToggleAura}
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            {mine ? (
+              <EchoAuraCount count={auraCount} />
+            ) : (
+              <EchoAuraButton
+                echoId={echo.id}
+                auraCount={auraCount}
+                iGaveAura={iGaveAura}
+                useRemote={useRemoteAura}
+                onAuraChange={onAuraChange ?? onToggleAura}
+              />
+            )}
+            <PostReactionButton
+              reactions={echo.reactions ?? []}
+              onReact={canReact ? (id) => onToggleReaction(echo.id, id) : undefined}
             />
-          )}
+          </div>
           {mine && (
-            <label className="flex items-center gap-2 text-xs frens-muted cursor-pointer">
+            <label className="flex items-center gap-2 text-xs frens-muted cursor-pointer ml-auto">
               <input
                 type="checkbox"
                 checked={Boolean(echo.allowComments)}

@@ -363,3 +363,24 @@ export async function deleteEchoComment(commentId) {
     throw error
   }
 }
+
+export async function listEchoFeedReactions(echoId) {
+  const { data, error } = await supabase.rpc('echo_feed_reactions_json', { p_echo_id: echoId })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+  return data
+}
+
+export async function toggleEchoFeedReaction(echoId, reactionId) {
+  const { data, error } = await supabase.rpc('toggle_echo_feed_reaction', {
+    p_echo: echoId,
+    p_reaction: reactionId,
+  })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+  return data
+}
