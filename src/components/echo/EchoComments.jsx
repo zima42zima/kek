@@ -84,11 +84,7 @@ export default function EchoComments({
   }
 
   return (
-    <div className="space-y-3 border-t frens-border pt-3">
-      <p className="text-xs frens-label">
-        {canCompose ? 'Comments' : 'Comments on your aftersound'}
-      </p>
-
+    <div className="space-y-3">
       {comments.length === 0 && !canCompose ? (
         <p className="text-xs frens-muted">No comments yet.</p>
       ) : comments.length > 0 ? (
