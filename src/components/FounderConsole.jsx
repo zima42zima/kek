@@ -430,16 +430,6 @@ export default function FounderConsole({
         </p>
       ) : (
         <div className="space-y-4 -mt-1">
-          <div className="text-[11px] frens-muted space-y-1 border frens-border rounded-xl px-3 py-2.5">
-            <p><span className="font-medium text-inherit">Founder</span> — full access; add/remove co-founders (sub-moderators).</p>
-            <p><span className="font-medium text-inherit">Co-founder</span> — same investigation powers: profile, posts, DMs, reports; suspend / unsuspend; hide Rabbit topics.</p>
-            <p>Use Investigate before suspending. Staff cannot suspend each other.</p>
-          </div>
-
-          <p className="text-xs frens-muted">
-            Reports from Rabbit Hole land here. Review before suspending.
-          </p>
-
           <div
             className="flex gap-0.5 p-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06]"
             role="tablist"
