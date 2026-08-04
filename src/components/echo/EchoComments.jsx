@@ -111,7 +111,7 @@ export default function EchoComments({
                       <button
                         type="button"
                         onClick={() => setPendingDeleteId(c.id)}
-                        className="ml-auto shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-[11px] leading-none frens-muted opacity-70 hover:opacity-100 hover:bg-black/[0.06] dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white transition"
+                        className="ml-auto shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-[17px] leading-none text-black dark:text-white hover:bg-black/[0.06] dark:hover:bg-white/[0.08] transition"
                         aria-label="Delete comment"
                         title="Delete"
                       >
