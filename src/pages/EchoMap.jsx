@@ -130,6 +130,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   })
   const [openId, setOpenId] = useState(null)
   const [editEcho, setEditEcho] = useState(null)
+  const [commentsByEchoId, setCommentsByEchoId] = useState({})
+  const commentsFetchGen = useRef(0)
   const [sortBy, setSortBy] = useState('newest')
   const [mineView, setMineView] = useState(() => {
     try {
@@ -1300,18 +1302,26 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   useEffect(() => {
     if (!openId || !backendReady) return undefined
+    const echoId = openId
+    const gen = ++commentsFetchGen.current
     let cancelled = false
     ;(async () => {
       try {
-        const comments = await listEchoComments(openId)
-        if (cancelled) return
-        const apply = (e) => (e.id === openId ? { ...e, comments } : e)
-        setEchoes((prev) => prev.map(apply))
-        setBrowseEchoes((prev) => prev.map(apply))
-        setExploreCityEchoes((prev) => prev.map(apply))
-        setSavedCollection((prev) => {
-          if (!prev.some((e) => e.id === openId)) return prev
-          return prev.map(apply)
+        const comments = await listEchoComments(echoId)
+        if (cancelled || gen !== commentsFetchGen.current) return
+        setCommentsByEchoId((prev) => {
+          const existing = prev[echoId] ?? []
+          const byId = new Map()
+          for (const c of comments) byId.set(String(c.id), c)
+          // Keep any optimistic/local comments a stale fetch would otherwise wipe.
+          for (const c of existing) {
+            const key = String(c.id)
+            if (!byId.has(key)) byId.set(key, c)
+          }
+          return {
+            ...prev,
+            [echoId]: [...byId.values()].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0)),
+          }
         })
       } catch (err) {
         if (!(err instanceof EchoesNotInstalledError)) {
@@ -1379,6 +1389,14 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   }
 
   async function addComment(echoId, comment) {
+    // Invalidate in-flight list fetches so a stale empty result can't wipe this comment.
+    commentsFetchGen.current += 1
+    const tempId = comment.id
+    setCommentsByEchoId((prev) => ({
+      ...prev,
+      [echoId]: [...(prev[echoId] ?? []), comment],
+    }))
+
     let nextComment = comment
     if (backendReady) {
       try {
@@ -1389,29 +1407,37 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           authorId: comment.authorId ?? user?.id,
           userId: comment.userId ?? user?.id,
         }
+        setCommentsByEchoId((prev) => ({
+          ...prev,
+          [echoId]: (prev[echoId] ?? []).map((c) => (
+            String(c.id) === String(tempId) ? nextComment : c
+          )),
+        }))
       } catch (err) {
-        if (!(err instanceof EchoesNotInstalledError)) throw err
+        if (!(err instanceof EchoesNotInstalledError)) {
+          setCommentsByEchoId((prev) => ({
+            ...prev,
+            [echoId]: (prev[echoId] ?? []).filter((c) => String(c.id) !== String(tempId)),
+          }))
+          throw err
+        }
       }
     }
-    let touched = null
-    const apply = (e) => {
-      if (e.id !== echoId) return e
-      const comments = [...(e.comments ?? []), nextComment]
-      const updated = { ...e, comments }
-      touched = updated
-      return updated
-    }
-    setEchoes((prev) => prev.map(apply))
-    setBrowseEchoes((prev) => prev.map(apply))
-    setExploreCityEchoes((prev) => prev.map(apply))
-    setSavedCollection((prev) => (prev.some((e) => e.id === echoId) ? prev.map(apply) : prev))
-    if (!backendReady) {
-      const echo = echoes.find((e) => e.id === echoId)
-      if (echo?.visibility && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility) && touched) {
+
+    const echo = findEchoById(echoId)
+    if (echo) {
+      const touched = {
+        ...echo,
+        comments: [
+          ...(commentsByEchoId[echoId] ?? []).filter((c) => String(c.id) !== String(tempId)),
+          nextComment,
+        ],
+      }
+      if (!backendReady && echo.visibility && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)) {
         publishToWorldPool(touched)
       }
+      touchEchoHistory(touched, { interaction: 'commented' })
     }
-    if (touched) touchEchoHistory(touched, { interaction: 'commented' })
   }
 
   async function removeComment(echoId, commentId) {
@@ -1422,52 +1448,51 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         if (!(err instanceof EchoesNotInstalledError)) throw err
       }
     }
-    const apply = (e) => {
-      if (e.id !== echoId) return e
-      const comments = (e.comments ?? []).filter((c) => c.id !== commentId)
-      const updated = { ...e, comments }
-      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) {
-        publishToWorldPool(updated)
+    setCommentsByEchoId((prev) => ({
+      ...prev,
+      [echoId]: (prev[echoId] ?? []).filter((c) => String(c.id) !== String(commentId)),
+    }))
+    if (!backendReady) {
+      const echo = findEchoById(echoId)
+      if (echo?.visibility && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)) {
+        publishToWorldPool({
+          ...echo,
+          comments: (commentsByEchoId[echoId] ?? echo.comments ?? []).filter(
+            (c) => String(c.id) !== String(commentId),
+          ),
+        })
       }
-      return updated
     }
-    setEchoes((prev) => prev.map(apply))
-    setBrowseEchoes((prev) => prev.map(apply))
-    setExploreCityEchoes((prev) => prev.map(apply))
-    setSavedCollection((prev) => (prev.some((e) => e.id === echoId) ? prev.map(apply) : prev))
   }
 
   function toggleCommentReaction(echoId, commentId, emoji) {
     const em = (emoji || '').trim()
     if (!em || !commentId) return
-    const apply = (e) => {
-      if (e.id !== echoId) return e
-      const comments = (e.comments ?? []).map((c) => (
-        c.id === commentId
+    setCommentsByEchoId((prev) => ({
+      ...prev,
+      [echoId]: (prev[echoId] ?? []).map((c) => (
+        String(c.id) === String(commentId)
           ? { ...c, reactions: applyCommentReactionToggle(c.reactions, em) }
           : c
-      ))
-      const updated = { ...e, comments }
-      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) {
-        publishToWorldPool(updated)
-      }
-      return updated
-    }
-    setEchoes((prev) => prev.map(apply))
-    setBrowseEchoes((prev) => prev.map(apply))
-    setExploreCityEchoes((prev) => prev.map(apply))
-    setSavedCollection((prev) => (prev.some((e) => e.id === echoId) ? prev.map(apply) : prev))
+      )),
+    }))
   }
 
   function handleReviewed(echo) {
     touchEchoHistory(echo, { interaction: 'viewed' })
   }
 
-  const openEcho = echoes.find((e) => e.id === openId)
+  const openEchoBase = echoes.find((e) => e.id === openId)
     || browseEchoes.find((e) => e.id === openId)
     || exploreCityEchoes.find((e) => e.id === openId)
     || displayCollection.find((e) => e.id === openId)
     || null
+  const openEcho = openEchoBase
+    ? {
+        ...openEchoBase,
+        comments: commentsByEchoId[openEchoBase.id] ?? openEchoBase.comments ?? [],
+      }
+    : null
   const openEchoNearby = openEcho && userPos
     ? isInDiscoverRange(openEcho, userPos)
     : false
