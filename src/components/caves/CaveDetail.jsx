@@ -478,6 +478,7 @@ function ChatMessage({
   mine,
   caveId,
   cave = null,
+  currentUserProfile = null,
   canModerate,
   onReact,
   onPin,
@@ -501,7 +502,11 @@ function ChatMessage({
     >
       <div className={`flex gap-2 ${mine ? 'flex-row-reverse' : ''} ${message.hidden ? 'opacity-50' : ''}`}>
         <ProfileAvatar
-          profile={message}
+          profile={
+            mine && currentUserProfile
+              ? currentUserProfile
+              : member || message
+          }
           className={`${nested ? 'w-7 h-7' : 'w-8 h-8'} shrink-0`}
           logoClassName={nested ? 'w-4 h-auto' : 'w-5 h-auto'}
         />
@@ -584,6 +589,8 @@ function ChatMessage({
               member={r._member}
               mine={r._mine}
               caveId={caveId}
+              cave={cave}
+              currentUserProfile={currentUserProfile}
               canModerate={canModerate}
               onReact={r._onReact}
               onPin={r._onPin}
@@ -970,6 +977,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
                   mine={m.authorId === currentUserId}
                   caveId={cave.id}
                   cave={cave}
+                  currentUserProfile={currentUserProfile}
                   canModerate={isKeeper}
                   onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
                   onPin={() => pinCaveMessage(cave.id, m.id)}
@@ -1001,6 +1009,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
                 mine={m.authorId === currentUserId}
                 caveId={cave.id}
                 cave={cave}
+                currentUserProfile={currentUserProfile}
                 canModerate={isKeeper}
                 onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
                 onPin={() => pinCaveMessage(cave.id, m.id)}

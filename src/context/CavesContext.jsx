@@ -187,6 +187,35 @@ export function CavesProvider({ children }) {
     } catch { /* quota */ }
   }, [caves, loaded, meId])
 
+  // Keep own member + message avatars in sync when profile photo changes.
+  useEffect(() => {
+    if (!meId || !profile) return
+    const avatarType = profile.avatarType || 'frog'
+    const avatarUrl = profile.avatarUrl || null
+    setCaves((prev) => {
+      let changed = false
+      const next = prev.map((cave) => {
+        let caveChanged = false
+        const members = (cave.members || []).map((m) => {
+          if (String(m.id) !== String(meId)) return m
+          if (m.avatarType === avatarType && m.avatarUrl === avatarUrl) return m
+          caveChanged = true
+          return { ...m, avatarType, avatarUrl }
+        })
+        const messages = (cave.messages || []).map((m) => {
+          if (String(m.authorId) !== String(meId)) return m
+          if (m.avatarType === avatarType && m.avatarUrl === avatarUrl) return m
+          caveChanged = true
+          return { ...m, avatarType, avatarUrl }
+        })
+        if (!caveChanged) return cave
+        changed = true
+        return { ...cave, members, messages }
+      })
+      return changed ? next : prev
+    })
+  }, [meId, profile?.avatarType, profile?.avatarUrl])
+
   useEffect(() => {
     seenCountsRef.current = {}
   }, [meId])

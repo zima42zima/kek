@@ -8,10 +8,11 @@ function authorIdMatch(a, b) {
   return a != null && b != null && String(a) === String(b)
 }
 
-/** Overlay a fren's current profile photo onto their post or comment. */
+/** Overlay a fren's current profile photo onto their post, comment, or message. */
 export function withLiveAuthorAvatar(item, liveProfile) {
   if (!item || !liveProfile?.id) return item
-  const authorId = item.userId ?? item.user_id
+  const authorId =
+    item.userId ?? item.user_id ?? item.senderId ?? item.authorId ?? item.author_id
   if (!authorIdMatch(authorId, liveProfile.id)) return item
   return {
     ...item,

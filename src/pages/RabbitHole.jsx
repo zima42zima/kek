@@ -34,9 +34,7 @@ import {
 
 /** Photo when set; otherwise the same solid mark used in front of feed text posts (not monad). */
 function RhAvatar({ profile, className = 'w-8 h-8' }) {
-  if (
-    (profile?.avatarType === 'photo' && (profile?.avatarUrl || profile?.avatarPreview))
-  ) {
+  if (profile?.avatarUrl || (profile?.avatarType === 'photo' && profile?.avatarPreview)) {
     return <ProfileAvatar profile={profile} className={className} logoClassName="w-5 h-auto" />
   }
   return (
@@ -361,9 +359,10 @@ function TopicDetail({ topicId, userId, isMod, onBack, onDeleted }) {
         </p>
         {replies.map((reply) => {
           const replyAuthor = displayAuthor(reply, userId, isMod)
-          const hasPhoto =
-            replyAuthor.avatarType === 'photo' &&
-            (replyAuthor.avatarUrl || replyAuthor.avatarPreview)
+          const hasPhoto = Boolean(
+            replyAuthor.avatarUrl ||
+              (replyAuthor.avatarType === 'photo' && replyAuthor.avatarPreview),
+          )
           return (
             <div key={reply.id} className="flex gap-3 rounded-xl p-3 bg-black/[0.03] dark:bg-white/[0.03]">
               {hasPhoto ? (

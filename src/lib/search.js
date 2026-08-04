@@ -72,33 +72,36 @@ export async function searchPublicPosts(query, { limit = 8, feedPosts = [] } = {
   const like = `%${escapeLike(q)}%`
   const quoted = `"${escapePostgrestValue(like)}"`
 
-  // Prefer direct table: public posts whose body matches.
+  // Prefer direct table: public posts whose body matches. Live avatar from profiles.
   const { data, error } = await supabase
     .from('posts')
-    .select('id, user_id, body, image, audience, tags, created_at, author_name, avatar_type, avatar_url')
+    .select('id, user_id, body, image, audience, tags, created_at, author_name, avatar_type, avatar_url, profiles!posts_user_id_fkey(avatar_type, avatar_url, silly_name)')
     .eq('audience', 'everyone')
     .or(`body.ilike.${quoted}`)
     .order('created_at', { ascending: false })
     .limit(limit)
 
   if (!error && data) {
-    return data.map((row) => ({
-      id: row.id,
-      userId: row.user_id,
-      text: row.body || '',
-      image: row.image || null,
-      frenName: row.author_name || 'fren',
-      avatarType: row.avatar_type || 'frog',
-      avatarUrl: row.avatar_url || null,
-      createdAt: row.created_at,
-    }))
+    return data.map((row) => {
+      const pr = row.profiles
+      return {
+        id: row.id,
+        userId: row.user_id,
+        text: row.body || '',
+        image: row.image || null,
+        frenName: pr?.silly_name || row.author_name || 'fren',
+        avatarType: pr?.avatar_type || row.avatar_type || 'frog',
+        avatarUrl: pr?.avatar_url ?? row.avatar_url ?? null,
+        createdAt: row.created_at,
+      }
+    })
   }
 
-  // Schema may omit author_name columns — retry minimal select.
+  // Schema may omit author_name / profile join — retry minimal select.
   if (error) {
     const retry = await supabase
       .from('posts')
-      .select('id, user_id, body, image, audience, created_at')
+      .select('id, user_id, body, image, audience, created_at, author_name, avatar_type, avatar_url')
       .eq('audience', 'everyone')
       .ilike('body', like)
       .order('created_at', { ascending: false })
@@ -110,9 +113,9 @@ export async function searchPublicPosts(query, { limit = 8, feedPosts = [] } = {
         userId: row.user_id,
         text: row.body || '',
         image: row.image || null,
-        frenName: 'fren',
-        avatarType: 'frog',
-        avatarUrl: null,
+        frenName: row.author_name || 'fren',
+        avatarType: row.avatar_type || 'frog',
+        avatarUrl: row.avatar_url || null,
         createdAt: row.created_at,
       }))
     }
@@ -180,7 +183,7 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
 
   const { data, error } = await supabase
     .from('echoes')
-    .select('*')
+    .select('*, profiles!echoes_owner_id_fkey(avatar_type, avatar_url, silly_name)')
     .eq('visibility', 'world')
     .eq('hidden', false)
     .or(`label.ilike.${quoted},place_label.ilike.${quoted},city_label.ilike.${quoted},author_name.ilike.${quoted}`)
@@ -189,14 +192,14 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
 
   if (!error && data) {
     for (const row of data) {
-      // mapTableRow is not exported — inline minimal map
+      const pr = row.profiles
       push({
         id: row.id,
         kind: row.kind,
         ownerId: row.owner_id,
-        authorName: row.author_name || 'a fren',
-        avatarType: row.avatar_type || 'frog',
-        avatarUrl: row.avatar_url || null,
+        authorName: pr?.silly_name || row.author_name || 'a fren',
+        avatarType: pr?.avatar_type || row.avatar_type || 'frog',
+        avatarUrl: pr?.avatar_url ?? row.avatar_url ?? null,
         label: row.label || '',
         cityLabel: row.city_label || null,
         placeLabel: row.place_label || null,
@@ -206,6 +209,35 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
         createdAt: row.created_at,
         mine: row.owner_id === userId,
       })
+    }
+  } else if (error) {
+    const retry = await supabase
+      .from('echoes')
+      .select('*')
+      .eq('visibility', 'world')
+      .eq('hidden', false)
+      .or(`label.ilike.${quoted},place_label.ilike.${quoted},city_label.ilike.${quoted},author_name.ilike.${quoted}`)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    if (!retry.error && retry.data) {
+      for (const row of retry.data) {
+        push({
+          id: row.id,
+          kind: row.kind,
+          ownerId: row.owner_id,
+          authorName: row.author_name || 'a fren',
+          avatarType: row.avatar_type || 'frog',
+          avatarUrl: row.avatar_url || null,
+          label: row.label || '',
+          cityLabel: row.city_label || null,
+          placeLabel: row.place_label || null,
+          visibility: row.visibility,
+          lat: row.lat,
+          lon: row.lon,
+          createdAt: row.created_at,
+          mine: row.owner_id === userId,
+        })
+      }
     }
   }
 

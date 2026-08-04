@@ -60,13 +60,13 @@ function DmMessageMenu({ onDelete }) {
   )
 }
 
-function DmBubble({ message, mine, canReact, onReact, onDelete }) {
+function DmBubble({ message, avatarProfile, mine, canReact, onReact, onDelete }) {
   const hasText = Boolean(message.text?.trim())
   const hasMedia = Boolean(message.image || message.video)
 
   return (
     <div className={`flex gap-2 min-w-0 ${mine ? 'flex-row-reverse' : ''}`}>
-      <ProfileAvatar profile={message} className="w-8 h-8 shrink-0" logoClassName="w-5 h-auto" />
+      <ProfileAvatar profile={avatarProfile || message} className="w-8 h-8 shrink-0" logoClassName="w-5 h-auto" />
       <div className={`min-w-0 max-w-[78%] flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
         <span className="text-[10px] frens-muted mb-1 tracking-wide">
           {message.authorName} · {message.ts}
@@ -130,6 +130,25 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
     frenName: thread.otherName,
     avatarType: thread.otherAvatarType,
     avatarUrl: thread.otherAvatarUrl,
+  }
+
+  function avatarForMessage(m) {
+    const mine = m.senderId === currentUserId
+    if (mine && profile) {
+      return {
+        ...m,
+        avatarType: profile.avatarType || 'frog',
+        avatarUrl: profile.avatarUrl ?? null,
+      }
+    }
+    if (!mine && thread.otherUserId && String(m.senderId) === String(thread.otherUserId)) {
+      return {
+        ...m,
+        avatarType: thread.otherAvatarType || 'frog',
+        avatarUrl: thread.otherAvatarUrl ?? null,
+      }
+    }
+    return m
   }
 
   function addEmoji(emoji) {
@@ -278,6 +297,7 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
               <DmBubble
                 key={m.id}
                 message={m}
+                avatarProfile={avatarForMessage(m)}
                 mine={m.senderId === currentUserId}
                 canReact={m.id != null && !String(m.id).startsWith('tmp-')}
                 onReact={(emoji) => reactToDmMessage(thread.id, m.id, emoji)}
