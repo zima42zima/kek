@@ -10,7 +10,6 @@ import { spatialTierLabel } from '../../lib/spatialEcho'
 import { senseFilterLabel, normalizeSenseFilter, lidarFilterLabel } from '../../lib/senseFilters'
 import { EchoMetaLine, EchoTypeIcon } from './EchoMeta'
 import { HeadphonesIcon, LocationIcon } from '../icons/UiIcons'
-import { getProfileCard } from '../../lib/social'
 
 const SWIPE_THRESHOLD_PX = 48
 
@@ -51,7 +50,6 @@ export default function EchoView({
   const touchStartX = useRef(null)
   const [reviewed, setReviewed] = useState(false)
   const [spatialView, setSpatialView] = useState(false)
-  const [authorCard, setAuthorCard] = useState(null)
 
   const rangeIndex = rangeEchoes.findIndex((e) => e.id === echo.id)
   const canRangeSwipe = rangeEchoes.length > 1 && rangeIndex >= 0
@@ -78,20 +76,7 @@ export default function EchoView({
   useEffect(() => {
     setReviewed(false)
     setSpatialView(false)
-    setAuthorCard(null)
   }, [echo.id])
-
-  useEffect(() => {
-    if (mine || !echo.ownerId) return undefined
-    let cancelled = false
-    ;(async () => {
-      try {
-        const card = await getProfileCard(echo.ownerId)
-        if (!cancelled) setAuthorCard(card)
-      } catch { /* ignore */ }
-    })()
-    return () => { cancelled = true }
-  }, [echo.ownerId, mine])
 
   function markReviewed() {
     if (reviewed) return
@@ -176,24 +161,15 @@ export default function EchoView({
           )}
         </div>
 
-        {!mine && (authorCard?.oneHumanThing || authorCard?.bio) ? (
-          <div className="mb-3 rounded-xl border frens-border bg-black/[0.03] dark:bg-white/[0.03] px-3 py-2.5">
-            {authorCard.oneHumanThing ? (
-              <p className="text-xs font-medium frens-body-text">{authorCard.oneHumanThing}</p>
-            ) : null}
-            {authorCard.bio ? (
-              <p className={`text-xs frens-muted ${authorCard.oneHumanThing ? 'mt-1' : ''} line-clamp-4`}>
-                {authorCard.bio}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {echo.title?.trim() ? (
-          <p className="text-sm frens-body-text text-center mb-3 px-1 leading-snug">
-            {echo.title.trim()}
-          </p>
-        ) : null}
+        {(() => {
+          const title = (echo.title || '').trim()
+          if (!title || /^[.…·•\s]+$/.test(title)) return null
+          return (
+            <p className="text-sm frens-body-text text-center mb-3 px-1 leading-snug">
+              {title}
+            </p>
+          )
+        })()}
 
         {canSpatialView ? (
           <button
