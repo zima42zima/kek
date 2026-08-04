@@ -14,6 +14,7 @@ import { echoWatchedPreviewUrl } from '../components/echo/EchoPreviewMedia'
 import EchoMineCard from '../components/echo/EchoMineCard'
 import EchoMineToolbar from '../components/echo/EchoMineToolbar'
 import EchoEditModal from '../components/echo/EchoEditModal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import EchoSearchRadiusSelect from '../components/echo/EchoRangeSelect'
 import EchoMapSearch, { EchoMapModeTabs } from '../components/echo/EchoMapSearch'
 import EchoPlacesPanel, { groupEchoesByPlace } from '../components/echo/EchoPlacesPanel'
@@ -130,6 +131,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   })
   const [openId, setOpenId] = useState(null)
   const [editEcho, setEditEcho] = useState(null)
+  const [pendingDeleteEchoId, setPendingDeleteEchoId] = useState(null)
   const [commentsByEchoId, setCommentsByEchoId] = useState({})
   const commentsFetchGen = useRef(0)
   const [sortBy, setSortBy] = useState('newest')
@@ -1179,7 +1181,6 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   async function deleteEcho(id) {
     if (!id) return
-    if (!window.confirm('Delete this aftersound? This cannot be undone.')) return
 
     if (backendReady) {
       try {
@@ -1728,7 +1729,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
                   onNavigateWorld={showEchoOnMap}
                   onView={(e) => setOpenId(e.id)}
                   onEdit={(e) => setEditEcho(e)}
-                  onDelete={deleteEcho}
+                  onDelete={(id) => setPendingDeleteEchoId(id)}
                 />
               ))}
             </div>
@@ -1827,7 +1828,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         <EchoEditModal
           echo={editEcho}
           onSave={(patch) => updateEchoSettings(editEcho.id, patch)}
-          onDelete={deleteEcho}
+          onDelete={(id) => setPendingDeleteEchoId(id)}
           onClose={() => setEditEcho(null)}
         />
       )}
@@ -1853,9 +1854,21 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           onToggleCommentReaction={toggleCommentReaction}
           onToggleComments={toggleComments}
           onReviewed={handleReviewed}
-          onDelete={openEcho.mine ? deleteEcho : undefined}
+          onDelete={openEcho.mine ? (id) => setPendingDeleteEchoId(id) : undefined}
         />
       )}
+      <ConfirmDialog
+        open={Boolean(pendingDeleteEchoId)}
+        title="Delete aftersound?"
+        message="This can’t be undone."
+        confirmLabel="Delete"
+        onCancel={() => setPendingDeleteEchoId(null)}
+        onConfirm={() => {
+          const id = pendingDeleteEchoId
+          setPendingDeleteEchoId(null)
+          if (id) deleteEcho(id)
+        }}
+      />
     </div>
   )
 }

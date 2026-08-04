@@ -4,6 +4,7 @@ import FrenHandle from '../FrenHandle'
 import CommentBody from '../CommentBody'
 import PillComposer from '../PillComposer'
 import EmojiReactions from '../EmojiReactions'
+import ConfirmDialog from '../ConfirmDialog'
 import { useAuth } from '../../context/AuthContext'
 import { appendGifUrlToText, prepareCommentText } from '../../lib/imageAttach'
 import { insertAtCaret } from '../../lib/insertText'
@@ -42,6 +43,7 @@ export default function EchoComments({
   const { user, profile } = useAuth()
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const inputRef = useRef(null)
   const comments = echo.comments ?? []
 
@@ -108,10 +110,7 @@ export default function EchoComments({
                     {isOwn && onRemoveComment ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          if (!window.confirm('Delete this comment? This can’t be undone.')) return
-                          onRemoveComment(echo.id, c.id)
-                        }}
+                        onClick={() => setPendingDeleteId(c.id)}
                         className="ml-auto shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-[11px] leading-none frens-muted opacity-70 hover:opacity-100 hover:bg-black/[0.06] dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white transition"
                         aria-label="Delete comment"
                         title="Delete"
@@ -158,6 +157,19 @@ export default function EchoComments({
           onGif={(url) => setDraft((prev) => appendGifUrlToText(prev, url))}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteId)}
+        title="Delete comment?"
+        message="This can’t be undone."
+        confirmLabel="Delete"
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          const id = pendingDeleteId
+          setPendingDeleteId(null)
+          if (id) onRemoveComment?.(echo.id, id)
+        }}
+      />
     </div>
   )
 }

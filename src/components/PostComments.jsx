@@ -10,6 +10,7 @@ import { insertAtCaret } from '../lib/insertText'
 import { POST_ACTION_BTN, POST_ACTION_ICON, POST_ACTION_BADGE } from './icons/UiIcons'
 import PostActionTip from './PostActionTip'
 import EmojiReactions from './EmojiReactions'
+import ConfirmDialog from './ConfirmDialog'
 import { normalizeEmojiReactions } from '../lib/emojiReactions'
 import { withLiveAuthorAvatar } from '../lib/posts'
 
@@ -36,6 +37,7 @@ export default function PostComments({
   const [open, setOpen] = useState(alwaysOpen)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const inputRef = useRef(null)
 
   const comments = getComments(postId)
@@ -136,10 +138,7 @@ export default function PostComments({
                       {user?.id === c.userId && (
                         <button
                           type="button"
-                          onClick={() => {
-                            if (!window.confirm('Delete this comment? This can’t be undone.')) return
-                            removeComment(postId, c.id)
-                          }}
+                          onClick={() => setPendingDeleteId(c.id)}
                           className="text-[10px] frens-action ml-auto shrink-0"
                         >
                           Delete
@@ -173,6 +172,19 @@ export default function PostComments({
           />
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteId)}
+        title="Delete comment?"
+        message="This can’t be undone."
+        confirmLabel="Delete"
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          const id = pendingDeleteId
+          setPendingDeleteId(null)
+          if (id) removeComment(postId, id)
+        }}
+      />
     </div>
   )
 }
