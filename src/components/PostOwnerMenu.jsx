@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { MoreIcon, PinIcon } from './icons/UiIcons'
+import ConfirmDialog from './ConfirmDialog'
 
 export default function PostOwnerMenu({ isPinned, onPin, onUnpin, onDelete }) {
   const [open, setOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const rootRef = useRef(null)
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function PostOwnerMenu({ isPinned, onPin, onUnpin, onDelete }) {
             role="menuitem"
             onClick={() => {
               close()
-              onDelete?.()
+              setConfirmDelete(true)
             }}
             className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 text-red-600 dark:text-red-400 hover:bg-black/5 dark:hover:bg-white/10"
           >
@@ -74,6 +76,18 @@ export default function PostOwnerMenu({ isPinned, onPin, onUnpin, onDelete }) {
           </button>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete post?"
+        message="This can’t be undone."
+        confirmLabel="Delete"
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          setConfirmDelete(false)
+          onDelete?.()
+        }}
+      />
     </div>
   )
 }

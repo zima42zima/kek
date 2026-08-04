@@ -261,7 +261,6 @@ export function PostsProvider({ children }) {
   }
 
   async function removePost(id) {
-    if (!window.confirm('Delete this post? This can’t be undone.')) return
     if (remote) {
       try {
         await deleteMyPost(id)
