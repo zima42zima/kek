@@ -145,21 +145,21 @@ export default function EchoImagePicker({
   return (
     <div className={compact ? 'space-y-2' : 'space-y-3'}>
       <div className={`rounded-xl border frens-border flex flex-col items-center justify-center text-center px-4 ${compact ? 'py-6' : 'aspect-[4/5] max-h-[48vh] py-10'}`}>
-        <ImageIcon className="w-10 h-10 mb-2 opacity-70" />
+        <ImageIcon className="w-8 h-8 mb-2 opacity-60" />
         <p className="text-sm font-medium">{title}</p>
-        <p className="text-xs frens-muted mt-1 max-w-[240px]">{hint}</p>
+        {hint ? <p className="text-[11px] frens-muted mt-1 max-w-[220px]">{hint}</p> : null}
       </div>
 
       {error ? <p className="text-xs text-red-500 dark:text-red-400 text-center">{error}</p> : null}
 
-      <div className="flex gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <label
-          className={`frens-btn-primary flex-1 py-2.5 text-sm inline-flex items-center justify-center gap-1.5 relative overflow-hidden cursor-pointer ${
+          className={`frens-btn-outline py-2.5 text-sm inline-flex items-center justify-center gap-1.5 relative overflow-hidden cursor-pointer touch-manipulation ${
             busy ? 'opacity-40 pointer-events-none' : ''
           }`}
         >
-          <CameraIcon className="w-4 h-4" />
-          {busy ? 'Processing…' : 'Take photo'}
+          <CameraIcon className="w-4 h-4 shrink-0" />
+          <span>{busy ? '…' : 'Take photo'}</span>
           <input
             ref={cameraRef}
             type="file"
@@ -174,11 +174,12 @@ export default function EchoImagePicker({
           />
         </label>
         <label
-          className={`frens-btn-outline flex-1 py-2.5 text-sm text-center relative overflow-hidden cursor-pointer ${
+          className={`frens-btn-outline py-2.5 text-sm inline-flex items-center justify-center gap-1.5 relative overflow-hidden cursor-pointer touch-manipulation ${
             busy ? 'opacity-40 pointer-events-none' : ''
           }`}
         >
-          {busy ? 'Processing…' : 'Choose meme'}
+          <ImageIcon className="w-4 h-4 shrink-0" />
+          <span>{busy ? '…' : 'Upload photo'}</span>
           <input
             ref={fileRef}
             type="file"
