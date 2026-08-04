@@ -311,9 +311,9 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         byId.set(e.id, {
           ...e,
           mine: true,
-          authorName: profile?.frenName?.trim() || e.authorName,
-          avatarType: profile?.avatarType || e.avatarType,
-          avatarUrl: profile?.avatarUrl ?? e.avatarUrl,
+          authorName: e.anonymous ? (e.authorName || 'a fren') : (profile?.frenName?.trim() || e.authorName),
+          avatarType: e.anonymous ? 'frog' : (profile?.avatarType || e.avatarType),
+          avatarUrl: e.anonymous ? null : (profile?.avatarUrl ?? e.avatarUrl),
         })
       })
       const localCollection = loadEchoCollection(userId)
@@ -1061,10 +1061,11 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   async function publishEcho({
     kind, mediaUrl, mediaBlob, coverUrl, coverBlob,
-    visibility, allowComments, voiceFilter, senseFilter, spatial, pinPosition,
+    visibility, allowComments, anonymous, voiceFilter, senseFilter, spatial, pinPosition,
     discoverRadiusM, placeLabel, browseGlobally, expiresAt, title,
   }) {
     const handle = profile?.frenName?.trim() || 'you'
+    const stayAnon = Boolean(anonymous)
     const spot = pinPosition
       || (spatial?.position
         ? { lat: spatial.position.lat, lon: spatial.position.lon }
@@ -1098,6 +1099,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           browseGlobally: Boolean(browseGlobally),
           expiresAt: expiresAt || null,
           discoverRadiusM: discoverR,
+          anonymous: stayAnon,
         })
         const resolvedUrl = await getEchoMediaUrl(mediaPath)
         const resolvedCover = coverPath ? await getEchoMediaUrl(coverPath) : null
@@ -1111,7 +1113,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           ownerId: userId,
           authorName: handle,
           avatarType: profile?.avatarType || 'frog',
-          avatarUrl: profile?.avatarUrl || null,
+          avatarUrl: stayAnon ? null : (profile?.avatarUrl || null),
+          anonymous: stayAnon,
           lat: spot.lat,
           lon: spot.lon,
           visibility: vis,
@@ -1156,7 +1159,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       ownerId: userId ?? 'me',
       authorName: handle,
       avatarType: profile?.avatarType || 'frog',
-      avatarUrl: profile?.avatarUrl || null,
+      avatarUrl: stayAnon ? null : (profile?.avatarUrl || null),
+      anonymous: stayAnon,
       lat: spot.lat,
       lon: spot.lon,
       visibility: vis,
