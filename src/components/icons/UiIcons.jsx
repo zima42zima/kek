@@ -398,9 +398,9 @@ export const POST_ACTION_ROW =
 
 /** Reusable selected-state classes for option pickers (no brand color). */
 export const OPTION_ACTIVE =
-  'border-frens bg-black/[0.04] dark:bg-white/[0.06]'
+  'border-black dark:border-white bg-black/[0.08] dark:bg-white/[0.12] ring-1 ring-black/15 dark:ring-white/20'
 export const OPTION_IDLE =
-  'frens-border hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
+  'frens-border bg-transparent [@media(hover:hover)]:hover:bg-black/[0.03] dark:[@media(hover:hover)]:hover:bg-white/[0.03]'
 
 export function GridIcon({ className = 'w-4 h-4' }) {
   return (
