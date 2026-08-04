@@ -165,6 +165,7 @@ begin
           'pinned', coalesce(m.pinned, false),
           'hidden', coalesce(m.hidden, false),
           'parentId', m.parent_id,
+          'createdAt', m.created_at,
           'replyPreview', case
             when m.parent_id is null then null
             else (

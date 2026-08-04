@@ -680,6 +680,7 @@ export function CavesProvider({ children }) {
       text: fields.text,
       image: fields.image,
       sticker: fields.sticker,
+      createdAt: new Date().toISOString(),
     }
     setCaves((prev) =>
       prev.map((c) =>

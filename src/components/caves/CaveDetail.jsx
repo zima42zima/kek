@@ -388,19 +388,11 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
   )
 }
 
-/** ··· menu: author delete + optional keeper pin/hide (separate actions). */
-function MessageOptionsMenu({
-  message,
-  mine,
-  canModerate,
-  onDelete,
-  onPin,
-  onHide,
-}) {
+/** Moderator-only ··· : hide spam. */
+function MessageOptionsMenu({ message, canModerate, onHide }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
-  const showDelete = Boolean(mine && onDelete)
-  const showMod = Boolean(canModerate && (onPin || onHide) && !message.hidden)
+  const showHide = Boolean(canModerate && onHide && !message.hidden)
 
   useEffect(() => {
     if (!open) return undefined
@@ -411,7 +403,7 @@ function MessageOptionsMenu({
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
 
-  if (!showDelete && !showMod && !(canModerate && message.pinned && onPin)) return null
+  if (!showHide) return null
 
   return (
     <div ref={ref} className="relative shrink-0">
@@ -425,40 +417,17 @@ function MessageOptionsMenu({
         ···
       </button>
       {open ? (
-        <div
-          className={`absolute bottom-full mb-1 ${mine ? 'right-0' : 'left-0'} frens-surface border frens-border rounded-lg shadow-lg py-1 min-w-[8.5rem] z-20`}
-        >
-          {showDelete ? (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                if (window.confirm('Delete this message?')) onDelete?.()
-              }}
-              className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10 text-red-600 dark:text-red-400"
-            >
-              Delete
-            </button>
-          ) : null}
-          {canModerate && onPin ? (
-            <button
-              type="button"
-              onClick={() => { setOpen(false); onPin?.() }}
-              className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10 inline-flex items-center gap-1.5"
-            >
-              <PinIcon className="w-3 h-3" />
-              {message.pinned ? 'Unpin' : 'Pin'}
-            </button>
-          ) : null}
-          {canModerate && onHide && !message.hidden ? (
-            <button
-              type="button"
-              onClick={() => { setOpen(false); onHide?.() }}
-              className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10"
-            >
-              Hide spam
-            </button>
-          ) : null}
+        <div className="absolute bottom-full left-0 mb-1 frens-surface border frens-border rounded-lg shadow-lg py-1 min-w-[8.5rem] z-20">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              onHide?.()
+            }}
+            className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10"
+          >
+            Hide spam
+          </button>
         </div>
       ) : null}
     </div>
@@ -472,6 +441,33 @@ function messageSearchText(m) {
     .toLowerCase()
 }
 
+function dayKey(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
+
+function formatDayLabel(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function CaveDaySep({ label }) {
+  if (!label) return null
+  return (
+    <div className="flex justify-center py-2" role="separator" aria-label={label}>
+      <span className="text-[11px] frens-muted tracking-wide">{label}</span>
+    </div>
+  )
+}
+
 function ChatMessage({
   message,
   member,
@@ -481,9 +477,7 @@ function ChatMessage({
   currentUserProfile = null,
   canModerate,
   onReact,
-  onPin,
   onHide,
-  onDelete,
   onReply,
   replies = [],
   highlight = false,
@@ -491,57 +485,65 @@ function ChatMessage({
 }) {
   const canReact = caveId && message.id != null && !String(message.id).startsWith('tmp-')
   const canMod = canModerate && canReact
-  const canOwnDelete = Boolean(mine && onDelete && message.id != null)
-  const showMenu = canOwnDelete || canMod
   const replyCount = replies.length
+  const avatarProfile =
+    mine && currentUserProfile ? currentUserProfile : member || message
 
   return (
     <div
       id={message.id != null ? `cave-msg-${message.id}` : undefined}
       className={`w-full ${highlight ? 'rounded-xl ring-1 ring-black/15 dark:ring-white/20 bg-black/[0.02] dark:bg-white/[0.03] p-1 -mx-1' : ''}`}
     >
-      <div className={`flex gap-2 ${mine ? 'flex-row-reverse' : ''} ${message.hidden ? 'opacity-50' : ''}`}>
+      <div
+        className={`flex gap-2.5 min-w-0 items-start ${mine ? 'flex-row-reverse' : ''} ${
+          message.hidden ? 'opacity-50' : ''
+        }`}
+      >
         <ProfileAvatar
-          profile={
-            mine && currentUserProfile
-              ? currentUserProfile
-              : member || message
-          }
-          className={`${nested ? 'w-7 h-7' : 'w-8 h-8'} shrink-0`}
+          profile={avatarProfile}
+          className={`${nested ? 'w-7 h-7' : 'w-8 h-8'} shrink-0 mt-0.5`}
           logoClassName={nested ? 'w-4 h-auto' : 'w-5 h-auto'}
         />
-        <div className={`min-w-0 max-w-[78%] flex flex-col ${mine ? 'items-end text-right' : ''}`}>
-          <div className={`flex items-center gap-1.5 mb-0.5 ${mine ? 'flex-row-reverse' : ''}`}>
-            <span className="text-[11px] frens-muted">
-              {message.authorName} · {message.ts}
-            </span>
-            {member ? <CaveRoleBadge member={member} cave={cave} compact /> : null}
-            {message.pinned ? <PinIcon className="w-3 h-3" /> : null}
-            {message.hidden ? <span className="text-[10px] frens-muted">(hidden)</span> : null}
-          </div>
+        <div className={`min-w-0 max-w-[78%] flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
+          {(message.pinned || message.hidden || (member && !nested)) ? (
+            <div className={`flex items-center gap-1.5 ${mine ? 'flex-row-reverse' : ''}`}>
+              {member && !nested ? <CaveRoleBadge member={member} cave={cave} compact /> : null}
+              {message.pinned ? <PinIcon className="w-3 h-3 shrink-0" /> : null}
+              {message.hidden ? <span className="text-[10px] frens-muted">(hidden)</span> : null}
+            </div>
+          ) : null}
           {message.replyPreview ? (
-            <div className={`mb-1 text-[10px] frens-muted border-l-2 frens-border pl-2 py-0.5 max-w-full ${mine ? 'border-l-0 border-r-2 pr-2 pl-0' : ''}`}>
+            <div
+              className={`text-[10px] frens-muted border-l-2 frens-border pl-2 py-0.5 max-w-full ${
+                mine ? 'border-l-0 border-r-2 pr-2 pl-0' : ''
+              }`}
+            >
               <span className="font-medium">{message.replyPreview.authorName}</span>
               {message.replyPreview.text ? (
                 <span className="opacity-80"> — {String(message.replyPreview.text).slice(0, 80)}</span>
               ) : null}
             </div>
           ) : null}
-          <div className={`flex items-end gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
-            <div className="min-w-0">
+          <div className={`flex items-center gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
+            <div className="min-w-0 max-w-full">
               {message.sticker ? (
-                <span className="text-4xl leading-none">{message.sticker}</span>
+                <span className="text-4xl leading-none block">{message.sticker}</span>
               ) : (
                 <>
                   {message.image ? (
-                    <SharedImage src={message.image} className={message.text ? 'mb-1' : ''} />
+                    <div className={`max-w-full min-w-0 ${message.text ? 'mb-1' : ''}`}>
+                      <SharedImage src={message.image} />
+                    </div>
                   ) : null}
                   {message.text ? (
                     hasRichEmbeds(message.text) ? (
-                      <RichText text={message.text} />
+                      <RichText text={message.text} className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words" />
                     ) : (
                       <div className={textBubbleClass(mine)}>
-                        <RichText text={message.text} />
+                        <RichText
+                          text={message.text}
+                          className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words"
+                        />
                       </div>
                     )
                   ) : null}
@@ -555,16 +557,15 @@ function ChatMessage({
               onReact={onReact}
               onReply={canReact && onReply ? () => onReply(message) : null}
               controlsOnly
-              extra={showMenu ? (
-                <MessageOptionsMenu
-                  message={message}
-                  mine={mine}
-                  canModerate={canMod}
-                  onDelete={canOwnDelete ? onDelete : null}
-                  onPin={canMod ? onPin : null}
-                  onHide={canMod ? onHide : null}
-                />
-              ) : null}
+              extra={
+                canMod ? (
+                  <MessageOptionsMenu
+                    message={message}
+                    canModerate={canMod}
+                    onHide={onHide}
+                  />
+                ) : null
+              }
             />
           </div>
           <EmojiReactions
@@ -578,7 +579,11 @@ function ChatMessage({
       </div>
 
       {!nested && replyCount > 0 ? (
-        <div className={`mt-1.5 ${mine ? 'mr-4 sm:mr-6 pr-3 border-r-2' : 'ml-4 sm:ml-6 pl-3 border-l-2'} frens-border space-y-2`}>
+        <div
+          className={`mt-1.5 ${
+            mine ? 'mr-4 sm:mr-6 pr-3 border-r-2' : 'ml-4 sm:ml-6 pl-3 border-l-2'
+          } frens-border space-y-2`}
+        >
           <p className="text-[10px] frens-muted tracking-wide">
             {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
           </p>
@@ -593,9 +598,7 @@ function ChatMessage({
               currentUserProfile={currentUserProfile}
               canModerate={canModerate}
               onReact={r._onReact}
-              onPin={r._onPin}
               onHide={r._onHide}
-              onDelete={r._onDelete}
               onReply={onReply}
               nested
               highlight={r._highlight}
@@ -609,7 +612,7 @@ function ChatMessage({
 
 
 export default function CaveDetail({ cave, currentUserId, currentUserProfile, onUpdateCave, onSendMessage, onBack, onDeleted }) {
-  const { reactToCaveMessage, pinCaveMessage, hideCaveMessage, deleteCaveMessage } = useCaves()
+  const { reactToCaveMessage, hideCaveMessage } = useCaves()
   const [draft, setDraft] = useState('')
   const [showInvite, setShowInvite] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
@@ -760,16 +763,6 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
     requestAnimationFrame(() => textareaRef.current?.focus())
   }
 
-  function toggleThread(messageId) {
-    const key = String(messageId)
-    setExpandedThreads((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-
   function decorateReplies(parentId) {
     const kids = repliesByParent.get(String(parentId)) || []
     return kids.map((r) => ({
@@ -777,9 +770,8 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
       _member: memberById(cave, r.authorId),
       _mine: r.authorId === currentUserId,
       _onReact: (emoji) => reactToCaveMessage(cave.id, r.id, emoji),
-      _onPin: () => pinCaveMessage(cave.id, r.id),
       _onHide: () => hideCaveMessage(cave.id, r.id),
-      _onDelete: () => deleteCaveMessage(cave.id, r.id),
+      _highlight: Boolean(q && searchHitIds?.has(String(r.id))),
     }))
   }
 
@@ -961,10 +953,10 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
         {/* Messages — only scroll region (full-bleed hit area) */}
         <div
           data-frens-panel-scroll
-          className="flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll frens-panel-scroll-bleed px-3 pt-3 pb-3 space-y-3"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll frens-panel-scroll-bleed px-3 pt-3 pb-3 space-y-2.5"
         >
           {pinned.length > 0 && !q ? (
-            <div className="rounded-xl p-2 space-y-2 bg-black/[0.02] dark:bg-white/[0.02]">
+            <div className="rounded-xl p-2 space-y-2.5 bg-black/[0.02] dark:bg-white/[0.02]">
               <p className="text-[10px] frens-muted uppercase tracking-wide px-1 inline-flex items-center gap-1">
                 <PinIcon className="w-3 h-3" />
                 Pinned
@@ -980,13 +972,9 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
                   currentUserProfile={currentUserProfile}
                   canModerate={isKeeper}
                   onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
-                  onPin={() => pinCaveMessage(cave.id, m.id)}
                   onHide={() => hideCaveMessage(cave.id, m.id)}
-                  onDelete={() => deleteCaveMessage(cave.id, m.id)}
                   onReply={startReply}
                   replies={decorateReplies(m.id)}
-                  expanded={expandedThreads.has(String(m.id))}
-                  onToggleThread={toggleThread}
                 />
               ))}
             </div>
@@ -1001,27 +989,33 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
               <p className="text-sm frens-muted">No messages match “{searchQuery.trim()}”</p>
             </div>
           ) : (
-            chatMessages.map((m) => (
-              <ChatMessage
-                key={m.id}
-                message={m}
-                member={memberById(cave, m.authorId)}
-                mine={m.authorId === currentUserId}
-                caveId={cave.id}
-                cave={cave}
-                currentUserProfile={currentUserProfile}
-                canModerate={isKeeper}
-                onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
-                onPin={() => pinCaveMessage(cave.id, m.id)}
-                onHide={() => hideCaveMessage(cave.id, m.id)}
-                onDelete={() => deleteCaveMessage(cave.id, m.id)}
-                onReply={startReply}
-                replies={decorateReplies(m.id)}
-                expanded={expandedThreads.has(String(m.id)) || Boolean(q && (searchHitIds?.has(String(m.id)) || (repliesByParent.get(String(m.id)) || []).some((r) => searchHitIds?.has(String(r.id)))))}
-                onToggleThread={toggleThread}
-                highlight={Boolean(q && searchHitIds?.has(String(m.id)))}
-              />
-            ))
+            (() => {
+              let lastDay = null
+              return chatMessages.map((m) => {
+                const key = dayKey(m.createdAt)
+                const showDay = key && key !== lastDay
+                if (showDay) lastDay = key
+                return (
+                  <div key={m.id} className="space-y-2.5">
+                    {showDay ? <CaveDaySep label={formatDayLabel(m.createdAt)} /> : null}
+                    <ChatMessage
+                      message={m}
+                      member={memberById(cave, m.authorId)}
+                      mine={m.authorId === currentUserId}
+                      caveId={cave.id}
+                      cave={cave}
+                      currentUserProfile={currentUserProfile}
+                      canModerate={isKeeper}
+                      onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
+                      onHide={() => hideCaveMessage(cave.id, m.id)}
+                      onReply={startReply}
+                      replies={decorateReplies(m.id)}
+                      highlight={Boolean(q && searchHitIds?.has(String(m.id)))}
+                    />
+                  </div>
+                )
+              })
+            })()
           )}
           <div ref={scrollRef} aria-hidden className="h-px shrink-0" />
         </div>
