@@ -11,21 +11,19 @@ import { clampSearchRadius } from '../../lib/echoRange'
 import { clusterEchoes } from '../../lib/echoCluster'
 import { canBrowseGlobally } from '../../lib/echoPrivacy'
 import { addEchoMapTiles, refreshActiveTiles } from '../../lib/mapTiles'
-import { maskUrl } from '../../lib/maskIcon'
 
 const MARKER_INK = '#1a1a1a'
 const MARKER_RING = '#444444'
 const ZONE_STROKE = '#888888'
 const ZONE_FILL = '#aaaaaa'
 
-/** Bat glyph only on the map (not the app echo mark). */
+/** Bat glyph — PNG is a light silhouette; force black via filter (avoid CSS mask + base64 commas). */
 function batGlyphHtml(size = 16, extraClass = '') {
   const h = Math.round(size * 0.55)
-  const mask = maskUrl(batIcon)
-  return `<span class="${extraClass}" style="
-    display:inline-block;width:${size}px;height:${h}px;background:${MARKER_INK};
-    -webkit-mask:${mask} center/contain no-repeat;
-    mask:${mask} center/contain no-repeat;"></span>`
+  const src = String(batIcon || '').replace(/"/g, '&quot;')
+  return `<img class="${extraClass}" src="${src}" alt="" width="${size}" height="${h}" style="
+    display:block;width:${size}px;height:${h}px;object-fit:contain;
+    filter:brightness(0);" draggable="false" />`
 }
 
 function markerHtml(echo) {
