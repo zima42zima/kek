@@ -465,8 +465,8 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
           <EchoImagePicker
             value={imagePick}
             onChange={setImagePick}
-            title="Add image"
-            hint="GIF, meme, or photo — EXIF stripped"
+            title="Add photo"
+            hint="GIF or image"
             captionEnabled
             captionOpen={memeCaptionOpen}
             onCaptionOpenChange={setMemeCaptionOpen}
