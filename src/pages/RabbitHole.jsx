@@ -491,14 +491,14 @@ export default function RabbitHole({ topicId: urlTopicId = null, onTopicChange }
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border frens-border p-4 bg-gradient-to-br from-black/[0.03] via-transparent to-[#6BC06B]/5 dark:from-white/[0.04] dark:to-[#6BC06B]/10">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <span
               aria-hidden
               className="frens-mask-icon w-10 h-10 shrink-0"
               style={maskImageStyle(rabbitholeIcon)}
             />
-            <div>
+            <div className="min-w-0">
               <h2 className="frens-title-lg">Rabbit Hole</h2>
               <p className="text-xs frens-muted">Threads you care about — open one, or start your own</p>
             </div>
