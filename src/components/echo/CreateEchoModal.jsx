@@ -98,6 +98,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
   const [voiceFilter, setVoiceFilter] = useState('normal')
   const [senseFilter, setSenseFilter] = useState('clear')
   const [allowComments, setAllowComments] = useState(false)
+  const [anonymous, setAnonymous] = useState(false)
   const [recording, setRecording] = useState(null)
   const [imagePick, setImagePick] = useState(null)
   const [audioCover, setAudioCover] = useState(null)
@@ -166,6 +167,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
       coverBlob: extra.coverBlob,
       visibility,
       allowComments,
+      anonymous,
       voiceFilter: extra.voiceFilter,
       senseFilter: extra.senseFilter,
       spatial: null,
@@ -292,6 +294,19 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
               onChange={(e) => setAllowComments(e.target.checked)}
               className="rounded"
               aria-label="Comments on or off"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-xl border frens-border px-3 py-2.5 cursor-pointer">
+            <span className="min-w-0">
+              <span className="text-sm block">Stay anonymous on the map</span>
+              <span className="text-[11px] frens-muted">Shows a bat instead of your profile photo</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={anonymous}
+              onChange={(e) => setAnonymous(e.target.checked)}
+              className="rounded shrink-0"
+              aria-label="Stay anonymous on the map"
             />
           </label>
           <div className="flex gap-2">

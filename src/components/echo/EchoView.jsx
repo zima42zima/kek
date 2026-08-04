@@ -136,9 +136,13 @@ export default function EchoView({
     <>
       <Modal title={mine ? 'Your aftersound' : 'A fren left an aftersound'} onClose={onClose} maxWidth="max-w-sm">
         <div className="flex items-center gap-3 mb-4">
-          <ProfileAvatar profile={echo} className="w-11 h-11" logoClassName="w-7 h-auto" />
+          <ProfileAvatar
+            profile={echo.anonymous && !mine ? { avatarType: 'frog', avatarUrl: null } : echo}
+            className="w-11 h-11"
+            logoClassName="w-7 h-auto"
+          />
           <div className="min-w-0 flex-1">
-            <FrenHandle>{echo.authorName}</FrenHandle>
+            <FrenHandle>{echo.anonymous && !mine ? 'a fren' : echo.authorName}</FrenHandle>
             <p className="text-xs frens-muted">
               <EchoMetaLine
                 kind={echo.kind}
@@ -153,7 +157,7 @@ export default function EchoView({
               />
             </p>
           </div>
-          {!mine && echo.ownerId && onOpenProfile && (
+          {!mine && !echo.anonymous && echo.ownerId && onOpenProfile && (
             <button
               type="button"
               onClick={() => onOpenProfile(echo.ownerId)}

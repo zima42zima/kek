@@ -26,6 +26,9 @@ function extForBlob(blob) {
 }
 
 function mapTableRow(row, userId) {
+  const mine = row.owner_id === userId
+  const anonymous = Boolean(row.anonymous)
+  const hideIdentity = anonymous && !mine
   return {
     id: row.id,
     kind: row.kind,
@@ -34,9 +37,10 @@ function mapTableRow(row, userId) {
     coverPath: row.cover_path || null,
     coverUrl: null,
     ownerId: row.owner_id,
-    authorName: row.author_name || 'a fren',
-    avatarType: row.avatar_type || 'frog',
-    avatarUrl: row.avatar_url || null,
+    authorName: hideIdentity ? 'a fren' : (row.author_name || 'a fren'),
+    avatarType: hideIdentity ? 'frog' : (row.avatar_type || 'frog'),
+    avatarUrl: hideIdentity ? null : (row.avatar_url || null),
+    anonymous,
     lat: row.lat,
     lon: row.lon,
     visibility: row.visibility,
@@ -52,7 +56,7 @@ function mapTableRow(row, userId) {
     expiresAt: row.expires_at ? new Date(row.expires_at).getTime() : null,
     discoverRadiusM: clampDiscoverRadius(row.discover_radius_m ?? ECHO_DEFAULT_DISCOVER_RADIUS_M),
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-    mine: row.owner_id === userId,
+    mine,
     saved: false,
     auraCount: Number(row.aura_count ?? 0),
     iGaveAura: Boolean(row.i_gave_aura),
@@ -90,6 +94,7 @@ function mapNearRow(row, userId) {
     distance_m: row.distance_m,
     aura_count: row.aura_count,
     i_gave_aura: row.i_gave_aura,
+    anonymous: row.anonymous,
   }, userId)
 }
 
@@ -164,6 +169,7 @@ export async function publishEcho({
   coverPath,
   discoverRadiusM,
   browseGlobally,
+  anonymous,
 }) {
   const { data, error } = await supabase.rpc('publish_echo', {
     p_kind: kind,
@@ -183,6 +189,7 @@ export async function publishEcho({
     p_discover_radius_m: clampDiscoverRadius(discoverRadiusM ?? ECHO_DEFAULT_DISCOVER_RADIUS_M),
     p_place_label: placeLabel || null,
     p_browse_globally: Boolean(browseGlobally),
+    p_anonymous: Boolean(anonymous),
   })
   if (error) {
     throwIfNotInstalled(error)

@@ -17,6 +17,14 @@ const MARKER_RING = '#444444'
 const ZONE_STROKE = '#888888'
 const ZONE_FILL = '#aaaaaa'
 
+function escapeAttr(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
 /** Bat glyph — PNG is a light silhouette; force black via filter (avoid CSS mask + base64 commas). */
 function batGlyphHtml(size = 16, extraClass = '') {
   const h = Math.round(size * 0.55)
@@ -26,14 +34,26 @@ function batGlyphHtml(size = 16, extraClass = '') {
     filter:brightness(0);" draggable="false" />`
 }
 
+function avatarGlyphHtml(url, size = 28) {
+  const src = escapeAttr(url)
+  return `<img src="${src}" alt="" width="${size}" height="${size}" style="
+    display:block;width:${size}px;height:${size}px;border-radius:9999px;object-fit:cover;"
+    draggable="false" referrerpolicy="no-referrer" />`
+}
+
 function markerHtml(echo) {
-  const inner = batGlyphHtml(echo.mine ? 16 : 14)
+  const useAvatar = !echo.anonymous && Boolean(echo.avatarUrl)
+  const size = echo.mine ? 16 : 14
+  const inner = useAvatar
+    ? avatarGlyphHtml(echo.avatarUrl, echo.mine ? 28 : 26)
+    : batGlyphHtml(size)
   const weight = echo.mine ? 2 : 1.5
+  const pad = useAvatar ? '0' : undefined
   return `
     <div style="position:relative;width:32px;height:32px;border-radius:9999px;
       display:flex;align-items:center;justify-content:center;
       background:#ffffff;border:${weight}px solid ${MARKER_RING};
-      box-shadow:0 2px 8px rgba(0,0,0,.12);">
+      box-shadow:0 2px 8px rgba(0,0,0,.12);overflow:hidden;${pad != null ? `padding:${pad};` : ''}">
       ${inner}
     </div>`
 }
