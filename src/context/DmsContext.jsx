@@ -144,6 +144,8 @@ export function DmsProvider({ children }) {
       video: fields.video || null,
       sticker: fields.sticker || null,
       ts: 'just now',
+      createdAt: new Date().toISOString(),
+      reactions: [],
     }
     setMessagesByConvo((prev) => ({
       ...prev,
