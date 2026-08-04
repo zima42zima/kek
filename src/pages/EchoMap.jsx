@@ -1172,16 +1172,22 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   }
 
   async function deleteEcho(id) {
+    if (!id) return
+    if (!window.confirm('Delete this aftersound? This cannot be undone.')) return
+
     if (backendReady) {
       try {
         await deleteEchoRemote(id)
       } catch (err) {
         console.error('Echo delete failed:', err)
+        window.alert(err?.message || 'Could not delete aftersound.')
+        return
       }
     } else {
       removeFromWorldPool(id)
     }
     setEchoes((prev) => prev.filter((e) => e.id !== id))
+    setBrowseEchoes((prev) => prev.filter((e) => e.id !== id))
     closeOpenEcho()
     setEditEcho(null)
   }
@@ -1752,6 +1758,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           onToggleCommentReaction={toggleCommentReaction}
           onToggleComments={toggleComments}
           onReviewed={handleReviewed}
+          onDelete={openEcho.mine ? deleteEcho : undefined}
         />
       )}
     </div>

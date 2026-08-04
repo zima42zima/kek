@@ -44,6 +44,7 @@ export default function EchoView({
   onToggleCommentReaction,
   onToggleComments,
   onReviewed,
+  onDelete,
 }) {
   const audioRef = useRef(null)
   const videoRef = useRef(null)
@@ -378,6 +379,16 @@ export default function EchoView({
             )}
           </div>
         )}
+
+        {mine && onDelete ? (
+          <button
+            type="button"
+            onClick={() => onDelete(echo.id)}
+            className="w-full mt-4 py-2.5 text-sm text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/10 transition"
+          >
+            Delete aftersound
+          </button>
+        ) : null}
       </Modal>
 
       {spatialView ? (
