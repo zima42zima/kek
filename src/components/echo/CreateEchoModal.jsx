@@ -14,6 +14,7 @@ import {
   ECHO_PIN_OFFSET_MAX_M,
   ECHO_PUBLIC_VISIBILITIES,
   ECHO_DEFAULT_DISCOVER_RADIUS_M,
+  ECHO_SAFETY_KEY,
 } from '../../lib/echoConstants'
 import {
   EchoTypeIcon,
@@ -26,17 +27,63 @@ import { formatRangeM } from '../../lib/echoRange'
 import { bakeMemeCaption, ECHO_TITLE_MAX } from '../../lib/memeText'
 import { OPTION_ACTIVE, OPTION_IDLE, GlobeIcon } from '../icons/UiIcons'
 
-function SafetyNotice({ visibility }) {
-  if (!ECHO_PUBLIC_VISIBILITIES.has(visibility)) return null
+function readSafetySeen() {
+  try {
+    return Boolean(localStorage.getItem(ECHO_SAFETY_KEY))
+  } catch {
+    return true
+  }
+}
+
+function markSafetySeen() {
+  try {
+    localStorage.setItem(ECHO_SAFETY_KEY, '1')
+  } catch { /* ignore */ }
+}
+
+/** One-time privacy note — shown once, then never again in create flow. */
+function SafetyNoticeOnce({ visibility }) {
+  const [show, setShow] = useState(() => !readSafetySeen())
+  if (!show || !ECHO_PUBLIC_VISIBILITIES.has(visibility)) return null
   return (
-    <div className="rounded-xl border border-amber-500/40 bg-amber-500/8 px-3 py-2.5 text-left">
-      <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
-        Public aftersounds can reveal you were here
+    <div className="rounded-xl border border-amber-500/35 px-3 py-2 text-left">
+      <p className="text-[11px] text-amber-800 dark:text-amber-200">
+        Public pins can reveal you were nearby — GPS is scattered ±{ECHO_PIN_OFFSET_MAX_M}m.
       </p>
-      <p className="text-[11px] frens-muted mt-1">
-        Pin is scattered up to {ECHO_PIN_OFFSET_MAX_M}m — exact GPS stays private.
-        {visibility === 'friends' ? ' Only frens can find it.' : ''}
-      </p>
+      <button
+        type="button"
+        className="text-[10px] frens-muted underline mt-1"
+        onClick={() => {
+          markSafetySeen()
+          setShow(false)
+        }}
+      >
+        Got it
+      </button>
+    </div>
+  )
+}
+
+function VisibilityIconRow({ value, onChange }) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {ECHO_VISIBILITY.map((v) => {
+        const active = value === v.id
+        return (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => onChange(v.id)}
+            aria-pressed={active}
+            className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 transition touch-manipulation ${
+              active ? OPTION_ACTIVE : OPTION_IDLE
+            }`}
+          >
+            <EchoVisibilityIcon visibility={v.id} className="w-5 h-5" />
+            <span className="text-xs font-medium">{v.label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -238,25 +285,8 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
       {step === 'visibility' && (
         <div className="space-y-3">
           <p className="text-sm frens-body-text text-center">Who can find this?</p>
-          <div className="grid gap-2">
-            {ECHO_VISIBILITY.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setVisibility(v.id)}
-                className={`text-left rounded-xl border p-4 transition ${
-                  visibility === v.id ? OPTION_ACTIVE : OPTION_IDLE
-                }`}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <EchoVisibilityIcon visibility={v.id} className="w-5 h-5 shrink-0" />
-                  <span className="font-medium text-sm">{v.label}</span>
-                </span>
-                <p className="text-xs frens-muted mt-1 ml-7">{v.hint}</p>
-              </button>
-            ))}
-          </div>
-          <SafetyNotice visibility={visibility} />
+          <VisibilityIconRow value={visibility} onChange={setVisibility} />
+          <SafetyNoticeOnce visibility={visibility} />
           <label className="block">
             <span className="text-xs frens-muted">Title / note (optional)</span>
             <input
@@ -269,14 +299,15 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             />
             <p className="text-[10px] frens-muted mt-1">{echoTitle.trim().length}/{ECHO_TITLE_MAX}</p>
           </label>
-          <label className="flex items-center gap-2 text-xs frens-muted px-1 cursor-pointer">
+          <label className="flex items-center justify-between gap-3 text-sm px-1 cursor-pointer">
+            <span>Comments</span>
             <input
               type="checkbox"
               checked={allowComments}
               onChange={(e) => setAllowComments(e.target.checked)}
               className="rounded"
+              aria-label="Comments on or off"
             />
-            Let frens leave comments after they find it
           </label>
           <div className="flex gap-2">
             <button type="button" onClick={back} className="frens-btn-outline flex-1 py-2.5 text-sm">Back</button>
@@ -289,24 +320,18 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
         <div className="space-y-3">
           <EchoDiscoverRadiusPicker value={discoverRadiusM} onChange={setDiscoverRadiusM} />
           {visibility === 'world' && (
-            <label className="flex items-start gap-3 rounded-xl border frens-border p-3 cursor-pointer">
+            <label className="flex items-center justify-between gap-3 rounded-xl border frens-border px-3 py-2.5 cursor-pointer">
+              <span className="text-sm inline-flex items-center gap-1.5">
+                <GlobeIcon className="w-4 h-4" /> Browse anywhere
+              </span>
               <input
                 type="checkbox"
                 checked={browseGlobally}
                 onChange={(e) => setBrowseGlobally(e.target.checked)}
-                className="mt-1 rounded"
+                className="rounded"
               />
-              <span>
-                <span className="text-sm font-medium inline-flex items-center gap-1.5">
-                  <GlobeIcon className="w-4 h-4" /> Browsable from anywhere
-                </span>
-                <span className="block text-xs frens-muted mt-1">
-                  Shows a world icon — frens can find this spot by searching cities and exploring the map, not only by walking here.
-                </span>
-              </span>
             </label>
           )}
-          <SafetyNotice visibility={visibility} />
           <div className="flex gap-2">
             <button type="button" onClick={back} className="frens-btn-outline flex-1 py-2.5 text-sm">Back</button>
             <button type="button" onClick={next} className="frens-btn-primary flex-1 py-2.5 text-sm">Continue</button>
@@ -355,7 +380,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
               Waiting for location…
             </div>
           )}
-          <SafetyNotice visibility={visibility} />
           {publishError ? (
             <p className="text-xs text-red-500 dark:text-red-400 text-center">{publishError}</p>
           ) : null}
@@ -438,7 +462,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             <EchoTypeIcon kind="image" className="w-3.5 h-3.5" />
             Meme spot · {visibilitySummary}{needsPinStep ? ` · ${formatRangeM(discoverRadiusM)} range` : ''}
           </p>
-          <SafetyNotice visibility={visibility} />
           <EchoImagePicker
             value={imagePick}
             onChange={setImagePick}
@@ -481,7 +504,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             {visibilitySummary}
             {needsPinStep ? ` · ${formatRangeM(discoverRadiusM)} range` : ''}
           </p>
-          <SafetyNotice visibility={visibility} />
           <EchoRecorder
             kind={echoType}
             senseFilter={echoType === 'video' ? senseFilter : 'clear'}

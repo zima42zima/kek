@@ -72,18 +72,18 @@ export function echoKindLabel(kind, { short = false } = {}) {
 export const ECHO_VISIBILITY = [
   {
     id: 'world',
-    label: 'To the world',
-    hint: 'On the map for nearby frens + browsable globally if you choose',
+    label: 'World',
+    hint: 'Nearby + map',
   },
   {
     id: 'friends',
-    label: 'Friends only',
-    hint: 'Only frens you follow can discover it — hidden from everyone else',
+    label: 'Frens',
+    hint: 'Follows only',
   },
   {
     id: 'private',
-    label: 'My memory',
-    hint: 'Only your archive — hidden from the world map',
+    label: 'Memory',
+    hint: 'Just you',
   },
 ]
 
@@ -124,6 +124,8 @@ export const ECHO_GLITCH_FILTERS = [
 export const ECHO_SENSE_FILTERS = ECHO_GLITCH_FILTERS
 
 export const ECHO_INTRO_KEY = 'frens-echo-intro-v1'
+export const ECHO_SAFETY_KEY = 'frens-echo-safety-v1'
+
 
 export const DURATIONS = [
   { id: 'minutes', label: 'Minutes', ms: 30 * 60 * 1000 },

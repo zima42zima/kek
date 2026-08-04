@@ -3,7 +3,7 @@ import Modal from '../Modal'
 import { ECHO_PUBLIC_VISIBILITIES, ECHO_VISIBILITY } from '../../lib/echoConstants'
 import { EchoVisibilityIcon } from './EchoMeta'
 import { EchoDiscoverRadiusPicker } from './EchoRangeSelect'
-import { OPTION_ACTIVE, OPTION_IDLE } from '../icons/UiIcons'
+import { OPTION_ACTIVE, OPTION_IDLE, GlobeIcon } from '../icons/UiIcons'
 
 export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
   const [label, setLabel] = useState(echo.label || '')
@@ -46,24 +46,25 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
         </label>
 
         <div className="space-y-2">
-          <p className="text-xs frens-muted">Audience</p>
-          <div className="grid gap-2">
-            {ECHO_VISIBILITY.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setVisibility(v.id)}
-                className={`text-left rounded-xl border p-3 transition ${
-                  visibility === v.id ? OPTION_ACTIVE : OPTION_IDLE
-                }`}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <EchoVisibilityIcon visibility={v.id} className="w-4 h-4 shrink-0" />
-                  <span className="font-medium text-sm">{v.label}</span>
-                </span>
-                <p className="text-[11px] frens-muted mt-1 ml-6">{v.hint}</p>
-              </button>
-            ))}
+          <p className="text-xs frens-muted text-center">Who can find this?</p>
+          <div className="grid grid-cols-3 gap-2">
+            {ECHO_VISIBILITY.map((v) => {
+              const active = visibility === v.id
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setVisibility(v.id)}
+                  aria-pressed={active}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 transition touch-manipulation ${
+                    active ? OPTION_ACTIVE : OPTION_IDLE
+                  }`}
+                >
+                  <EchoVisibilityIcon visibility={v.id} className="w-5 h-5" />
+                  <span className="text-xs font-medium">{v.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -71,29 +72,30 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
           <>
             <EchoDiscoverRadiusPicker value={discoverRadiusM} onChange={setDiscoverRadiusM} />
             {visibility === 'world' ? (
-              <label className="flex items-start gap-2 text-xs frens-muted cursor-pointer px-1">
+              <label className="flex items-center justify-between gap-3 rounded-xl border frens-border px-3 py-2.5 cursor-pointer">
+                <span className="text-sm inline-flex items-center gap-1.5">
+                  <GlobeIcon className="w-4 h-4" /> Browse anywhere
+                </span>
                 <input
                   type="checkbox"
                   checked={browseGlobally}
                   onChange={(e) => setBrowseGlobally(e.target.checked)}
-                  className="rounded mt-0.5"
+                  className="rounded"
                 />
-                <span>
-                  Browsable from anywhere — frens can open this aftersound from the world map even when far away
-                </span>
               </label>
             ) : null}
           </>
         ) : null}
 
-        <label className="flex items-center gap-2 text-xs frens-muted px-1 cursor-pointer">
+        <label className="flex items-center justify-between gap-3 text-sm px-1 cursor-pointer">
+          <span>Comments</span>
           <input
             type="checkbox"
             checked={allowComments}
             onChange={(e) => setAllowComments(e.target.checked)}
             className="rounded"
+            aria-label="Comments on or off"
           />
-          Allow comments after someone finds it
         </label>
 
         <div className="flex gap-2 pt-1">
