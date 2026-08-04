@@ -287,7 +287,8 @@
   }
 
   /* Scroll hit area spans full viewport; content stays in frens-content-max */
-  .frens-cave-scroll-bleed {
+  .frens-cave-scroll-bleed,
+  .frens-panel-scroll-bleed {
     width: 100vw;
     max-width: 100vw;
     margin-left: calc(50% - 50vw);
@@ -500,7 +501,6 @@
   width: 100%;
   max-width: 100%;
   padding-bottom: 0.25rem;
-  scrollbar-width: thin;
 }
 
 .frens-echo-range-card {
@@ -1664,4 +1664,17 @@ html, body, #root, .frens-page, .frens-feed, .frens-screen {
 [class*="overflow-y-auto"],
 [class*="overflow-auto"] {
   overscroll-behavior: none;
+}
+
+/* Hide scrollbars app-wide (scroll still works via wheel / trackpad / touch) */
+*,
+*::before,
+*::after {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }

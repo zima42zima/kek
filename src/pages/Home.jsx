@@ -260,6 +260,40 @@ export default function Home() {
   const dmDetailOpen = activeTab === 'messages' && Boolean(route.conversationId)
   const panelDetailOpen = caveDetailOpen || dmDetailOpen
 
+  // When a DM/cave chat is open, only the message pane scrolls. Forward wheel
+  // from header / gutters / chrome so scroll works like the rest of the app.
+  useEffect(() => {
+    if (!panelDetailOpen) return undefined
+    const feed = document.querySelector('.frens-feed')
+    if (!feed) return undefined
+
+    function onWheel(e) {
+      if (e.ctrlKey || e.metaKey) return
+      const scroller = feed.querySelector('[data-frens-panel-scroll]')
+      if (!scroller) return
+      if (scroller.contains(e.target)) return
+
+      const path = typeof e.composedPath === 'function' ? e.composedPath() : []
+      for (const el of path) {
+        if (!(el instanceof HTMLElement) || el === scroller || el === feed) continue
+        const style = window.getComputedStyle(el)
+        const oy = style.overflowY
+        if (
+          (oy === 'auto' || oy === 'scroll') &&
+          el.scrollHeight > el.clientHeight + 1
+        ) {
+          return
+        }
+      }
+
+      scroller.scrollTop += e.deltaY
+      e.preventDefault()
+    }
+
+    feed.addEventListener('wheel', onWheel, { passive: false })
+    return () => feed.removeEventListener('wheel', onWheel)
+  }, [panelDetailOpen])
+
   return (
     <div className="frens-feed">
       <header className="shrink-0 px-4 py-3 flex items-center gap-3">

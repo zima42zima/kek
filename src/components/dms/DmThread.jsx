@@ -263,29 +263,34 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
         <p className="shrink-0 text-xs text-red-500 dark:text-red-400 px-3 py-1">{callError}</p>
       ) : null}
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-none px-3 py-3 space-y-3.5">
-        {messages.length === 0 ? (
-          <div className="py-16 flex flex-col items-center justify-center text-center">
-            <p className="text-sm frens-body-text mb-1 font-light">Say hi to {thread.otherName}</p>
-            <p className="text-xs frens-muted">Just between you two. No third hand.</p>
-          </div>
-        ) : (
-          messages.map((m) => (
-            <DmBubble
-              key={m.id}
-              message={m}
-              mine={m.senderId === currentUserId}
-              canReact={m.id != null && !String(m.id).startsWith('tmp-')}
-              onReact={(emoji) => reactToDmMessage(thread.id, m.id, emoji)}
-              onDelete={
-                m.senderId === currentUserId
-                  ? () => deleteDmMessage(thread.id, m.id)
-                  : null
-              }
-            />
-          ))
-        )}
-        <div ref={bottomRef} aria-hidden className="h-px shrink-0" />
+      <div
+        data-frens-panel-scroll
+        className="flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll frens-panel-scroll-bleed"
+      >
+        <div className="px-3 py-3 space-y-3.5 frens-content-max">
+          {messages.length === 0 ? (
+            <div className="py-16 flex flex-col items-center justify-center text-center">
+              <p className="text-sm frens-body-text mb-1 font-light">Say hi to {thread.otherName}</p>
+              <p className="text-xs frens-muted">Just between you two. No third hand.</p>
+            </div>
+          ) : (
+            messages.map((m) => (
+              <DmBubble
+                key={m.id}
+                message={m}
+                mine={m.senderId === currentUserId}
+                canReact={m.id != null && !String(m.id).startsWith('tmp-')}
+                onReact={(emoji) => reactToDmMessage(thread.id, m.id, emoji)}
+                onDelete={
+                  m.senderId === currentUserId
+                    ? () => deleteDmMessage(thread.id, m.id)
+                    : null
+                }
+              />
+            ))
+          )}
+          <div ref={bottomRef} aria-hidden className="h-px shrink-0" />
+        </div>
       </div>
 
       <div className="shrink-0 z-20 frens-surface px-3 pt-1.5 pb-2">
