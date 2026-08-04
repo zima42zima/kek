@@ -71,8 +71,8 @@ export default function EchoCollectionCard({
           ) : null}
         </div>
 
-        {echo.label ? (
-          <p className="text-sm frens-body-text truncate mb-0.5">{echo.label}</p>
+        {(echo.title || echo.label) ? (
+          <p className="text-sm frens-body-text truncate mb-0.5">{(echo.title || echo.label).trim()}</p>
         ) : null}
 
         <div className="text-[11px] frens-hint mt-0.5">

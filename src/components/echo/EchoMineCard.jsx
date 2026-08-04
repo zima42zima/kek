@@ -41,19 +41,20 @@ function CardOverlay({ echo, global, auraSlot, onNavigateWorld }) {
 }
 
 function MineCardFooter({ echo, showAuthor }) {
-  if (!echo.label && !showAuthor) return null
+  const note = (echo.title || echo.label || '').trim()
+  if (!note && !showAuthor) return null
   return (
     <div className="px-2.5 py-2 flex items-center gap-2 min-w-0 border-t frens-border">
       {showAuthor ? (
         <>
           <ProfileAvatar profile={echo} className="w-5 h-5 shrink-0" logoClassName="w-3 h-auto" />
           <FrenHandle className="text-[11px] truncate shrink-0 max-w-[5rem]">{echo.authorName}</FrenHandle>
-          {echo.label ? (
-            <span className="text-[11px] frens-muted truncate min-w-0">{echo.label}</span>
+          {note ? (
+            <span className="text-[11px] frens-muted truncate min-w-0">{note}</span>
           ) : null}
         </>
       ) : (
-        <p className="text-xs frens-body-text truncate">{echo.label}</p>
+        <p className="text-xs frens-body-text truncate">{note}</p>
       )}
     </div>
   )
@@ -140,8 +141,8 @@ export default function EchoMineCard({
               <ProfileAvatar profile={echo} className="w-5 h-5 shrink-0" logoClassName="w-3 h-auto" />
               <FrenHandle className="text-xs truncate">{echo.authorName || 'a fren'}</FrenHandle>
             </div>
-          ) : echo.label ? (
-            <p className="text-sm frens-body-text truncate">{echo.label}</p>
+          ) : (echo.title || echo.label) ? (
+            <p className="text-sm frens-body-text truncate">{(echo.title || echo.label).trim()}</p>
           ) : null}
           <EchoMetaIcons
             kind={echo.kind}

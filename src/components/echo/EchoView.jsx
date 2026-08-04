@@ -188,6 +188,12 @@ export default function EchoView({
           </div>
         ) : null}
 
+        {echo.title?.trim() ? (
+          <p className="text-sm frens-body-text text-center mb-3 px-1 leading-snug">
+            {echo.title.trim()}
+          </p>
+        ) : null}
+
         {canSpatialView ? (
           <button
             type="button"

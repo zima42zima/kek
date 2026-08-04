@@ -23,6 +23,7 @@ import {
 import { EchoDiscoverRadiusPicker } from './EchoRangeSelect'
 import EchoDurationPicker, { durationToExpiresAt } from './EchoDurationPicker'
 import { formatRangeM } from '../../lib/echoRange'
+import { bakeMemeCaption, ECHO_TITLE_MAX } from '../../lib/memeText'
 import { OPTION_ACTIVE, OPTION_IDLE, GlobeIcon } from '../icons/UiIcons'
 
 function SafetyNotice({ visibility }) {
@@ -60,6 +61,9 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
   const [durationId, setDurationId] = useState('days')
   const [publishing, setPublishing] = useState(false)
   const [publishError, setPublishError] = useState('')
+  const [echoTitle, setEchoTitle] = useState('')
+  const [memeCaption, setMemeCaption] = useState({ text: '', style: 'outline' })
+  const [memeCaptionOpen, setMemeCaptionOpen] = useState(false)
 
   const needsPinStep = ECHO_PUBLIC_VISIBILITIES.has(visibility)
   const isImage = echoType === 'image'
@@ -92,6 +96,8 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
     setImagePick(null)
     setAudioCover(null)
     setPublishError('')
+    setMemeCaption({ text: '', style: 'outline' })
+    setMemeCaptionOpen(false)
   }, [echoType])
 
   useEffect(() => {
@@ -104,6 +110,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
 
   const readyToPublish = isImage ? Boolean(imagePick?.blob) : Boolean(recording)
   const expiresAt = durationToExpiresAt(durationId)
+  const titleTrimmed = echoTitle.trim().slice(0, ECHO_TITLE_MAX)
 
   async function publishPayload(extra = {}) {
     await onPublish({
@@ -122,6 +129,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
       placeLabel: needsPinStep ? placeLabel.trim() : '',
       browseGlobally: needsPinStep && visibility === 'world' ? browseGlobally : false,
       expiresAt,
+      title: titleTrimmed || '',
     })
   }
 
@@ -131,10 +139,21 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
       if (!imagePick?.blob) return
       setPublishing(true)
       try {
+        let mediaBlob = imagePick.blob
+        let mediaUrl = imagePick.url
+        const captionText = memeCaptionOpen ? memeCaption.text.trim() : ''
+        if (captionText) {
+          const baked = await bakeMemeCaption(imagePick.blob, {
+            text: captionText,
+            style: memeCaption.style,
+          })
+          mediaBlob = baked.blob
+          mediaUrl = baked.dataUrl
+        }
         await publishPayload({
           kind: 'image',
-          mediaUrl: imagePick.url,
-          mediaBlob: imagePick.blob,
+          mediaUrl,
+          mediaBlob,
           coverUrl: null,
           coverBlob: null,
           voiceFilter: null,
@@ -238,6 +257,18 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             ))}
           </div>
           <SafetyNotice visibility={visibility} />
+          <label className="block">
+            <span className="text-xs frens-muted">Title / note (optional)</span>
+            <input
+              type="text"
+              value={echoTitle}
+              onChange={(e) => setEchoTitle(e.target.value.slice(0, ECHO_TITLE_MAX))}
+              placeholder="Short joke, thought, or note…"
+              className="frens-input mt-1 text-sm w-full"
+              maxLength={ECHO_TITLE_MAX}
+            />
+            <p className="text-[10px] frens-muted mt-1">{echoTitle.trim().length}/{ECHO_TITLE_MAX}</p>
+          </label>
           <label className="flex items-center gap-2 text-xs frens-muted px-1 cursor-pointer">
             <input
               type="checkbox"
@@ -413,6 +444,11 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             onChange={setImagePick}
             title="Add image"
             hint="GIF, meme, or photo — EXIF stripped"
+            captionEnabled
+            captionOpen={memeCaptionOpen}
+            onCaptionOpenChange={setMemeCaptionOpen}
+            caption={memeCaption}
+            onCaptionChange={setMemeCaption}
           />
           {publishError ? (
             <p className="text-xs text-red-500 dark:text-red-400 text-center">{publishError}</p>
