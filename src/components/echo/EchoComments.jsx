@@ -108,7 +108,10 @@ export default function EchoComments({
                     {isOwn && onRemoveComment ? (
                       <button
                         type="button"
-                        onClick={() => onRemoveComment(echo.id, c.id)}
+                        onClick={() => {
+                          if (!window.confirm('Delete this comment? This can’t be undone.')) return
+                          onRemoveComment(echo.id, c.id)
+                        }}
                         className="ml-auto shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-[11px] leading-none frens-muted opacity-70 hover:opacity-100 hover:bg-black/[0.06] dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white transition"
                         aria-label="Delete comment"
                         title="Delete"
