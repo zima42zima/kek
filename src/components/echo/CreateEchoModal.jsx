@@ -189,27 +189,30 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
           <p className="text-sm frens-body-text text-center">What kind of aftersound?</p>
 
           <div className="space-y-2">
-            {[FEATURED_TYPE, ...ALT_TYPES].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setEchoType(t.id)}
-                className={`w-full text-left rounded-xl border p-3 transition ${
-                  echoType === t.id ? OPTION_ACTIVE : OPTION_IDLE
-                }`}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <EchoTypeIcon kind={t.id} className="w-4 h-4 shrink-0" />
-                  <span className="font-medium text-sm">{t.label}</span>
-                </span>
-                <p className="text-xs frens-muted mt-1 ml-6">{t.hint}</p>
-              </button>
-            ))}
+            {[FEATURED_TYPE, ...ALT_TYPES].map((t) => {
+              const selected = echoType === t.id
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => {
+                    setEchoType(t.id)
+                    setStep('visibility')
+                  }}
+                  className={`w-full text-left rounded-xl border p-3 transition touch-manipulation ${
+                    selected ? OPTION_ACTIVE : OPTION_IDLE
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <EchoTypeIcon kind={t.id} className="w-4 h-4 shrink-0" />
+                    <span className="font-medium text-sm">{t.label}</span>
+                  </span>
+                  <p className="text-xs frens-muted mt-1 ml-6">{t.hint}</p>
+                </button>
+              )
+            })}
           </div>
-
-          <button type="button" onClick={next} className="frens-btn-primary w-full py-2.5 text-sm mt-1">
-            Continue
-          </button>
         </div>
       )}
 
