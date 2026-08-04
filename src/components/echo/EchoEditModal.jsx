@@ -27,9 +27,7 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
   }
 
   function handleDelete() {
-    if (!window.confirm('Delete this aftersound? This cannot be undone.')) return
     onDelete?.(echo.id)
-    onClose?.()
   }
 
   return (
