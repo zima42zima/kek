@@ -4,6 +4,10 @@ import { CameraIcon, ImageIcon } from '../icons/UiIcons'
 
 const ACCEPT = 'image/*,image/gif,.gif,.heic,.heif,.webp,.png,.jpg,.jpeg'
 
+/** Visually hidden but not display:none — iOS Safari ignores .click() on display:none file inputs. */
+const FILE_INPUT_CLASS =
+  'absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed'
+
 function isHeicFile(file) {
   const type = file?.type || ''
   const name = file?.name || ''
@@ -11,6 +15,12 @@ function isHeicFile(file) {
     || type === 'image/heif'
     || /\.heic$/i.test(name)
     || /\.heif$/i.test(name)
+}
+
+function looksLikeImage(file) {
+  if (!file) return false
+  if (file.type?.startsWith('image/')) return true
+  return /\.(gif|jpe?g|png|webp|heic|heif|bmp|tiff?)$/i.test(file.name || '')
 }
 
 export default function EchoImagePicker({
@@ -31,9 +41,23 @@ export default function EchoImagePicker({
     setBusy(true)
     try {
       if (isHeicFile(file)) {
-        throw new Error('HEIC photos are not supported here yet — try a JPEG, PNG, or GIF.')
+        throw new Error('iPhone HEIC isn’t supported yet — in Photos, share as JPEG, or pick a PNG/GIF.')
       }
-      const { blob, dataUrl, isGif } = await prepareImageAttachment(file, { maxDimension: 1600 })
+      if (!looksLikeImage(file)) {
+        throw new Error('Please choose an image file (JPEG, PNG, GIF, or WebP).')
+      }
+      // iOS sometimes omits MIME type — give prepareImageAttachment a typed File.
+      let input = file
+      if (!file.type?.startsWith('image/')) {
+        const ext = (file.name.match(/\.([a-z0-9]+)$/i) || [])[1]?.toLowerCase()
+        const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+          : ext === 'png' ? 'image/png'
+            : ext === 'gif' ? 'image/gif'
+              : ext === 'webp' ? 'image/webp'
+                : 'image/jpeg'
+        input = new File([file], file.name || `photo.${ext || 'jpg'}`, { type: mime })
+      }
+      const { blob, dataUrl, isGif } = await prepareImageAttachment(input, { maxDimension: 1600 })
       onChange?.({ blob, url: dataUrl, isGif: Boolean(isGif) })
     } catch (err) {
       setError(err.message || 'Could not use that image.')
@@ -58,20 +82,21 @@ export default function EchoImagePicker({
           <button type="button" onClick={clear} className="frens-btn-outline flex-1 py-2 text-sm">
             Remove
           </button>
-          <button type="button" onClick={() => fileRef.current?.click()} className="frens-btn-outline flex-1 py-2 text-sm">
+          <label className="frens-btn-outline flex-1 py-2 text-sm text-center relative overflow-hidden cursor-pointer">
             Replace
-          </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept={ACCEPT}
+              className={FILE_INPUT_CLASS}
+              disabled={busy}
+              onChange={(e) => {
+                handleFile(e.target.files?.[0])
+                e.target.value = ''
+              }}
+            />
+          </label>
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept={ACCEPT}
-          className="hidden"
-          onChange={(e) => {
-            handleFile(e.target.files?.[0])
-            e.target.value = ''
-          }}
-        />
       </div>
     )
   }
@@ -87,46 +112,45 @@ export default function EchoImagePicker({
       {error ? <p className="text-xs text-red-500 dark:text-red-400 text-center">{error}</p> : null}
 
       <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => cameraRef.current?.click()}
-          className="frens-btn-primary flex-1 py-2.5 text-sm disabled:opacity-40 inline-flex items-center justify-center gap-1.5"
+        <label
+          className={`frens-btn-primary flex-1 py-2.5 text-sm inline-flex items-center justify-center gap-1.5 relative overflow-hidden cursor-pointer ${
+            busy ? 'opacity-40 pointer-events-none' : ''
+          }`}
         >
           <CameraIcon className="w-4 h-4" />
           {busy ? 'Processing…' : 'Take photo'}
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => fileRef.current?.click()}
-          className="frens-btn-outline flex-1 py-2.5 text-sm disabled:opacity-40"
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+            capture="environment"
+            className={FILE_INPUT_CLASS}
+            disabled={busy}
+            onChange={(e) => {
+              handleFile(e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+        </label>
+        <label
+          className={`frens-btn-outline flex-1 py-2.5 text-sm text-center relative overflow-hidden cursor-pointer ${
+            busy ? 'opacity-40 pointer-events-none' : ''
+          }`}
         >
-          Choose meme
-        </button>
+          {busy ? 'Processing…' : 'Choose meme'}
+          <input
+            ref={fileRef}
+            type="file"
+            accept={ACCEPT}
+            className={FILE_INPUT_CLASS}
+            disabled={busy}
+            onChange={(e) => {
+              handleFile(e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+        </label>
       </div>
-
-      <input
-        ref={cameraRef}
-        type="file"
-        accept={ACCEPT}
-        capture="environment"
-        className="hidden"
-        onChange={(e) => {
-          handleFile(e.target.files?.[0])
-          e.target.value = ''
-        }}
-      />
-      <input
-        ref={fileRef}
-        type="file"
-        accept={ACCEPT}
-        className="hidden"
-        onChange={(e) => {
-          handleFile(e.target.files?.[0])
-          e.target.value = ''
-        }}
-      />
     </div>
   )
 }
