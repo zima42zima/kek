@@ -295,3 +295,70 @@ export async function toggleEchoAura(echoId) {
     iGaveAura: row?.i_gave_aura ?? false,
   }
 }
+
+function mapEchoComment(row) {
+  return {
+    id: row.id,
+    echoId: row.echo_id,
+    authorId: row.user_id,
+    userId: row.user_id,
+    authorName: row.author_name || 'a fren',
+    frenName: row.author_name || 'a fren',
+    avatarType: row.avatar_type || 'frog',
+    avatarUrl: row.avatar_url || null,
+    text: row.body,
+    body: row.body,
+    createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+    timestamp: row.created_at
+      ? new Date(row.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      : '',
+    reactions: [],
+  }
+}
+
+export async function listEchoComments(echoId) {
+  const { data, error } = await supabase.rpc('list_echo_comments', { p_echo: echoId })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+  return (data ?? []).map(mapEchoComment)
+}
+
+export async function addEchoComment(echoId, body, profile = {}) {
+  const { data, error } = await supabase.rpc('add_echo_comment', {
+    p_echo: echoId,
+    p_body: body,
+    p_author_name: profile.frenName || null,
+    p_avatar_type: profile.avatarType || 'frog',
+    p_avatar_url: profile.avatarUrl || null,
+  })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+  const id = Array.isArray(data) ? data[0] : data
+  return {
+    id,
+    echoId,
+    authorId: null,
+    userId: null,
+    authorName: profile.frenName || 'you',
+    frenName: profile.frenName || 'you',
+    avatarType: profile.avatarType || 'frog',
+    avatarUrl: profile.avatarUrl || null,
+    text: body,
+    body,
+    createdAt: Date.now(),
+    timestamp: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    reactions: [],
+  }
+}
+
+export async function deleteEchoComment(commentId) {
+  const { error } = await supabase.rpc('delete_echo_comment', { p_id: commentId })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+}

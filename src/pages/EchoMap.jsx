@@ -79,6 +79,10 @@ import {
   listEchoesInBbox,
   getEchoById,
   deleteEcho as deleteEchoRemote,
+  listEchoComments,
+  addEchoComment,
+  deleteEchoComment,
+  EchoesNotInstalledError,
 } from '../lib/echoes'
 import { consumeEchoExplorePlace } from '../lib/notificationNav'
 
@@ -1294,6 +1298,30 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     })()
   }, [openId, backendReady, echoes, displayCollection, browseEchoes, userId])
 
+  useEffect(() => {
+    if (!openId || !backendReady) return undefined
+    let cancelled = false
+    ;(async () => {
+      try {
+        const comments = await listEchoComments(openId)
+        if (cancelled) return
+        const apply = (e) => (e.id === openId ? { ...e, comments } : e)
+        setEchoes((prev) => prev.map(apply))
+        setBrowseEchoes((prev) => prev.map(apply))
+        setExploreCityEchoes((prev) => prev.map(apply))
+        setSavedCollection((prev) => {
+          if (!prev.some((e) => e.id === openId)) return prev
+          return prev.map(apply)
+        })
+      } catch (err) {
+        if (!(err instanceof EchoesNotInstalledError)) {
+          /* keep local comments if list fails */
+        }
+      }
+    })()
+    return () => { cancelled = true }
+  }, [openId, backendReady])
+
   function updateEchoSettings(id, patch) {
     setEchoes((prev) => prev.map((e) => {
       if (e.id !== id) return e
@@ -1350,33 +1378,69 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     }
   }
 
-  function addComment(echoId, comment) {
+  async function addComment(echoId, comment) {
+    let nextComment = comment
+    if (backendReady) {
+      try {
+        const saved = await addEchoComment(echoId, comment.text, profile)
+        nextComment = {
+          ...comment,
+          ...saved,
+          authorId: comment.authorId ?? user?.id,
+          userId: comment.userId ?? user?.id,
+        }
+      } catch (err) {
+        if (!(err instanceof EchoesNotInstalledError)) throw err
+      }
+    }
     let touched = null
-    setEchoes((prev) => prev.map((e) => {
+    const apply = (e) => {
       if (e.id !== echoId) return e
-      const comments = [...(e.comments ?? []), comment]
+      const comments = [...(e.comments ?? []), nextComment]
       const updated = { ...e, comments }
-      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) publishToWorldPool(updated)
       touched = updated
       return updated
-    }))
+    }
+    setEchoes((prev) => prev.map(apply))
+    setBrowseEchoes((prev) => prev.map(apply))
+    setExploreCityEchoes((prev) => prev.map(apply))
+    setSavedCollection((prev) => (prev.some((e) => e.id === echoId) ? prev.map(apply) : prev))
+    if (!backendReady) {
+      const echo = echoes.find((e) => e.id === echoId)
+      if (echo?.visibility && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility) && touched) {
+        publishToWorldPool(touched)
+      }
+    }
     if (touched) touchEchoHistory(touched, { interaction: 'commented' })
   }
 
-  function removeComment(echoId, commentId) {
-    setEchoes((prev) => prev.map((e) => {
+  async function removeComment(echoId, commentId) {
+    if (backendReady) {
+      try {
+        await deleteEchoComment(commentId)
+      } catch (err) {
+        if (!(err instanceof EchoesNotInstalledError)) throw err
+      }
+    }
+    const apply = (e) => {
       if (e.id !== echoId) return e
       const comments = (e.comments ?? []).filter((c) => c.id !== commentId)
       const updated = { ...e, comments }
-      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) publishToWorldPool(updated)
+      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) {
+        publishToWorldPool(updated)
+      }
       return updated
-    }))
+    }
+    setEchoes((prev) => prev.map(apply))
+    setBrowseEchoes((prev) => prev.map(apply))
+    setExploreCityEchoes((prev) => prev.map(apply))
+    setSavedCollection((prev) => (prev.some((e) => e.id === echoId) ? prev.map(apply) : prev))
   }
 
   function toggleCommentReaction(echoId, commentId, emoji) {
     const em = (emoji || '').trim()
     if (!em || !commentId) return
-    setEchoes((prev) => prev.map((e) => {
+    const apply = (e) => {
       if (e.id !== echoId) return e
       const comments = (e.comments ?? []).map((c) => (
         c.id === commentId
@@ -1384,9 +1448,15 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           : c
       ))
       const updated = { ...e, comments }
-      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) publishToWorldPool(updated)
+      if (!backendReady && e.visibility && ECHO_PUBLIC_VISIBILITIES.has(e.visibility)) {
+        publishToWorldPool(updated)
+      }
       return updated
-    }))
+    }
+    setEchoes((prev) => prev.map(apply))
+    setBrowseEchoes((prev) => prev.map(apply))
+    setExploreCityEchoes((prev) => prev.map(apply))
+    setSavedCollection((prev) => (prev.some((e) => e.id === echoId) ? prev.map(apply) : prev))
   }
 
   function handleReviewed(echo) {

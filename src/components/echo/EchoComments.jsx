@@ -51,22 +51,16 @@ export default function EchoComments({
     )
   }
 
-  if (requireReviewed && !reviewed) {
-    return (
-      <p className="text-xs frens-muted text-center py-2">
-        Listen or watch the aftersound first, then you can comment.
-      </p>
-    )
-  }
+  const showComposer = canCompose && (!requireReviewed || reviewed)
 
   async function submit(e) {
     e.preventDefault()
     const text = draft.trim()
-    if (!text || busy || !canCompose) return
+    if (!text || busy || !showComposer) return
     setBusy(true)
     try {
       const prepared = await prepareCommentText(text)
-      onAddComment?.(echo.id, {
+      await onAddComment?.(echo.id, {
         id: `ec-${Date.now()}`,
         authorId: user?.id ?? profile?.userId,
         authorName: profile?.frenName || 'you',
@@ -85,7 +79,7 @@ export default function EchoComments({
 
   return (
     <div className="space-y-3">
-      {comments.length === 0 && !canCompose ? (
+      {comments.length === 0 && !showComposer ? (
         <p className="text-xs frens-muted">No comments yet.</p>
       ) : comments.length > 0 ? (
         <ul className="space-y-3 max-h-48 overflow-y-auto">
@@ -137,16 +131,22 @@ export default function EchoComments({
         </ul>
       ) : null}
 
-      {canCompose && (
+      {canCompose && requireReviewed && !reviewed ? (
+        <p className="text-xs frens-muted text-center py-1">
+          Listen or watch first to leave a comment.
+        </p>
+      ) : null}
+
+      {showComposer && (
         <PillComposer
           value={draft}
           onChange={setDraft}
           onSubmit={submit}
           placeholder="say something"
           busy={busy}
-          disabled={!canCompose}
+          disabled={!showComposer}
           inputRef={inputRef}
-          submitDisabled={!draft.trim() || busy || !canCompose}
+          submitDisabled={!draft.trim() || busy || !showComposer}
           onMediaPick={(url) => setDraft((prev) => appendGifUrlToText(prev, url))}
           onEmoji={(emoji) => setDraft((prev) => insertAtCaret(inputRef.current, prev, emoji))}
           onGif={(url) => setDraft((prev) => appendGifUrlToText(prev, url))}
