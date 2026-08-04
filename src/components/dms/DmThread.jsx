@@ -16,65 +16,50 @@ import { SharedImage, SharedVideo, textBubbleClass } from '../SharedMedia'
 
 const MAX_VIDEO_MB = 25
 
-function DmMessageMenu({ onDelete }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
+function dayKey(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
 
-  useEffect(() => {
-    if (!open) return undefined
-    function onDoc(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [open])
+/** Exact calendar date for day separators, e.g. "Jun 17, 2025". */
+function formatDayLabel(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
-  if (!onDelete) return null
-
+function DmDaySep({ label }) {
+  if (!label) return null
   return (
-    <div ref={ref} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="frens-action w-5 h-5 rounded-full flex items-center justify-center text-[10px] leading-none frens-muted hover:bg-black/5 dark:hover:bg-white/10"
-        aria-label="Message options"
-        aria-expanded={open}
-      >
-        ···
-      </button>
-      {open ? (
-        <div className="absolute bottom-full right-0 mb-1 frens-surface border frens-border rounded-lg shadow-lg py-1 min-w-[8rem] z-20">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false)
-              if (window.confirm('Delete this message?')) onDelete()
-            }}
-            className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10 text-red-600 dark:text-red-400"
-          >
-            Delete
-          </button>
-        </div>
-      ) : null}
+    <div className="flex justify-center py-2" role="separator" aria-label={label}>
+      <span className="text-[11px] frens-muted tracking-wide">{label}</span>
     </div>
   )
 }
 
-function DmBubble({ message, avatarProfile, mine, canReact, onReact, onDelete }) {
+function DmBubble({ message, avatarProfile, mine, canReact, onReact }) {
   const hasText = Boolean(message.text?.trim())
   const hasMedia = Boolean(message.image || message.video)
 
   return (
-    <div className={`flex gap-2 min-w-0 ${mine ? 'flex-row-reverse' : ''}`}>
-      <ProfileAvatar profile={avatarProfile || message} className="w-8 h-8 shrink-0" logoClassName="w-5 h-auto" />
-      <div className={`min-w-0 max-w-[78%] flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-        <span className="text-[10px] frens-muted mb-1 tracking-wide">
-          {message.authorName} · {message.ts}
-        </span>
-        <div className={`flex items-end gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
+    <div className={`flex gap-2.5 min-w-0 items-start ${mine ? 'flex-row-reverse' : ''}`}>
+      <ProfileAvatar
+        profile={avatarProfile || message}
+        className="w-8 h-8 shrink-0 mt-0.5"
+        logoClassName="w-5 h-auto"
+      />
+      <div className={`min-w-0 max-w-[78%] flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
+        <div className={`flex items-center gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
           <div className="min-w-0">
             {message.sticker ? (
-              <span className="text-4xl leading-none">{message.sticker}</span>
+              <span className="text-4xl leading-none block">{message.sticker}</span>
             ) : (
               <>
                 {hasMedia && (
@@ -97,7 +82,6 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact, onDelete })
             canReact={canReact}
             onReact={onReact}
             controlsOnly
-            extra={mine ? <DmMessageMenu onDelete={onDelete} /> : null}
           />
         </div>
         <EmojiReactions
@@ -114,7 +98,7 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact, onDelete })
 
 export default function DmThread({ thread, messages, currentUserId, onSend, onBack }) {
   const { startCall, inCall } = useDmCalls()
-  const { reactToDmMessage, deleteDmMessage } = useDms()
+  const { reactToDmMessage } = useDms()
   const { profile } = useAuth()
   const [draft, setDraft] = useState('')
   const [mediaBusy, setMediaBusy] = useState(false)
@@ -242,6 +226,8 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
     if (!result?.ok) setCallError(result?.message || 'Could not start call.')
   }
 
+  let lastDay = null
+
   return (
     // Fill shell between app header and bottom nav; composer docks above icon bar.
     <div className="flex flex-col h-full min-h-0 w-full overflow-hidden">
@@ -286,28 +272,30 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
         data-frens-panel-scroll
         className="flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll frens-panel-scroll-bleed"
       >
-        <div className="px-3 py-3 space-y-3.5 frens-content-max">
+        <div className="px-3 py-3 space-y-2.5 frens-content-max">
           {messages.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center text-center">
               <p className="text-sm frens-body-text mb-1 font-light">Say hi to {thread.otherName}</p>
               <p className="text-xs frens-muted">Just between you two. No third hand.</p>
             </div>
           ) : (
-            messages.map((m) => (
-              <DmBubble
-                key={m.id}
-                message={m}
-                avatarProfile={avatarForMessage(m)}
-                mine={m.senderId === currentUserId}
-                canReact={m.id != null && !String(m.id).startsWith('tmp-')}
-                onReact={(emoji) => reactToDmMessage(thread.id, m.id, emoji)}
-                onDelete={
-                  m.senderId === currentUserId
-                    ? () => deleteDmMessage(thread.id, m.id)
-                    : null
-                }
-              />
-            ))
+            messages.map((m) => {
+              const key = dayKey(m.createdAt)
+              const showDay = key && key !== lastDay
+              if (showDay) lastDay = key
+              return (
+                <div key={m.id} className="space-y-2.5">
+                  {showDay ? <DmDaySep label={formatDayLabel(m.createdAt)} /> : null}
+                  <DmBubble
+                    message={m}
+                    avatarProfile={avatarForMessage(m)}
+                    mine={m.senderId === currentUserId}
+                    canReact={m.id != null && !String(m.id).startsWith('tmp-')}
+                    onReact={(emoji) => reactToDmMessage(thread.id, m.id, emoji)}
+                  />
+                </div>
+              )
+            })
           )}
           <div ref={bottomRef} aria-hidden className="h-px shrink-0" />
         </div>
