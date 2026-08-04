@@ -7,6 +7,7 @@ import { requestEchoFocus } from '../../lib/notificationNav'
 
 import { AuraCount } from '../AuraButton'
 import { EchoKindLabel } from './EchoMeta'
+import EchoPreviewMedia from './EchoPreviewMedia'
 
 function EchoesListModal({ echoes, frenName, onClose, onFindOnMap }) {
   return (
@@ -26,21 +27,26 @@ function EchoesListModal({ echoes, frenName, onClose, onFindOnMap }) {
               <button
                 type="button"
                 onClick={() => onFindOnMap(e.id)}
-                className="w-full text-left border frens-border rounded-xl p-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
+                className="w-full text-left border frens-border rounded-xl overflow-hidden flex gap-0 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <EchoKindLabel kind={e.kind} short className="frens-title-sm" />
-                  {(e.auraCount ?? 0) > 0 && (
-                    <AuraCount count={e.auraCount ?? 0} />
-                  )}
+                <div className="relative shrink-0 w-[4.25rem] aspect-square bg-black/5 dark:bg-white/5 overflow-hidden border-r frens-border">
+                  <EchoPreviewMedia echo={e} watchedPreview />
                 </div>
-                {e.label ? (
-                  <p className="text-xs frens-body-text mt-1 truncate">{e.label}</p>
-                ) : null}
-                <p className="text-xs frens-muted mt-1">
-                  {e.createdAt ? new Date(e.createdAt).toLocaleDateString() : 'recent'}
-                  {' '}· find on map when you&apos;re close
-                </p>
+                <div className="min-w-0 flex-1 p-2.5 flex flex-col justify-center gap-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <EchoKindLabel kind={e.kind} short className="frens-title-sm" />
+                    {(e.auraCount ?? 0) > 0 && (
+                      <AuraCount count={e.auraCount ?? 0} />
+                    )}
+                  </div>
+                  {e.label ? (
+                    <p className="text-xs frens-body-text truncate">{e.label}</p>
+                  ) : null}
+                  <p className="text-xs frens-muted">
+                    {e.createdAt ? new Date(e.createdAt).toLocaleDateString() : 'recent'}
+                    {' '}· find on map when you&apos;re close
+                  </p>
+                </div>
               </button>
             </li>
           ))}
