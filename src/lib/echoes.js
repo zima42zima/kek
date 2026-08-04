@@ -325,7 +325,7 @@ export async function listEchoComments(echoId) {
   return (data ?? []).map(mapEchoComment)
 }
 
-export async function addEchoComment(echoId, body, profile = {}) {
+export async function addEchoComment(echoId, body, profile = {}, userId = null) {
   const { data, error } = await supabase.rpc('add_echo_comment', {
     p_echo: echoId,
     p_body: body,
@@ -338,11 +338,12 @@ export async function addEchoComment(echoId, body, profile = {}) {
     throw error
   }
   const id = Array.isArray(data) ? data[0] : data
+  const authorId = userId || profile.userId || profile.id || null
   return {
     id,
     echoId,
-    authorId: null,
-    userId: null,
+    authorId,
+    userId: authorId,
     authorName: profile.frenName || 'you',
     frenName: profile.frenName || 'you',
     avatarType: profile.avatarType || 'frog',

@@ -1400,12 +1400,12 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     let nextComment = comment
     if (backendReady) {
       try {
-        const saved = await addEchoComment(echoId, comment.text, profile)
+        const saved = await addEchoComment(echoId, comment.text, profile, user?.id)
         nextComment = {
           ...comment,
           ...saved,
-          authorId: comment.authorId ?? user?.id,
-          userId: comment.userId ?? user?.id,
+          authorId: saved.authorId || comment.authorId || user?.id,
+          userId: saved.userId || comment.userId || user?.id,
         }
         setCommentsByEchoId((prev) => ({
           ...prev,

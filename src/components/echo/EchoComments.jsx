@@ -96,23 +96,26 @@ export default function EchoComments({
                 : null,
             )
             const canReact = Boolean(user?.id && uid && String(user.id) !== String(uid))
+            const isOwn = Boolean(user?.id && uid && String(user.id) === String(uid))
 
             return (
-              <li key={c.id} className="flex gap-2">
+              <li key={c.id} className="flex gap-2 group/comment">
                 <ProfileAvatar profile={commentAuthor} className="w-7 h-7 shrink-0" logoClassName="w-4 h-auto" />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-center gap-2">
                     <FrenHandle className="text-xs">{commentName(c)}</FrenHandle>
                     <span className="text-[10px] frens-muted shrink-0">{commentTimestamp(c)}</span>
-                    {user?.id && uid && String(user.id) === String(uid) && onRemoveComment && (
+                    {isOwn && onRemoveComment ? (
                       <button
                         type="button"
                         onClick={() => onRemoveComment(echo.id, c.id)}
-                        className="text-[10px] frens-action ml-auto shrink-0"
+                        className="ml-auto shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-[11px] leading-none frens-muted opacity-70 hover:opacity-100 hover:bg-black/[0.06] dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white transition"
+                        aria-label="Delete comment"
+                        title="Delete"
                       >
-                        Delete
+                        ×
                       </button>
-                    )}
+                    ) : null}
                   </div>
                   <CommentBody text={commentText(c)} />
                   <EmojiReactions
