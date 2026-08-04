@@ -57,7 +57,8 @@ function mapMessage(row) {
           text: replyPreview.text ?? replyPreview.body ?? '',
         }
       : null,
-    ts: row.ts ?? formatTs(row.created_at),
+    ts: row.ts ?? formatTs(row.created_at ?? row.createdAt),
+    createdAt: row.createdAt ?? row.created_at ?? null,
     reactions: mapReactions(row.reactions),
   }
 }
