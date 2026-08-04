@@ -45,25 +45,25 @@ import { maskImageStyle } from '../lib/maskIcon'
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: homeIcon },
   { id: 'echoes', label: 'Aftersound', icon: echoesIcon },
-  { id: 'rabbit', label: 'Rabbit Hole', icon: rabbitholeIcon },
+  { id: 'rabbit', label: 'Rabbit Hole', icon: rabbitholeIcon, iconScale: 0.9 },
   { id: 'messages', label: 'Messages', icon: messagesIcon },
   { id: 'caves', label: 'Caves', icon: cavesIcon },
   { id: 'profile', label: 'Profile', icon: profileIcon },
 ]
 
 /**
- * Bottom-nav glyph — full 24×24 size, pure black/white.
- * SVGs are centered in a shared box so icons stay aligned and proportional.
+ * Bottom-nav glyph — shared 24×24 box; optional scale shrinks the mask only (stays centered).
  */
-function NavIcon({ src }) {
+function NavIcon({ src, scale = 1 }) {
+  const maskSize = scale === 1 ? 'contain' : `${Math.round(scale * 100)}%`
   return (
     <span
       aria-hidden
       className="block w-6 h-6 shrink-0 bg-black dark:bg-white"
       style={{
         ...maskImageStyle(src),
-        maskSize: 'contain',
-        WebkitMaskSize: 'contain',
+        maskSize,
+        WebkitMaskSize: maskSize,
         maskRepeat: 'no-repeat',
         WebkitMaskRepeat: 'no-repeat',
         maskPosition: 'center',
@@ -88,7 +88,7 @@ function BottomNav({ active = 'home', onNavigate, dmUnread = 0 }) {
               aria-current={isActive ? 'page' : undefined}
               className="relative flex flex-col items-center justify-center gap-1 px-0.5 py-1 rounded-lg transition min-w-0 flex-1 max-w-[4.75rem]"
             >
-              <NavIcon src={item.icon} />
+              <NavIcon src={item.icon} scale={item.iconScale ?? 1} />
               {showBadge && (
                 <span className="absolute top-0.5 right-[16%] min-w-[14px] h-3.5 px-0.5 rounded-full bg-black text-white dark:bg-white dark:text-black text-[9px] frens-badge-count flex items-center justify-center">
                   {dmUnread > 9 ? '9+' : dmUnread}

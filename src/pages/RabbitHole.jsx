@@ -495,7 +495,7 @@ export default function RabbitHole({ topicId: urlTopicId = null, onTopicChange }
           <div className="flex items-center gap-3 min-w-0">
             <span
               aria-hidden
-              className="frens-mask-icon w-10 h-10 shrink-0"
+              className="frens-mask-icon w-9 h-9 shrink-0"
               style={maskImageStyle(rabbitholeIcon)}
             />
             <div className="min-w-0">
