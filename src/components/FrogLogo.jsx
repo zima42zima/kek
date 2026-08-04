@@ -55,22 +55,17 @@ export function ProfileAvatar({
   className = 'w-10 h-10',
   logoClassName = 'w-7 h-auto',
 }) {
-  if (profile?.avatarType === 'photo' && profile?.avatarUrl) {
-    return (
-      <div
-        className={`shrink-0 rounded-full frens-avatar-ring overflow-hidden ${className}`}
-      >
-        <img src={profile.avatarUrl} alt="" key={profile.avatarUrl} className="w-full h-full object-cover" />
-      </div>
-    )
-  }
+  const photoUrl =
+    profile?.avatarUrl ||
+    (profile?.avatarType === 'photo' ? profile?.avatarPreview : null) ||
+    null
 
-  if (profile?.avatarType === 'photo' && profile?.avatarPreview) {
+  if (photoUrl) {
     return (
       <div
         className={`shrink-0 rounded-full frens-avatar-ring overflow-hidden ${className}`}
       >
-        <img src={profile.avatarPreview} alt="" className="w-full h-full object-cover" />
+        <img src={photoUrl} alt="" key={photoUrl} className="w-full h-full object-cover" />
       </div>
     )
   }

@@ -73,6 +73,26 @@ export function DmsProvider({ children }) {
     }
   }, [meId, refreshThreads])
 
+  // Keep own message avatars in sync when profile photo changes.
+  useEffect(() => {
+    if (!meId || !profile) return
+    const avatarType = profile.avatarType || 'frog'
+    const avatarUrl = profile.avatarUrl || null
+    setMessagesByConvo((prev) => {
+      let changed = false
+      const next = {}
+      for (const [convoId, rows] of Object.entries(prev)) {
+        next[convoId] = rows.map((m) => {
+          if (String(m.senderId) !== String(meId)) return m
+          if (m.avatarType === avatarType && m.avatarUrl === avatarUrl) return m
+          changed = true
+          return { ...m, avatarType, avatarUrl }
+        })
+      }
+      return changed ? next : prev
+    })
+  }, [meId, profile?.avatarType, profile?.avatarUrl])
+
   async function openConversation(conversationId) {
     setPendingOpenId(conversationId)
     await loadMessages(conversationId)
