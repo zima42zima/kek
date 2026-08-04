@@ -1050,7 +1050,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   async function publishEcho({
     kind, mediaUrl, mediaBlob, coverUrl, coverBlob,
     visibility, allowComments, voiceFilter, senseFilter, spatial, pinPosition,
-    discoverRadiusM, placeLabel, browseGlobally, expiresAt,
+    discoverRadiusM, placeLabel, browseGlobally, expiresAt, title,
   }) {
     const handle = profile?.frenName?.trim() || 'you'
     const spot = pinPosition
@@ -1080,6 +1080,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           allowComments,
           shareOnProfile: ECHO_PUBLIC_VISIBILITIES.has(vis),
           label: '',
+          title: title || '',
           cityLabel,
           placeLabel: placeLabel || null,
           browseGlobally: Boolean(browseGlobally),
@@ -1117,6 +1118,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           mine: true,
           saved: false,
           label: '',
+          title: (title || '').trim().slice(0, 222),
         }
         setEchoes((prev) => [echo, ...prev])
         setShowCreate(false)
@@ -1161,6 +1163,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       mine: true,
       saved: false,
       label: '',
+      title: (title || '').trim().slice(0, 222),
     }
     setEchoes((prev) => [echo, ...prev])
     if (!backendReady && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)) publishToWorldPool(echo)

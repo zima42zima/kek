@@ -262,6 +262,18 @@ export function ImageIcon({ className = 'w-4 h-4' }) {
   )
 }
 
+/** Aa — meme / caption text toggle */
+export function TextIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={`inline-block align-middle ${className}`}>
+      <path d="M4 18 10 6h1l6 12" />
+      <path d="M6.5 14h6" />
+      <path d="M16 18v-5.5a2.5 2.5 0 0 1 5 0V18" />
+      <path d="M16 15h5" />
+    </svg>
+  )
+}
+
 export function MicIcon({ className = 'w-4 h-4' }) {
   return (
     <svg {...base} className={`inline-block align-middle ${className}`}>

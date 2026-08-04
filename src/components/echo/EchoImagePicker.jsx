@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { prepareImageAttachment } from '../../lib/imageAttach'
-import { CameraIcon, ImageIcon } from '../icons/UiIcons'
+import { CameraIcon, ImageIcon, TextIcon, OPTION_ACTIVE, OPTION_IDLE } from '../icons/UiIcons'
+import EchoMemeCaptionPanel, { MemeCaptionPreview } from './EchoMemeCaptionPanel'
 
 const ACCEPT = 'image/*,image/gif,.gif,.heic,.heif,.webp,.png,.jpg,.jpeg'
 
@@ -29,6 +30,11 @@ export default function EchoImagePicker({
   compact = false,
   title = 'Drop a meme',
   hint = 'Pick a meme, GIF, or photo — EXIF stripped for privacy',
+  captionEnabled = false,
+  captionOpen = false,
+  onCaptionOpenChange,
+  caption = { text: '', style: 'outline' },
+  onCaptionChange,
 }) {
   const fileRef = useRef(null)
   const cameraRef = useRef(null)
@@ -46,7 +52,6 @@ export default function EchoImagePicker({
       if (!looksLikeImage(file)) {
         throw new Error('Please choose an image file (JPEG, PNG, GIF, or WebP).')
       }
-      // iOS sometimes omits MIME type — give prepareImageAttachment a typed File.
       let input = file
       if (!file.type?.startsWith('image/')) {
         const ext = (file.name.match(/\.([a-z0-9]+)$/i) || [])[1]?.toLowerCase()
@@ -70,14 +75,50 @@ export default function EchoImagePicker({
   function clear() {
     setError('')
     onChange?.(null)
+    onCaptionChange?.({ text: '', style: caption?.style || 'outline' })
+    onCaptionOpenChange?.(false)
   }
 
   if (value?.url) {
+    const showCaption = Boolean(captionEnabled)
+    const capText = caption?.text || ''
+    const capStyle = caption?.style || 'outline'
     return (
       <div className={compact ? 'space-y-2' : 'space-y-3'}>
-        <div className={`relative rounded-xl overflow-hidden border frens-border bg-black/5 ${compact ? 'aspect-[4/3]' : 'aspect-[4/5] max-h-[48vh]'}`}>
-          <img src={value.url} alt="" className="w-full h-full object-cover" />
+        <div className="relative">
+          <MemeCaptionPreview
+            src={value.url}
+            text={showCaption ? capText : ''}
+            style={capStyle}
+            className={`rounded-xl border frens-border bg-black/5 ${compact ? 'aspect-[4/3]' : 'aspect-[4/5] max-h-[48vh]'}`}
+          />
+          {showCaption ? (
+            <button
+              type="button"
+              onClick={() => onCaptionOpenChange?.(!captionOpen)}
+              aria-pressed={captionOpen}
+              aria-label={captionOpen ? 'Hide meme text' : 'Add meme text'}
+              title="Add text"
+              className={`absolute top-2 right-2 z-10 w-9 h-9 rounded-full border frens-surface shadow-sm flex items-center justify-center transition touch-manipulation ${
+                captionOpen ? OPTION_ACTIVE : 'border-white/40 bg-black/55 text-white'
+              }`}
+            >
+              <TextIcon className="w-4 h-4" />
+            </button>
+          ) : null}
         </div>
+
+        {showCaption && captionOpen ? (
+          <EchoMemeCaptionPanel
+            open
+            hideToggle
+            onToggle={() => onCaptionOpenChange?.(false)}
+            text={capText}
+            style={capStyle}
+            onChange={onCaptionChange}
+          />
+        ) : null}
+
         <div className="flex gap-2">
           <button type="button" onClick={clear} className="frens-btn-outline flex-1 py-2 text-sm">
             Remove
