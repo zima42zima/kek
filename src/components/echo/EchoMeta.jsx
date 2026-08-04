@@ -19,14 +19,14 @@ export function echoKindText(kind, { short = false } = {}) {
 
 export function echoVisibilityText(visibility) {
   if (visibility === 'private') return 'memory'
-  if (visibility === 'friends') return 'friends'
+  if (visibility === 'friends') return 'frens'
   return 'world'
 }
 
 export function echoVisibilitySummary(visibility) {
-  if (visibility === 'private') return 'private archive'
-  if (visibility === 'friends') return 'friends only'
-  return 'public map + your archive'
+  if (visibility === 'private') return 'memory'
+  if (visibility === 'friends') return 'frens only'
+  return 'world'
 }
 
 export function EchoTypeIcon({ kind, className = 'w-4 h-4' }) {
