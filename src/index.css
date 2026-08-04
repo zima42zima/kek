@@ -12,6 +12,9 @@
     --frens-outline: #e4e4e4;
     /* Explicit (not only @apply font-sans) so Vite/Tailwind cache cannot leave Open Sans */
     font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   html.dark {
@@ -22,10 +25,19 @@
     @apply text-black dark:text-white font-normal;
     font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     background-color: var(--frens-canvas-bg-light);
-    min-height: 100vh;
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
     letter-spacing: 0.01em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   html.dark body {
@@ -139,6 +151,8 @@
 
   .frens-feed {
     @apply frens-page h-screen flex flex-col;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   /* Main feed column — ~10% wider than max-w-lg (32rem → 35.2rem) */
@@ -259,9 +273,17 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    overscroll-behavior-y: contain;
+    overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
+  }
+
+  /* App scroll surfaces — continuous scroll, no rubber-band / snap slide */
+  .frens-scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Scroll hit area spans full viewport; content stays in frens-content-max */
@@ -471,10 +493,10 @@
   gap: 0.625rem;
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-snap-type: x mandatory;
+  scroll-snap-type: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
-  overscroll-behavior-x: contain;
+  overscroll-behavior: none;
   width: 100%;
   max-width: 100%;
   padding-bottom: 0.25rem;
@@ -482,7 +504,6 @@
 }
 
 .frens-echo-range-card {
-  scroll-snap-align: start;
   flex-shrink: 0;
 }
 .frens-echo-pin-placer {
@@ -1632,4 +1653,15 @@ html.dark .ps-field:focus {
 /* Force MISAO typeface — wins over any stale Tailwind font-sans */
 html, body, #root, .frens-page, .frens-feed, .frens-screen {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+}
+
+/* Kill rubber-band / scroll-chaining “slide” everywhere scroll happens */
+.frens-page,
+.frens-feed,
+.frens-screen,
+.frens-scroll,
+.frens-cave-scroll,
+[class*="overflow-y-auto"],
+[class*="overflow-auto"] {
+  overscroll-behavior: none;
 }

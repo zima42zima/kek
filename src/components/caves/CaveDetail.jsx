@@ -952,7 +952,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
         aria-hidden={caveView !== 'chat'}
       >
         {/* Messages — only scroll region */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 pt-3 pb-3 space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-none px-3 pt-3 pb-3 space-y-3">
           {pinned.length > 0 && !q ? (
             <div className="rounded-xl p-2 space-y-2 bg-black/[0.02] dark:bg-white/[0.02]">
               <p className="text-[10px] frens-muted uppercase tracking-wide px-1 inline-flex items-center gap-1">

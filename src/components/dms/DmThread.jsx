@@ -263,7 +263,7 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
         <p className="shrink-0 text-xs text-red-500 dark:text-red-400 px-3 py-1">{callError}</p>
       ) : null}
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 space-y-3.5">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-none px-3 py-3 space-y-3.5">
         {messages.length === 0 ? (
           <div className="py-16 flex flex-col items-center justify-center text-center">
             <p className="text-sm frens-body-text mb-1 font-light">Say hi to {thread.otherName}</p>
