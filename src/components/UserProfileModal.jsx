@@ -245,6 +245,7 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
                   userId={userId}
                   frenName={card.frenName}
                   onNavigate={onNavigate}
+                  onCloseProfile={onClose}
                 />
                 {showcase && isShowcaseOn(showcase, 'echoes') ? (
                   <ProfileEchoesPublic
