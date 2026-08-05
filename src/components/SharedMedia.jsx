@@ -1,5 +1,7 @@
 /** Clean, borderless rendering for photos, GIFs, and videos shared in the app. */
 const MEDIA_BASE = 'block max-w-full w-full rounded-xl border-0 outline-none'
+/** Chat bubbles — intrinsic width, never stretch/squeeze in flex rows. */
+const CHAT_MEDIA_BASE = 'block max-w-full w-auto h-auto rounded-xl border-0 outline-none object-contain'
 
 function imageObjectFit(src) {
   const lower = String(src || '').toLowerCase()
@@ -9,21 +11,27 @@ function imageObjectFit(src) {
   return 'object-cover'
 }
 
-export function SharedImage({ src, alt = '', className = '' }) {
+export function SharedImage({ src, alt = '', className = '', variant = 'default' }) {
   if (!src) return null
+  const isChat = variant === 'chat'
   return (
     <img
       src={src}
       alt={alt}
       loading="lazy"
       referrerPolicy="no-referrer"
-      className={`${MEDIA_BASE} max-h-80 ${imageObjectFit(src)} ${className}`}
+      className={
+        isChat
+          ? `${CHAT_MEDIA_BASE} max-h-80 ${className}`
+          : `${MEDIA_BASE} max-h-80 ${imageObjectFit(src)} ${className}`
+      }
     />
   )
 }
 
-export function SharedVideo({ src, className = '', autoPlay = false, loop = false, muted = false }) {
+export function SharedVideo({ src, className = '', autoPlay = false, loop = false, muted = false, variant = 'default' }) {
   if (!src) return null
+  const isChat = variant === 'chat'
   return (
     <video
       src={src}
@@ -33,7 +41,11 @@ export function SharedVideo({ src, className = '', autoPlay = false, loop = fals
       loop={loop}
       muted={muted}
       referrerPolicy="no-referrer"
-      className={`${MEDIA_BASE} max-h-80 ${className}`}
+      className={
+        isChat
+          ? `${CHAT_MEDIA_BASE} max-h-80 ${className}`
+          : `${MEDIA_BASE} max-h-80 ${className}`
+      }
     />
   )
 }

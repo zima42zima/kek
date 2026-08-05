@@ -488,6 +488,28 @@ function ChatMessage({
   const replyCount = replies.length
   const avatarProfile =
     mine && currentUserProfile ? currentUserProfile : member || message
+  const hasText = Boolean(message.text?.trim())
+  const hasImage = Boolean(message.image)
+
+  const reactionControls = (canReact || canMod) ? (
+    <EmojiReactions
+      reactions={message.reactions || []}
+      mine={mine}
+      canReact={canReact}
+      onReact={onReact}
+      onReply={canReact && onReply ? () => onReply(message) : null}
+      controlsOnly
+      extra={
+        canMod ? (
+          <MessageOptionsMenu
+            message={message}
+            canModerate={canMod}
+            onHide={onHide}
+          />
+        ) : null
+      }
+    />
+  ) : null
 
   return (
     <div
@@ -504,7 +526,7 @@ function ChatMessage({
           className={`${nested ? 'w-7 h-7' : 'w-8 h-8'} shrink-0 mt-0.5`}
           logoClassName={nested ? 'w-4 h-auto' : 'w-5 h-auto'}
         />
-        <div className={`min-w-0 max-w-[78%] flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
+        <div className={`flex-1 min-w-0 max-w-[85%] flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
           {(message.pinned || message.hidden || (member && !nested)) ? (
             <div className={`flex items-center gap-1.5 ${mine ? 'flex-row-reverse' : ''}`}>
               {member && !nested ? <CaveRoleBadge member={member} cave={cave} compact /> : null}
@@ -524,19 +546,24 @@ function ChatMessage({
               ) : null}
             </div>
           ) : null}
-          <div className={`flex items-center gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
-            <div className="min-w-0 max-w-full">
-              {message.sticker ? (
-                <span className="text-4xl leading-none block">{message.sticker}</span>
-              ) : (
-                <>
-                  {message.image ? (
-                    <div className={`max-w-full min-w-0 ${message.text ? 'mb-1' : ''}`}>
-                      <SharedImage src={message.image} />
+          {message.sticker ? (
+            <span className="text-4xl leading-none block">{message.sticker}</span>
+          ) : (
+            <>
+              {hasImage ? (
+                <div className={`max-w-full ${hasText ? 'mb-1' : ''}`}>
+                  <SharedImage src={message.image} variant="chat" />
+                  {!hasText && reactionControls ? (
+                    <div className={`flex mt-0.5 ${mine ? 'justify-end' : 'justify-start'}`}>
+                      {reactionControls}
                     </div>
                   ) : null}
-                  {message.text ? (
-                    hasRichEmbeds(message.text) ? (
+                </div>
+              ) : null}
+              {hasText ? (
+                <div className={`flex items-start gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
+                  <div className="min-w-0 max-w-full">
+                    {hasRichEmbeds(message.text) ? (
                       <RichText text={message.text} className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words" />
                     ) : (
                       <div className={textBubbleClass(mine)}>
@@ -545,29 +572,17 @@ function ChatMessage({
                           className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words"
                         />
                       </div>
-                    )
-                  ) : null}
-                </>
-              )}
-            </div>
-            <EmojiReactions
-              reactions={message.reactions || []}
-              mine={mine}
-              canReact={canReact}
-              onReact={onReact}
-              onReply={canReact && onReply ? () => onReply(message) : null}
-              controlsOnly
-              extra={
-                canMod ? (
-                  <MessageOptionsMenu
-                    message={message}
-                    canModerate={canMod}
-                    onHide={onHide}
-                  />
-                ) : null
-              }
-            />
-          </div>
+                    )}
+                  </div>
+                  {reactionControls}
+                </div>
+              ) : !hasImage && reactionControls ? (
+                <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                  {reactionControls}
+                </div>
+              ) : null}
+            </>
+          )}
           <EmojiReactions
             reactions={message.reactions || []}
             mine={mine}
@@ -950,11 +965,12 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
         }
         aria-hidden={caveView !== 'chat'}
       >
-        {/* Messages — only scroll region (full-bleed hit area) */}
+        {/* Messages — full-bleed scroll hit area; content capped like DMs */}
         <div
           data-frens-panel-scroll
-          className="flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll frens-panel-scroll-bleed px-3 pt-3 pb-3 space-y-2.5"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll frens-panel-scroll-bleed"
         >
+          <div className="px-3 pt-3 pb-3 space-y-2.5 frens-content-max">
           {pinned.length > 0 && !q ? (
             <div className="rounded-xl p-2 space-y-2.5 bg-black/[0.02] dark:bg-white/[0.02]">
               <p className="text-[10px] frens-muted uppercase tracking-wide px-1 inline-flex items-center gap-1">
@@ -1018,6 +1034,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
             })()
           )}
           <div ref={scrollRef} aria-hidden className="h-px shrink-0" />
+          </div>
         </div>
 
         {/* Composer — post-style row, docked above bottom nav */}
