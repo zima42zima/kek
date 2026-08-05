@@ -80,7 +80,7 @@ export function CavesProvider({ children }) {
     setCaves((prev) => {
       const byId = new Map()
       prev
-        .filter((c) => !accessibleIds || c.ownerId === meId || accessibleIds.has(c.id))
+        .filter((c) => !accessibleIds || String(c.ownerId) === String(meId) || accessibleIds.has(c.id))
         .forEach((c) => byId.set(c.id, c))
       remoteCaves.forEach((r) => {
         if (!r?.id) return
@@ -101,6 +101,33 @@ export function CavesProvider({ children }) {
       .filter(Boolean)
   }, [user?.id])
 
+  const pushProfileCavesToServer = useCallback(async () => {
+    if (!user?.id) return
+    const ownerId = user.id
+    const visible = cavesRef.current.filter(
+      (c) =>
+        String(c.ownerId) === String(meId)
+        && c.access === 'public'
+        && !c.hiddenOnProfile,
+    )
+    if (!visible.length) return
+    for (const cave of visible) {
+      try {
+        await createCaveRemote(cave.id, cave.name, cave.emoji || '🕳️')
+        await syncCaveRemote(cave, { forceOwnerId: ownerId })
+        await setCaveProfileHidden(cave.id, false)
+        setRemote(true)
+      } catch (err) {
+        if (err instanceof CavesNotInstalledError) {
+          setRemote(false)
+          return
+        }
+        console.error('Could not push profile cave to server:', cave.id, err.message)
+      }
+    }
+    ensureShowcaseOn(ownerId, 'caves').catch(() => { /* best-effort */ })
+  }, [user?.id, meId])
+
   const syncRemoteCaves = useCallback(async () => {
     if (!user?.id || !remote) return
     try {
@@ -120,8 +147,10 @@ export function CavesProvider({ children }) {
       let rows = remoteRows
 
       if (rows.length === 0 && cavesRef.current.length > 0) {
-        const owned = cavesRef.current.filter((c) => c.ownerId === meId)
-        await Promise.all(owned.map((c) => syncCaveRemote(c).catch(() => {})))
+        const owned = cavesRef.current.filter((c) => String(c.ownerId) === String(meId))
+        await Promise.all(
+          owned.map((c) => syncCaveRemote(c, { forceOwnerId: user.id }).catch(() => {})),
+        )
         rows = await listMyCavesRemote()
       }
 
@@ -138,10 +167,12 @@ export function CavesProvider({ children }) {
       })
       merged.push(...byId.values())
 
+      await pushProfileCavesToServer()
+
       if (merged.length || accessibleIds.size) {
         mergeRemoteCaves(merged, accessibleIds)
       } else if (accessibleIds.size === 0 && memberships.length === 0 && rows.length === 0) {
-        setCaves((prev) => prev.filter((c) => c.ownerId === meId))
+        setCaves((prev) => prev.filter((c) => String(c.ownerId) === String(meId)))
       }
     } catch (err) {
       if (err instanceof CavesNotInstalledError) {
@@ -156,7 +187,7 @@ export function CavesProvider({ children }) {
         console.error('Could not sync caves:', err.message)
       }
     }
-  }, [user?.id, meId, remote, mergeRemoteCaves, applyMembershipRows])
+  }, [user?.id, meId, remote, mergeRemoteCaves, applyMembershipRows, pushProfileCavesToServer])
 
   // Load local cache first, then pull server caves + messages.
   useEffect(() => {
@@ -786,34 +817,6 @@ export function CavesProvider({ children }) {
     }
   }
 
-  async function pushProfileCavesToServer() {
-    if (!user?.id) return
-    const ownerId = user.id
-    const visible = cavesRef.current.filter(
-      (c) =>
-        String(c.ownerId) === String(meId)
-        && c.access === 'public'
-        && !c.hiddenOnProfile,
-    )
-    for (const cave of visible) {
-      try {
-        await createCaveRemote(cave.id, cave.name, cave.emoji || '🕳️')
-        await syncCaveRemote(cave, { forceOwnerId: ownerId })
-        await setCaveProfileHidden(cave.id, false)
-        setRemote(true)
-      } catch (err) {
-        if (err instanceof CavesNotInstalledError) {
-          setRemote(false)
-          return
-        }
-        console.error('Could not push profile cave to server:', cave.id, err.message)
-      }
-    }
-    if (visible.length) {
-      ensureShowcaseOn(ownerId, 'caves').catch(() => { /* best-effort */ })
-    }
-  }
-
   function requestOpenCave(caveId) {
     setPendingOpenId(caveId)
   }
@@ -840,8 +843,8 @@ export function CavesProvider({ children }) {
 
   const myCaves = caves.filter(
     (c) =>
-      c.ownerId === meId
-      || c.members?.some((m) => m.id === meId)
+      String(c.ownerId) === String(meId)
+      || c.members?.some((m) => String(m.id) === String(meId))
       || memberCaveIds.has(c.id),
   )
 

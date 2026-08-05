@@ -473,17 +473,29 @@ export function mergeCaveSnapshot(local, remote) {
     const bi = Number(b.id) || 0
     return ai - bi
   })
+  const ownerId = remote.ownerId ?? local?.ownerId
+  const sameOwner = ownerId != null
+    && local?.ownerId != null
+    && String(local.ownerId) === String(ownerId)
+  const access = sameOwner && local?.access === 'public' && (remote.access ?? 'invite') !== 'public'
+    ? 'public'
+    : (remote.access ?? local?.access ?? 'invite')
+  const hiddenOnProfile = sameOwner
+    && local?.hiddenOnProfile === false
+    && remote.hiddenOnProfile === true
+    ? false
+    : (remote.hiddenOnProfile ?? local?.hiddenOnProfile ?? false)
   return {
     ...remote,
     ...(local || {}),
     id: remote.id,
     name: remote.name ?? local?.name,
-    ownerId: remote.ownerId ?? local?.ownerId,
-    access: remote.access ?? local?.access ?? 'invite',
+    ownerId,
+    access,
     emoji: remote.emoji ?? local?.emoji,
     banned: remote.banned?.length ? remote.banned : (local?.banned ?? []),
     emojiPacks: local?.emojiPacks?.length ? local.emojiPacks : (remote.emojiPacks || []),
-    hiddenOnProfile: remote.hiddenOnProfile ?? local?.hiddenOnProfile ?? false,
+    hiddenOnProfile,
     coverUrl: remote.coverUrl || remote.cover_url || local?.coverUrl || null,
     roles: Array.isArray(remote.roles) && remote.roles.length
       ? remote.roles

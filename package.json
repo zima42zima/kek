@@ -12,7 +12,8 @@
     "dev:ngrok": "node scripts/dev-ngrok.mjs",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "db:check": "node scripts/check-supabase.mjs"
+    "db:check": "node scripts/check-supabase.mjs",
+    "db:check-caves": "node scripts/check-profile-caves.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

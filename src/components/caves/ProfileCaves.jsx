@@ -65,10 +65,6 @@ export default function ProfileCaves({ onNavigate }) {
   const visible = cavesVisibleOnProfile(myCaves, meId)
 
   useEffect(() => {
-    pushProfileCavesToServer()
-  }, [pushProfileCavesToServer])
-
-  useEffect(() => {
     if (!open) return
     pushProfileCavesToServer()
   }, [open, pushProfileCavesToServer])
