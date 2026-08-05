@@ -238,49 +238,34 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
               </div>
             )}
 
-            {!isMe && showcase && (
-              (() => {
-                const showCaves = isShowcaseOn(showcase, 'caves')
-                const showEchoes = isShowcaseOn(showcase, 'echoes')
-                const showPlaylists = isShowcaseOn(showcase, 'playlists')
-                const showMoodboards = isShowcaseOn(showcase, 'moodboards')
-                const any =
-                  showCaves || showEchoes || showPlaylists || showMoodboards
-                if (!any) return null
-                return (
-                  <div className="flex items-center gap-2 mt-3 flex-wrap">
-                    {showCaves ? (
-                      <ProfileCavesPublic userId={userId} frenName={card.frenName} onNavigate={onNavigate} />
-                    ) : null}
-                    {showEchoes ? (
-                      <ProfileEchoesPublic
-                        userId={userId}
-                        frenName={card.frenName}
-                        onNavigate={onNavigate}
-                        onOpenEcho={onOpenEcho}
-                        onCloseProfile={onClose}
-                      />
-                    ) : null}
-                    {showPlaylists ? (
-                      <ProfilePlaylistsPublic
-                        userId={userId}
-                        frenName={card.frenName}
-                        onOpenPlaylists={onOpenPlaylists}
-                        onCloseProfile={onClose}
-                      />
-                    ) : null}
-                    {showMoodboards ? (
-                      <ProfileGathererPublic
-                        userId={userId}
-                        frenName={card.frenName}
-                        onOpenGatherer={onOpenGatherer}
-                        onNavigate={onNavigate}
-                        onCloseProfile={onClose}
-                      />
-                    ) : null}
-                  </div>
-                )
-              })()
+            {!isMe && (
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                <ProfileCavesPublic userId={userId} frenName={card.frenName} onNavigate={onNavigate} />
+                {showcase && isShowcaseOn(showcase, 'echoes') ? (
+                  <ProfileEchoesPublic
+                    userId={userId}
+                    frenName={card.frenName}
+                    onNavigate={onNavigate}
+                    onOpenEcho={onOpenEcho}
+                    onCloseProfile={onClose}
+                  />
+                ) : null}
+                <ProfilePlaylistsPublic
+                  userId={userId}
+                  frenName={card.frenName}
+                  onOpenPlaylists={onOpenPlaylists}
+                  onCloseProfile={onClose}
+                />
+                {showcase && isShowcaseOn(showcase, 'moodboards') ? (
+                  <ProfileGathererPublic
+                    userId={userId}
+                    frenName={card.frenName}
+                    onOpenGatherer={onOpenGatherer}
+                    onNavigate={onNavigate}
+                    onCloseProfile={onClose}
+                  />
+                ) : null}
+              </div>
             )}
           </div>
 

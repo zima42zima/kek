@@ -21,7 +21,7 @@ function CavesProfileModal({ caves, onClose, onOpenCave, onManage }) {
         <ProfileShareToggle
           showcaseKey="caves"
           label="Show caves on my profile"
-          hint="You always open caves here. When on, other frens also see this icon on your profile."
+          hint="Per-cave: mark a public cave as Shown on profile below — other frens then see your cave icon."
         />
         {visible.length === 0 ? (
           <p className="text-sm frens-muted text-center py-4">

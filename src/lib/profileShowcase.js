@@ -96,3 +96,11 @@ export async function saveShowcasePrefs(userId, prefs) {
 export function isShowcaseOn(prefs, key) {
   return Boolean(normalizeShowcase(prefs)[key])
 }
+
+/** Turn on a showcase hub when the user shares content (e.g. public cave on profile). */
+export async function ensureShowcaseOn(userId, key) {
+  if (!userId || !key) return normalizeShowcase(null)
+  const prefs = await loadShowcasePrefs(userId)
+  if (isShowcaseOn(prefs, key)) return prefs
+  return saveShowcasePrefs(userId, { ...prefs, [key]: true })
+}

@@ -82,6 +82,8 @@ export default function ProfileCavesPublic({ userId, frenName = 'this fren', onN
     setOpen(false)
   }
 
+  if (!loading && caves.length === 0) return null
+
   return (
     <>
       <button

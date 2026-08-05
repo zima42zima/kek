@@ -22,6 +22,7 @@ import {
   applyReactionToggle,
   CavesNotInstalledError,
 } from '../lib/caves'
+import { ensureShowcaseOn } from '../lib/profileShowcase'
 import { DEFAULT_CAVE_ROLES, normalizeCaveRoles } from '../lib/caveRoles'
 
 const CavesContext = createContext(undefined)
@@ -373,6 +374,9 @@ export function CavesProvider({ children }) {
     if (remote) {
       setCaveProfileHidden(caveId, hiddenOnProfile).catch(() => { /* best-effort */ })
     }
+    if (!hiddenOnProfile && meId) {
+      ensureShowcaseOn(meId, 'caves').catch(() => { /* best-effort */ })
+    }
   }
 
   function setCaveAccess(caveId, access) {
@@ -383,6 +387,9 @@ export function CavesProvider({ children }) {
     })
     if (remote && access === 'invite') {
       setCaveProfileHidden(caveId, true).catch(() => { /* best-effort */ })
+    }
+    if (access === 'public' && meId) {
+      ensureShowcaseOn(meId, 'caves').catch(() => { /* best-effort */ })
     }
   }
 
