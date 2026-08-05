@@ -491,7 +491,9 @@ function ChatMessage({
   ) : null
 
   const sideControls = reactionControls || modHide ? (
-    <div className={`flex items-center gap-1 shrink-0 ${mine ? 'flex-row-reverse' : ''}`}>
+    <div
+      className={`chat-msg-hover-controls flex items-center gap-1 shrink-0 ${mine ? 'flex-row-reverse' : ''}`}
+    >
       {reactionControls}
       {modHide}
     </div>
@@ -503,7 +505,7 @@ function ChatMessage({
       className={`w-full ${highlight ? 'rounded-xl ring-1 ring-black/15 dark:ring-white/20 bg-black/[0.02] dark:bg-white/[0.03] p-1 -mx-1' : ''}`}
     >
       <div
-        className={`flex gap-2.5 min-w-0 items-start ${mine ? 'flex-row-reverse' : ''} ${
+        className={`chat-msg-row group flex gap-2.5 min-w-0 items-start ${mine ? 'flex-row-reverse' : ''} ${
           message.hidden ? 'opacity-50' : ''
         }`}
       >

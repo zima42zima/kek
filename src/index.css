@@ -1678,3 +1678,16 @@ html, body, #root, .frens-page, .frens-feed, .frens-screen {
   width: 0;
   height: 0;
 }
+
+/* Cave/DM message + and mod × — show on hover (desktop); always visible on touch. */
+@media (hover: hover) and (pointer: fine) {
+  .chat-msg-hover-controls {
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+  .chat-msg-row:hover .chat-msg-hover-controls,
+  .chat-msg-row:focus-within .chat-msg-hover-controls,
+  .chat-msg-hover-controls:has([aria-expanded='true']) {
+    opacity: 1;
+  }
+}
