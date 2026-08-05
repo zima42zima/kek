@@ -15,6 +15,7 @@ import { removeCaveMemberRemote, CavesNotInstalledError } from '../../lib/caves'
 import { useCaves } from '../../context/CavesContext'
 import CaveRoleBadge from './CaveRoleBadge'
 import RichText from '../RichText'
+import ConfirmDialog from '../ConfirmDialog'
 import { SharedImage, textBubbleClass } from '../SharedMedia'
 import {
   MOD_ROLES,
@@ -388,49 +389,32 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
   )
 }
 
-/** Moderator-only ··· : hide spam. */
-function MessageOptionsMenu({ message, canModerate, onHide }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-  const showHide = Boolean(canModerate && onHide && !message.hidden)
-
-  useEffect(() => {
-    if (!open) return undefined
-    function onDoc(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [open])
-
-  if (!showHide) return null
+/** Moderator-only × — confirm before hiding spam. */
+function ModHideButton({ onHide }) {
+  const [confirm, setConfirm] = useState(false)
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="frens-action w-5 h-5 rounded-full flex items-center justify-center text-[10px] leading-none frens-muted hover:bg-black/5 dark:hover:bg-white/10"
-        aria-label="Message options"
-        aria-expanded={open}
+        onClick={() => setConfirm(true)}
+        className="frens-muted w-4 h-4 rounded-full flex items-center justify-center text-[11px] leading-none opacity-45 hover:opacity-100 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition shrink-0"
+        aria-label="Hide spam"
       >
-        ···
+        ×
       </button>
-      {open ? (
-        <div className="absolute bottom-full left-0 mb-1 frens-surface border frens-border rounded-lg shadow-lg py-1 min-w-[8.5rem] z-20">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false)
-              onHide?.()
-            }}
-            className="block w-full text-left text-xs px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10"
-          >
-            Hide spam
-          </button>
-        </div>
-      ) : null}
-    </div>
+      <ConfirmDialog
+        open={confirm}
+        title="Hide spam?"
+        message="This message will be hidden for everyone except cave mods."
+        confirmLabel="Hide"
+        onConfirm={() => {
+          setConfirm(false)
+          onHide?.()
+        }}
+        onCancel={() => setConfirm(false)}
+      />
+    </>
   )
 }
 
@@ -491,24 +475,26 @@ function ChatMessage({
   const hasText = Boolean(message.text?.trim())
   const hasImage = Boolean(message.image)
 
-  const reactionControls = (canReact || canMod) ? (
+  const reactionControls = canReact ? (
     <EmojiReactions
       reactions={message.reactions || []}
       mine={mine}
       canReact={canReact}
       onReact={onReact}
-      onReply={canReact && onReply ? () => onReply(message) : null}
+      onReply={onReply ? () => onReply(message) : null}
       controlsOnly
-      extra={
-        canMod ? (
-          <MessageOptionsMenu
-            message={message}
-            canModerate={canMod}
-            onHide={onHide}
-          />
-        ) : null
-      }
     />
+  ) : null
+
+  const modHide = canMod && !message.hidden && onHide ? (
+    <ModHideButton onHide={onHide} />
+  ) : null
+
+  const sideControls = reactionControls || modHide ? (
+    <div className={`flex items-center gap-1 shrink-0 ${mine ? 'flex-row-reverse' : ''}`}>
+      {reactionControls}
+      {modHide}
+    </div>
   ) : null
 
   return (
@@ -553,9 +539,9 @@ function ChatMessage({
               {hasImage ? (
                 <div className={`max-w-full ${hasText ? 'mb-1' : ''}`}>
                   <SharedImage src={message.image} variant="chat" />
-                  {!hasText && reactionControls ? (
+                  {!hasText && sideControls ? (
                     <div className={`flex mt-0.5 ${mine ? 'justify-end' : 'justify-start'}`}>
-                      {reactionControls}
+                      {sideControls}
                     </div>
                   ) : null}
                 </div>
@@ -574,11 +560,11 @@ function ChatMessage({
                       </div>
                     )}
                   </div>
-                  {reactionControls}
+                  {sideControls}
                 </div>
-              ) : !hasImage && reactionControls ? (
+              ) : !hasImage && sideControls ? (
                 <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                  {reactionControls}
+                  {sideControls}
                 </div>
               ) : null}
             </>

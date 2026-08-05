@@ -50,7 +50,7 @@ export function SharedVideo({ src, className = '', autoPlay = false, loop = fals
   )
 }
 
-/** Chat/DM text bubbles — same transparent outline for both sides. */
+/** Chat/DM text bubbles — borderless, minimal padding. */
 export function textBubbleClass(_mine) {
-  return 'rounded-2xl px-3 py-2 text-sm font-light max-w-full min-w-0 break-words [overflow-wrap:anywhere] border frens-border bg-transparent'
+  return 'rounded-2xl px-3 py-1.5 text-sm font-light max-w-full min-w-0 break-words [overflow-wrap:anywhere]'
 }
