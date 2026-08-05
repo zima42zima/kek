@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { supabase, setPhotoAvatar } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import { usePosts } from '../context/PostsContext'
@@ -39,14 +39,14 @@ import ProfileTrail from '../components/ProfileTrail'
 import FounderConsole from '../components/FounderConsole'
 const SHOW_EMAIL_KEY = 'frens-show-email'
 
-export default function Profile({
+export default forwardRef(function Profile({
   onNavigate,
   onOpenEcho,
   onOpenPlaylists,
   onOpenGatherer,
   /** When false, profile stays mounted but hidden (keeps Posts|_log state stable). */
   active = true,
-}) {
+}, ref) {
   const { profile: contextProfile, user, refreshProfile, signOut, accountStatus, refreshAccountStatus } = useAuth()
   const { postsByUser, loadPostsForUser } = usePosts()
   const { openConversationWithUser } = useDms()
@@ -172,6 +172,41 @@ export default function Profile({
       .then(setCounts)
       .catch(() => { /* social SQL not installed yet — leave counts at 0 */ })
   }
+
+  const reloadProfileView = useCallback(async () => {
+    if (!userId) return
+    try {
+      await refreshProfile()
+      const row = await fetchProfileForUser(userId, userEmail)
+      if (row) {
+        setProfile(row)
+        setBio(row.bio || '')
+        setFrenName(row.frenName || '')
+        setCosmosUrl(row.cosmosUrl || '')
+        setShareLocation(row.shareLocation ?? false)
+      }
+      await loadPostsForUser(userId)
+      loadCounts()
+      try {
+        setOwlSettings(await getMyOwlSettings())
+      } catch (err) {
+        if (!(err instanceof OwlPostNotInstalledError)) {
+          /* leave owl row hidden until SQL is installed */
+        }
+      }
+      try {
+        const n = await foldInboxUnread(userId)
+        setFoldsUnread(n)
+      } catch {
+        setFoldsUnread(0)
+      }
+      setHubBadgeTick((t) => t + 1)
+    } catch (err) {
+      setSaveMsg(`Could not refresh profile: ${err.message}`)
+    }
+  }, [userId, userEmail, refreshProfile, loadPostsForUser])
+
+  useImperativeHandle(ref, () => ({ reload: reloadProfileView }), [reloadProfileView])
 
   useEffect(() => {
     loadCounts()
@@ -823,7 +858,7 @@ export default function Profile({
       )}
     </div>
   )
-}
+})
 
 function SettingToggle({ title, hint, checked, onToggle }) {
   return (

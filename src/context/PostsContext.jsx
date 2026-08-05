@@ -111,6 +111,7 @@ export function PostsProvider({ children }) {
   const { user, profile } = useAuth()
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   // remote === false means the posts SQL isn't installed yet — fall back to localStorage
   // so nothing breaks until the user re-runs supabase-fix-profile-permissions.sql.
   const [remote, setRemote] = useState(true)
@@ -133,6 +134,35 @@ export function PostsProvider({ children }) {
       setShowQuota(null)
     }
   }, [user?.id, remote])
+
+  const refreshFeed = useCallback(async () => {
+    if (!user?.id) {
+      setPosts([])
+      setLoading(false)
+      setRefreshing(false)
+      return
+    }
+
+    setRefreshing(true)
+    try {
+      const rows = await listPosts()
+      const hydrated = await hydratePostReactions(rows, user.id)
+      setRemote(true)
+      setPosts(hydrated)
+      await refreshShowQuota()
+    } catch (err) {
+      if (err instanceof PostsNotInstalledError) {
+        setRemote(false)
+        setPosts(loadLocal())
+        setShowQuota(null)
+      } else {
+        console.error('Could not refresh feed:', err.message)
+        setPosts(loadLocal())
+      }
+    } finally {
+      setRefreshing(false)
+    }
+  }, [user?.id, refreshShowQuota])
 
   useEffect(() => {
     let cancelled = false
@@ -630,6 +660,8 @@ export function PostsProvider({ children }) {
   const value = {
     posts,
     loading,
+    refreshing,
+    refreshFeed,
     persisted: remote,
     addPost,
     removePost,

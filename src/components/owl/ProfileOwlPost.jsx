@@ -1,4 +1,4 @@
-import FoldsLettersIcon from './FoldsLettersIcon'
+import PsHubIcon from './PsHubIcon'
 
 /** P.S. mark — own profile (inbox) or other fren (send letter when open). */
 export default function ProfileOwlPost({ open, badgeCount = 0, onClick }) {
@@ -13,7 +13,7 @@ export default function ProfileOwlPost({ open, badgeCount = 0, onClick }) {
       title={title}
       aria-label={title}
     >
-      <FoldsLettersIcon className="w-[1.06rem] h-[1.06rem] group-hover/folds:hidden" />
+      <PsHubIcon className="w-[1.06rem] h-[0.66rem] group-hover/folds:hidden" />
       <span
         aria-hidden
         className="hidden group-hover/folds:block text-[11px] font-medium tracking-tight leading-none"

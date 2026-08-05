@@ -381,14 +381,16 @@ export function MuteIcon({ className = 'w-4 h-4' }) {
 export function ShowToFrensIcon({ className = 'w-4 h-4', active = false }) {
   return (
     <svg
-      {...base}
-      className={`inline-block align-middle transition ${className}`}
-      fill={active ? 'currentColor' : 'none'}
+      viewBox="0 0 100 100"
+      className={`inline-block shrink-0 align-middle transition ${className} ${active ? 'opacity-100' : 'opacity-70'}`}
+      aria-hidden
     >
-      <circle cx="7" cy="12" r="2.5" />
-      <circle cx="17" cy="7" r="2.5" />
-      <circle cx="17" cy="17" r="2.5" />
-      <path d="M9.4 11.2l5.2-2.8M9.4 12.8l5.2 2.8" />
+      <path
+        fill={active ? '#0C0CFF' : 'currentColor'}
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M32.2 11.6a26.4 26.4 0 1 1 0 52.8a26.4 26.4 0 1 1 0-52.8zm29.3 29.9a26.3 26.3 0 1 1 0 52.6a26.3 26.3 0 1 1 0-52.6z"
+      />
     </svg>
   )
 }

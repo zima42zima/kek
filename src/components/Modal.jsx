@@ -1,6 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 export default function Modal({ title, onClose, children, maxWidth = 'max-w-md', panelClassName = '' }) {
+  const backdropRef = useRef(null)
+  const panelRef = useRef(null)
+
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape') onClose?.()
@@ -9,13 +12,34 @@ export default function Modal({ title, onClose, children, maxWidth = 'max-w-md',
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  // Forward wheel from the dimmed backdrop to the scrollable panel.
+  useEffect(() => {
+    const backdrop = backdropRef.current
+    const panel = panelRef.current
+    if (!backdrop || !panel) return undefined
+
+    function onWheel(e) {
+      if (e.ctrlKey || e.metaKey) return
+      if (panel.contains(e.target)) return
+      panel.scrollTop += e.deltaY
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    backdrop.addEventListener('wheel', onWheel, { passive: false })
+    return () => backdrop.removeEventListener('wheel', onWheel)
+  }, [])
+
   return (
     <div
+      ref={backdropRef}
+      data-frens-modal-backdrop
       className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}
     >
       <div
-        className={`frens-surface border frens-border rounded-2xl p-6 w-full ${maxWidth} max-h-[88vh] overflow-y-auto overscroll-none ${panelClassName}`}
+        ref={panelRef}
+        className={`frens-surface border frens-border rounded-2xl p-6 w-full ${maxWidth} max-h-[88vh] overflow-y-auto overscroll-none frens-scroll ${panelClassName}`}
       >
         {(title || onClose) && (
           <div className={`flex items-center justify-between shrink-0 ${title ? 'mb-3' : 'mb-0'}`}>

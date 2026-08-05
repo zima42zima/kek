@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { usePosts } from '../context/PostsContext'
@@ -41,6 +41,38 @@ import { buildAppPath, goApp, isKnownAppPath, parseAppRoute } from '../lib/appNa
 import { clearPostFromUrl } from '../lib/postShare'
 import { GlobalPlaylistPauseButton } from '../context/PlaylistPlaybackContext'
 import { maskImageStyle } from '../lib/maskIcon'
+
+const FEED_PULL_TRIGGER = 64
+
+/** Panel scroll target — skip hidden cave chat when Playlists tab is open. */
+function findActivePanelScroller(root) {
+  for (const el of root.querySelectorAll('[data-frens-panel-scroll]')) {
+    if (!(el instanceof HTMLElement)) continue
+    const { width, height } = el.getBoundingClientRect()
+    if (width > 0 && height > 0) return el
+  }
+  return null
+}
+
+function FeedRefreshIndicator({ offset = 0, refreshing = false }) {
+  if (!refreshing && offset < 8) return null
+
+  const label = refreshing
+    ? 'Refreshing…'
+    : offset >= FEED_PULL_TRIGGER
+      ? 'Release to refresh'
+      : 'Pull to refresh'
+
+  return (
+    <div
+      className="flex items-end justify-center overflow-hidden pointer-events-none"
+      style={{ height: refreshing ? 28 : offset }}
+      aria-hidden={!refreshing}
+    >
+      <span className="pb-1 text-[11px] frens-muted">{label}</span>
+    </div>
+  )
+}
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: homeIcon },
@@ -121,18 +153,19 @@ function BellIcon({ className = 'w-5 h-5' }) {
 
 export default function Home() {
   const { profile } = useAuth()
-  const { posts } = usePosts()
+  const { posts, refreshFeed, refreshing: feedRefreshing } = usePosts()
   const { unread } = useNotifications()
   const { totalUnread: dmUnread, openConversation, openConversationWithUser } = useDms()
   const location = useLocation()
   const navigate = useNavigate()
   const route = parseAppRoute(location)
   const activeTab = route.tab
-
-  const handleNavigate = useCallback((tab, extras = {}) => {
-    goApp(navigate, { tab, ...extras })
-  }, [navigate])
-
+  const mainRef = useRef(null)
+  const profileRef = useRef(null)
+  const feedPullStartY = useRef(null)
+  const feedPullOffsetRef = useRef(0)
+  const [feedPullOffset, setFeedPullOffset] = useState(0)
+  const [profileRefreshing, setProfileRefreshing] = useState(false)
   const [showNotifs, setShowNotifs] = useState(false)
   const [showPeopleSearch, setShowPeopleSearch] = useState(false)
   const [viewUserId, setViewUserId] = useState(null)
@@ -140,6 +173,48 @@ export default function Home() {
   const [postFocus, setPostFocus] = useState(null)
   // Keep Profile mounted after first visit so Posts|_log doesn't remount/flash.
   const [profileMounted, setProfileMounted] = useState(() => activeTab === 'profile')
+
+  const reloadHomeFeed = useCallback(async () => {
+    await refreshFeed()
+  }, [refreshFeed])
+
+  const reloadProfileView = useCallback(async () => {
+    setProfileRefreshing(true)
+    try {
+      await profileRef.current?.reload?.()
+    } finally {
+      setProfileRefreshing(false)
+    }
+  }, [])
+
+  const scrollFeedToTop = useCallback((behavior = 'smooth') => {
+    mainRef.current?.scrollTo({ top: 0, behavior })
+  }, [])
+
+  const handleNavigate = useCallback((tab, extras = {}) => {
+    if (tab === 'home' && activeTab === 'home') {
+      reloadHomeFeed()
+      scrollFeedToTop()
+      setPostFocus(null)
+      if (route.postId) {
+        goApp(navigate, { tab: 'home' }, { replace: true })
+      }
+      return
+    }
+    if (tab === 'profile' && activeTab === 'profile') {
+      reloadProfileView()
+      scrollFeedToTop()
+      return
+    }
+    goApp(navigate, { tab, ...extras })
+  }, [
+    navigate,
+    activeTab,
+    route.postId,
+    reloadHomeFeed,
+    reloadProfileView,
+    scrollFeedToTop,
+  ])
 
   useEffect(() => {
     if (activeTab === 'profile') setProfileMounted(true)
@@ -269,7 +344,8 @@ export default function Home() {
 
     function onWheel(e) {
       if (e.ctrlKey || e.metaKey) return
-      const scroller = feed.querySelector('[data-frens-panel-scroll]')
+      if (e.target instanceof Element && e.target.closest('[data-frens-modal-backdrop]')) return
+      const scroller = findActivePanelScroller(feed)
       if (!scroller) return
       if (scroller.contains(e.target)) return
 
@@ -293,6 +369,68 @@ export default function Home() {
     feed.addEventListener('wheel', onWheel, { passive: false })
     return () => feed.removeEventListener('wheel', onWheel)
   }, [panelDetailOpen])
+
+  // Pull down at top of home or profile to refresh (touch).
+  useEffect(() => {
+    const el = mainRef.current
+    const canPull = activeTab === 'home' || activeTab === 'profile'
+    if (!el || !canPull || panelDetailOpen) return undefined
+
+    function resetPull() {
+      feedPullStartY.current = null
+      feedPullOffsetRef.current = 0
+      setFeedPullOffset(0)
+    }
+
+    function onTouchStart(e) {
+      if (feedRefreshing || profileRefreshing || el.scrollTop > 1) return
+      feedPullStartY.current = e.touches[0].clientY
+    }
+
+    function onTouchMove(e) {
+      if (feedPullStartY.current == null || feedRefreshing || profileRefreshing) return
+      if (el.scrollTop > 1) {
+        resetPull()
+        return
+      }
+      const dy = e.touches[0].clientY - feedPullStartY.current
+      if (dy <= 0) {
+        resetPull()
+        return
+      }
+      const offset = Math.min(dy * 0.5, 88)
+      feedPullOffsetRef.current = offset
+      setFeedPullOffset(offset)
+      if (dy > 10) e.preventDefault()
+    }
+
+    async function onTouchEnd() {
+      if (feedPullStartY.current == null) return
+      const shouldRefresh = feedPullOffsetRef.current >= FEED_PULL_TRIGGER
+      resetPull()
+      if (!shouldRefresh) return
+      if (activeTab === 'home') await reloadHomeFeed()
+      else if (activeTab === 'profile') await reloadProfileView()
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+    el.addEventListener('touchcancel', onTouchEnd)
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [
+    activeTab,
+    panelDetailOpen,
+    feedRefreshing,
+    profileRefreshing,
+    reloadHomeFeed,
+    reloadProfileView,
+  ])
 
   return (
     <div className="frens-feed">
@@ -328,6 +466,7 @@ export default function Home() {
       </header>
 
       <main
+        ref={mainRef}
         className={`flex-1 min-h-0 flex flex-col overscroll-none ${
           panelDetailOpen ? 'overflow-hidden' : 'overflow-y-auto frens-scroll'
         }`}
@@ -339,6 +478,12 @@ export default function Home() {
               : 'p-4'
           }`}
         >
+          {(activeTab === 'home' || activeTab === 'profile') && (
+            <FeedRefreshIndicator
+              offset={feedPullOffset}
+              refreshing={activeTab === 'home' ? feedRefreshing : profileRefreshing}
+            />
+          )}
           {activeTab === 'home' && (
             <>
               <PostComposer collapsible />
@@ -395,6 +540,7 @@ export default function Home() {
               aria-hidden={activeTab !== 'profile'}
             >
               <Profile
+                ref={profileRef}
                 active={activeTab === 'profile'}
                 onNavigate={handleNavigate}
                 onOpenEcho={handleOpenEcho}

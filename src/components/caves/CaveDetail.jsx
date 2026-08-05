@@ -963,7 +963,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
       >
         {/* Messages — full-bleed scroll hit area; content capped like DMs */}
         <div
-          data-frens-panel-scroll
+          data-frens-panel-scroll={caveView === 'chat' ? '' : undefined}
           className="flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll"
         >
           <div className="px-3 pt-3 pb-3 space-y-2.5 frens-content-max w-full">

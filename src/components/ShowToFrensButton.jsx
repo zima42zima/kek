@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { usePosts } from '../context/PostsContext'
-import { POST_ACTION_BTN, POST_ACTION_ICON } from './icons/UiIcons'
-import scalarIcon from '../assets/icons/scalar.png'
+import { POST_ACTION_BTN, POST_ACTION_ICON, ShowToFrensIcon } from './icons/UiIcons'
 
 function quotaTitle(remaining) {
   if (remaining == null || remaining > 3) return undefined
@@ -49,12 +48,7 @@ export default function ShowToFrensButton({
         showing ? 'ring-1 ring-black/15 dark:ring-white/25 bg-black/[0.04] dark:bg-white/[0.06]' : 'frens-muted'
       } ${className}`}
     >
-      <img
-        src={scalarIcon}
-        alt=""
-        className={`${POST_ACTION_ICON} object-contain dark:invert ${showing ? 'opacity-100' : 'opacity-70'}`}
-        draggable={false}
-      />
+      <ShowToFrensIcon className={POST_ACTION_ICON} active={showing} />
     </button>
   )
 }
