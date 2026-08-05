@@ -15,6 +15,7 @@ export default function ProfileShareToggle({
   label = 'Show on my profile',
   hint = 'When on, other frens see this when they open your profile. Off by default.',
   className = '',
+  onChange,
 }) {
   const { user } = useAuth()
   const userId = user?.id
@@ -40,6 +41,7 @@ export default function ProfileShareToggle({
     try {
       const prefs = await loadShowcasePrefs(userId)
       await saveShowcasePrefs(userId, { ...prefs, [showcaseKey]: nextOn })
+      onChange?.(nextOn)
     } catch {
       setOn(!nextOn)
     } finally {

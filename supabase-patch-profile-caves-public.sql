@@ -2,6 +2,8 @@
 -- Invite-only caves stay off profile lists entirely.
 -- Safe to re-run.
 
+alter table public.caves add column if not exists cover_url text;
+
 drop function if exists public.list_profile_caves(uuid);
 
 create or replace function public.list_profile_caves(p_user uuid)
@@ -35,5 +37,32 @@ as $$
 $$;
 
 grant execute on function public.list_profile_caves(uuid) to authenticated;
+
+-- Ensure owner membership row exists when toggling profile visibility.
+create or replace function public.set_cave_profile_hidden(p_cave_id text, p_hidden boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then raise exception 'Not authenticated'; end if;
+
+  insert into public.cave_members (cave_id, user_id, role, hidden_on_profile)
+  select p_cave_id, uid, 'owner', coalesce(p_hidden, false)
+  from public.caves c
+  where c.id = p_cave_id and c.owner_id = uid
+  on conflict (cave_id, user_id) do update
+    set hidden_on_profile = coalesce(p_hidden, false);
+
+  update public.cave_members
+  set hidden_on_profile = coalesce(p_hidden, false)
+  where cave_id = p_cave_id and user_id = uid;
+end;
+$$;
+
+grant execute on function public.set_cave_profile_hidden(text, boolean) to authenticated;
 
 notify pgrst, 'reload schema';

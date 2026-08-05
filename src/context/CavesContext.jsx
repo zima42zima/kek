@@ -786,6 +786,31 @@ export function CavesProvider({ children }) {
     }
   }
 
+  async function pushProfileCavesToServer() {
+    if (!user?.id || !remote) return
+    const visible = cavesRef.current.filter(
+      (c) =>
+        String(c.ownerId) === String(meId)
+        && c.access === 'public'
+        && !c.hiddenOnProfile,
+    )
+    for (const cave of visible) {
+      try {
+        await syncCaveRemote(cave)
+        await setCaveProfileHidden(cave.id, false)
+      } catch (err) {
+        if (err instanceof CavesNotInstalledError) {
+          setRemote(false)
+          return
+        }
+        console.error('Could not push profile cave to server:', cave.id, err.message)
+      }
+    }
+    if (visible.length && meId) {
+      ensureShowcaseOn(meId, 'caves').catch(() => { /* best-effort */ })
+    }
+  }
+
   function requestOpenCave(caveId) {
     setPendingOpenId(caveId)
   }
@@ -842,6 +867,7 @@ export function CavesProvider({ children }) {
     joinCaveFromInvite,
     syncMemberships: syncRemoteCaves,
     syncRemoteCaves,
+    pushProfileCavesToServer,
     clearPendingOpen,
   }
 

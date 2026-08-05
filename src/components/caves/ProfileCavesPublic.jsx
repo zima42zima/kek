@@ -62,6 +62,7 @@ export default function ProfileCavesPublic({ userId, frenName = 'this fren', onN
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
+    if (!userId) return undefined
     let cancelled = false
     setLoading(true)
     listProfileCaves(userId)

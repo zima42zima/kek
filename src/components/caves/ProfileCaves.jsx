@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCaves } from '../../context/CavesContext'
 import { cavesVisibleOnProfile } from '../../lib/caves'
 import Modal from '../Modal'
@@ -8,7 +8,7 @@ import CaveAccessLabel from '../CaveAccessLabel'
 import CavesManager from './CavesManager'
 import ProfileShareToggle from '../ProfileShareToggle'
 
-function CavesProfileModal({ caves, ownerId, onClose, onOpenCave, onManage }) {
+function CavesProfileModal({ caves, ownerId, onClose, onOpenCave, onManage, onShowcaseEnabled }) {
   const visible = cavesVisibleOnProfile(caves, ownerId)
 
   return (
@@ -22,6 +22,7 @@ function CavesProfileModal({ caves, ownerId, onClose, onOpenCave, onManage }) {
           showcaseKey="caves"
           label="Show caves on my profile"
           hint="Per-cave: mark a public cave you own as Shown on profile — other frens then see your cave icon."
+          onChange={(enabled) => { if (enabled) onShowcaseEnabled?.() }}
         />
         {visible.length === 0 ? (
           <p className="text-sm frens-muted text-center py-4">
@@ -57,11 +58,16 @@ function CavesProfileModal({ caves, ownerId, onClose, onOpenCave, onManage }) {
 
 /** Cave icon on your profile — tap to see caves you share with others. */
 export default function ProfileCaves({ onNavigate }) {
-  const { myCaves, meId } = useCaves()
+  const { myCaves, meId, pushProfileCavesToServer } = useCaves()
   const [open, setOpen] = useState(false)
   const [manage, setManage] = useState(false)
 
   const visible = cavesVisibleOnProfile(myCaves, meId)
+
+  useEffect(() => {
+    if (!open) return
+    pushProfileCavesToServer()
+  }, [open, pushProfileCavesToServer])
 
   function openCave(id) {
     onNavigate?.('caves', { caveId: id })
@@ -88,6 +94,7 @@ export default function ProfileCaves({ onNavigate }) {
           onClose={() => setOpen(false)}
           onOpenCave={openCave}
           onManage={() => setManage(true)}
+          onShowcaseEnabled={pushProfileCavesToServer}
         />
       )}
 

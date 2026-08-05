@@ -129,12 +129,7 @@ export async function listMyCavesRemote() {
 }
 
 export async function listProfileCaves(userId) {
-  const { data, error } = await supabase.rpc('list_profile_caves', { p_user: userId })
-  if (error) {
-    throwIfNotInstalled(error)
-    throw error
-  }
-  return (data ?? [])
+  const mapRows = (rows) => (rows ?? [])
     .filter((r) => (r.access || 'invite') === 'public' && (r.is_owner ?? true))
     .map((r) => ({
       id: r.cave_id,
@@ -144,6 +139,44 @@ export async function listProfileCaves(userId) {
       isOwner: r.is_owner ?? true,
       coverUrl: r.cover_url ?? r.coverUrl ?? null,
     }))
+
+  const { data, error } = await supabase.rpc('list_profile_caves', { p_user: userId })
+  if (!error && (data ?? []).length > 0) {
+    return mapRows(data)
+  }
+
+  if (error) {
+    const missing = error?.code === 'PGRST202' || error?.code === '42P01' || error?.code === '42883'
+    if (missing) throw new CavesNotInstalledError(error.message)
+    if (import.meta.env.DEV) {
+      console.warn('list_profile_caves failed, trying public-cave fallback:', error.message)
+    }
+  }
+
+  try {
+    const { data: fallback, error: fbErr } = await supabase.rpc('search_public_caves', {
+      p_query: null,
+    })
+    if (fbErr) {
+      throwIfNotInstalled(fbErr)
+      return []
+    }
+    return mapRows(
+      (fallback ?? [])
+        .filter((r) => String(r.owner_id) === String(userId))
+        .map((r) => ({
+          cave_id: r.cave_id,
+          name: r.name,
+          emoji: r.emoji,
+          access: 'public',
+          is_owner: true,
+          cover_url: r.cover_url ?? r.coverUrl ?? null,
+        })),
+    )
+  } catch (err) {
+    if (err instanceof CavesNotInstalledError) throw err
+    return []
+  }
 }
 
 /** Discover public caves by name (empty query = recent public). Needs search_public_caves RPC. */
