@@ -381,7 +381,7 @@ export function CavesProvider({ children }) {
     if (remote) {
       ;(async () => {
         try {
-          await syncCaveRemote(updated)
+          await syncCaveRemote(updated, { forceOwnerId: user?.id })
           await setCaveProfileHidden(caveId, hiddenOnProfile)
         } catch (err) {
           if (err instanceof CavesNotInstalledError) setRemote(false)
@@ -410,7 +410,7 @@ export function CavesProvider({ children }) {
     if (remote) {
       ;(async () => {
         try {
-          await syncCaveRemote(updated)
+          await syncCaveRemote(updated, { forceOwnerId: user?.id })
           if (access === 'invite') {
             await setCaveProfileHidden(caveId, true)
           } else if (!updated.hiddenOnProfile) {
@@ -787,7 +787,8 @@ export function CavesProvider({ children }) {
   }
 
   async function pushProfileCavesToServer() {
-    if (!user?.id || !remote) return
+    if (!user?.id) return
+    const ownerId = user.id
     const visible = cavesRef.current.filter(
       (c) =>
         String(c.ownerId) === String(meId)
@@ -796,8 +797,10 @@ export function CavesProvider({ children }) {
     )
     for (const cave of visible) {
       try {
-        await syncCaveRemote(cave)
+        await createCaveRemote(cave.id, cave.name, cave.emoji || '🕳️')
+        await syncCaveRemote(cave, { forceOwnerId: ownerId })
         await setCaveProfileHidden(cave.id, false)
+        setRemote(true)
       } catch (err) {
         if (err instanceof CavesNotInstalledError) {
           setRemote(false)
@@ -806,8 +809,8 @@ export function CavesProvider({ children }) {
         console.error('Could not push profile cave to server:', cave.id, err.message)
       }
     }
-    if (visible.length && meId) {
-      ensureShowcaseOn(meId, 'caves').catch(() => { /* best-effort */ })
+    if (visible.length) {
+      ensureShowcaseOn(ownerId, 'caves').catch(() => { /* best-effort */ })
     }
   }
 

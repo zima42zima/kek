@@ -7,6 +7,7 @@ import PostCard from '../components/PostCard'
 import PostComposer from '../components/PostComposer'
 import Modal from '../components/Modal'
 import ProfileCaves from '../components/caves/ProfileCaves'
+import { useCaves } from '../context/CavesContext'
 import ProfileEchoes from '../components/echo/ProfileEchoes'
 import CavesManager from '../components/caves/CavesManager'
 import CaveIcon from '../components/caves/CaveIcon'
@@ -50,6 +51,7 @@ export default forwardRef(function Profile({
   const { profile: contextProfile, user, refreshProfile, signOut, accountStatus, refreshAccountStatus } = useAuth()
   const { postsByUser, loadPostsForUser } = usePosts()
   const { openConversationWithUser } = useDms()
+  const { pushProfileCavesToServer } = useCaves()
   const [profile, setProfile] = useState(contextProfile)
   const [bio, setBio] = useState('')
   const [frenName, setFrenName] = useState('')
@@ -114,6 +116,10 @@ export default forwardRef(function Profile({
   useEffect(() => {
     checkProfileDbSetup().then(setDbSetup)
   }, [])
+
+  useEffect(() => {
+    if (user?.id) pushProfileCavesToServer()
+  }, [user?.id, pushProfileCavesToServer])
 
   useEffect(() => {
     setProfile(contextProfile)

@@ -65,6 +65,10 @@ export default function ProfileCaves({ onNavigate }) {
   const visible = cavesVisibleOnProfile(myCaves, meId)
 
   useEffect(() => {
+    pushProfileCavesToServer()
+  }, [pushProfileCavesToServer])
+
+  useEffect(() => {
     if (!open) return
     pushProfileCavesToServer()
   }, [open, pushProfileCavesToServer])
@@ -79,7 +83,10 @@ export default function ProfileCaves({ onNavigate }) {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          pushProfileCavesToServer()
+          setOpen(true)
+        }}
         className="profile-hub-chip"
         title="Your caves"
         aria-label="Your caves"

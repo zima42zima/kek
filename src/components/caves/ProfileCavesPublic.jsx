@@ -61,12 +61,15 @@ export default function ProfileCavesPublic({ userId, frenName = 'this fren', onN
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (!userId) return undefined
+    if (!userId) {
+      setCaves([])
+      return undefined
+    }
     let cancelled = false
+    setCaves([])
     listProfileCaves(userId)
       .then((rows) => {
-        if (cancelled) return
-        if (rows.length > 0) setCaves(rows)
+        if (!cancelled) setCaves(rows)
       })
       .catch((err) => {
         if (!cancelled && !(err instanceof CavesNotInstalledError)) {

@@ -240,7 +240,12 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
 
             {!isMe && (
               <div className="flex items-center gap-2 mt-3 flex-wrap">
-                <ProfileCavesPublic userId={userId} frenName={card.frenName} onNavigate={onNavigate} />
+                <ProfileCavesPublic
+                  key={userId}
+                  userId={userId}
+                  frenName={card.frenName}
+                  onNavigate={onNavigate}
+                />
                 {showcase && isShowcaseOn(showcase, 'echoes') ? (
                   <ProfileEchoesPublic
                     userId={userId}
