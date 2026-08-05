@@ -37,7 +37,7 @@ export default function CavesManager({ onOpenCave }) {
             </div>
 
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {isPublic ? (
+              {isOwner && isPublic ? (
                 <button
                   type="button"
                   onClick={() => setCaveHidden(c.id, shown)}
@@ -47,6 +47,8 @@ export default function CavesManager({ onOpenCave }) {
                 >
                   {shown ? 'Shown on profile' : 'Hidden'}
                 </button>
+              ) : !isOwner ? (
+                <span className="text-[11px] frens-hint">joined · only owners can list on profile</span>
               ) : (
                 <span className="text-[11px] frens-hint">invite-only · not on profile</span>
               )}

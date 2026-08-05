@@ -367,12 +367,27 @@ export function CavesProvider({ children }) {
   }
 
   function setCaveHidden(caveId, hiddenOnProfile) {
-    updateCave(caveId, (c) => {
-      if (!hiddenOnProfile && c.access !== 'public') return c
-      return { ...c, hiddenOnProfile }
-    })
+    let updated = null
+    setCaves((prev) =>
+      prev.map((c) => {
+        if (c.id !== caveId) return c
+        if (c.ownerId !== meId) return c
+        if (!hiddenOnProfile && c.access !== 'public') return c
+        updated = { ...c, hiddenOnProfile }
+        return updated
+      }),
+    )
+    if (!updated) return
     if (remote) {
-      setCaveProfileHidden(caveId, hiddenOnProfile).catch(() => { /* best-effort */ })
+      ;(async () => {
+        try {
+          await syncCaveRemote(updated)
+          await setCaveProfileHidden(caveId, hiddenOnProfile)
+        } catch (err) {
+          if (err instanceof CavesNotInstalledError) setRemote(false)
+          else console.error('Could not update profile cave visibility:', err.message)
+        }
+      })()
     }
     if (!hiddenOnProfile && meId) {
       ensureShowcaseOn(meId, 'caves').catch(() => { /* best-effort */ })
@@ -380,13 +395,32 @@ export function CavesProvider({ children }) {
   }
 
   function setCaveAccess(caveId, access) {
-    updateCave(caveId, (c) => {
-      const next = { ...c, access }
-      if (access === 'invite') next.hiddenOnProfile = true
-      return next
-    })
-    if (remote && access === 'invite') {
-      setCaveProfileHidden(caveId, true).catch(() => { /* best-effort */ })
+    let updated = null
+    setCaves((prev) =>
+      prev.map((c) => {
+        if (c.id !== caveId) return c
+        if (c.ownerId !== meId) return c
+        const next = { ...c, access }
+        if (access === 'invite') next.hiddenOnProfile = true
+        updated = next
+        return next
+      }),
+    )
+    if (!updated) return
+    if (remote) {
+      ;(async () => {
+        try {
+          await syncCaveRemote(updated)
+          if (access === 'invite') {
+            await setCaveProfileHidden(caveId, true)
+          } else if (!updated.hiddenOnProfile) {
+            await setCaveProfileHidden(caveId, false)
+          }
+        } catch (err) {
+          if (err instanceof CavesNotInstalledError) setRemote(false)
+          else console.error('Could not update cave access:', err.message)
+        }
+      })()
     }
     if (access === 'public' && meId) {
       ensureShowcaseOn(meId, 'caves').catch(() => { /* best-effort */ })

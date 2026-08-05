@@ -135,13 +135,13 @@ export async function listProfileCaves(userId) {
     throw error
   }
   return (data ?? [])
-    .filter((r) => (r.access || 'invite') === 'public')
+    .filter((r) => (r.access || 'invite') === 'public' && (r.is_owner ?? true))
     .map((r) => ({
       id: r.cave_id,
       name: r.name,
       emoji: r.emoji || '🕳️',
       access: r.access || 'invite',
-      isOwner: r.is_owner ?? false,
+      isOwner: r.is_owner ?? true,
       coverUrl: r.cover_url ?? r.coverUrl ?? null,
     }))
 }
@@ -197,9 +197,13 @@ export async function joinPublicCave(caveId) {
   }
 }
 
-/** Caves a fren chose to show on their profile (public + not hidden). */
-export function cavesVisibleOnProfile(caves) {
-  return (caves ?? []).filter((c) => c.access === 'public' && !c.hiddenOnProfile)
+/** Public caves this fren owns and chose to show on profile (not joined caves). */
+export function cavesVisibleOnProfile(caves, ownerId) {
+  return (caves ?? []).filter((c) => {
+    if (c.access !== 'public' || c.hiddenOnProfile) return false
+    if (ownerId == null) return true
+    return String(c.ownerId) === String(ownerId)
+  })
 }
 
 export async function createCaveRemote(id, name, emoji = '🕳️') {

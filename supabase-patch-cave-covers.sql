@@ -102,13 +102,14 @@ as $$
     c.name,
     coalesce(c.emoji, '🕳️') as emoji,
     c.access,
-    (c.owner_id = p_user) as is_owner,
+    true as is_owner,
     c.cover_url
   from public.caves c
-  join public.cave_members cm on cm.cave_id = c.id and cm.user_id = p_user
-  where c.access = 'public'
-    and not coalesce(c.hidden_on_profile, false)
-    and not coalesce(cm.hidden_on_profile, false)
+  left join public.cave_members cm
+    on cm.cave_id = c.id and cm.user_id = p_user
+  where c.owner_id = p_user
+    and c.access = 'public'
+    and coalesce(cm.hidden_on_profile, false) = false
   order by c.updated_at desc nulls last;
 $$;
 
