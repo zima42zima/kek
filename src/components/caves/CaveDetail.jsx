@@ -109,13 +109,21 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
   async function saveCover(url) {
     setCoverError('')
     const result = await setCaveCover(cave.id, url)
-    if (!result?.ok) setCoverError(result?.message || 'Could not save cover.')
+    if (!result?.ok) {
+      setCoverError(result?.message || 'Could not save cover.')
+    } else if (result?.localOnly && result?.message) {
+      setCoverError(result.message)
+    }
   }
 
   async function removeCover() {
     setCoverError('')
     const result = await setCaveCover(cave.id, null)
-    if (!result?.ok) setCoverError(result?.message || 'Could not remove cover.')
+    if (!result?.ok) {
+      setCoverError(result?.message || 'Could not remove cover.')
+    } else if (result?.localOnly && result?.message) {
+      setCoverError(result.message)
+    }
   }
 
   async function handleDeleteCave() {

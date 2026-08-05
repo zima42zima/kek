@@ -64,6 +64,9 @@ console.log('list_platform_reports RPC:', listReports.error?.message || 'ok', li
 const dms = await supabase.rpc('list_my_dm_threads')
 console.log('list_my_dm_threads RPC:', dms.error?.message || 'ok', dms.error?.code || '')
 
+const caveCover = await supabase.rpc('set_cave_cover', { p_cave_id: 'test', p_cover_url: null })
+console.log('set_cave_cover RPC:', caveCover.error?.message || 'ok', caveCover.error?.code || '')
+
 const session = await supabase.auth.getSession()
 console.log('browser session (cli):', session.data.session ? 'yes' : 'no')
 
@@ -124,6 +127,13 @@ if (searchProfiles.error?.code === 'PGRST202') {
 if (dms.error?.code === 'PGRST202') {
   console.log('\nDMs patch missing.')
   console.log('Fix: run supabase-patch-dms.sql in Supabase SQL Editor')
+  process.exit(1)
+}
+
+if (caveCover.error?.code === 'PGRST202') {
+  console.log('\nCave cover patch missing.')
+  console.log('Fix: run supabase-patch-cave-covers-fix.sql in Supabase SQL Editor')
+  console.log(`Make sure you are in project "${project}" matching your .env URL`)
   process.exit(1)
 }
 

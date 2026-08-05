@@ -292,6 +292,7 @@ export function CavesProvider({ children }) {
   }
 
   async function setCaveCover(caveId, coverUrl) {
+    const previous = cavesRef.current.find((c) => c.id === caveId)?.coverUrl ?? null
     updateCave(caveId, (c) => ({ ...c, coverUrl: coverUrl || null }))
     if (!remote) return { ok: true }
     try {
@@ -299,9 +300,14 @@ export function CavesProvider({ children }) {
       return { ok: true }
     } catch (err) {
       if (err instanceof CavesNotInstalledError) {
-        // Keep local cover even if RPC missing
-        return { ok: true, localOnly: true }
+        // sync_cave may still persist coverUrl when column exists; warn if not.
+        return {
+          ok: true,
+          localOnly: true,
+          message: 'Cover saved here only. Run supabase-patch-cave-covers-fix.sql in Supabase SQL Editor.',
+        }
       }
+      updateCave(caveId, (c) => ({ ...c, coverUrl: previous }))
       console.error('Could not set cave cover:', err.message)
       return { ok: false, message: err.message || 'Could not save cover.' }
     }

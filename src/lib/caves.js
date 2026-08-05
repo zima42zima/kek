@@ -83,6 +83,7 @@ export function caveToRpcPayload(cave) {
     emoji: cave.emoji,
     ownerId: cave.ownerId,
     access: cave.access,
+    coverUrl: cave.coverUrl ?? null,
     banned: cave.banned || [],
     emojiPacks: cave.emojiPacks || [],
     roles: cave.roles || null,
@@ -470,7 +471,7 @@ export function mergeCaveSnapshot(local, remote) {
     banned: remote.banned?.length ? remote.banned : (local?.banned ?? []),
     emojiPacks: local?.emojiPacks?.length ? local.emojiPacks : (remote.emojiPacks || []),
     hiddenOnProfile: remote.hiddenOnProfile ?? local?.hiddenOnProfile ?? false,
-    coverUrl: remote.coverUrl ?? remote.cover_url ?? local?.coverUrl ?? null,
+    coverUrl: remote.coverUrl || remote.cover_url || local?.coverUrl || null,
     roles: Array.isArray(remote.roles) && remote.roles.length
       ? remote.roles
       : (Array.isArray(local?.roles) && local.roles.length ? local.roles : remote.roles ?? local?.roles ?? null),
