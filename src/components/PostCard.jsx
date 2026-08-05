@@ -20,6 +20,7 @@ import PostDetailModal from './PostDetailModal'
 import PostMorseRule from './PostMorseRule'
 import { isTextOnlyThoughtPost } from '../lib/urls'
 import { withLiveAuthorAvatar } from '../lib/posts'
+import useLiveAuthorProfile from '../hooks/useLiveAuthorProfile'
 
 function isInteractiveTarget(target) {
   return Boolean(target?.closest?.('a, button, input, textarea, [data-no-post-open]'))
@@ -31,8 +32,13 @@ export default function PostCard({ post, authorProfile, onOpenProfile, highlight
   const [expandedEmbed, setExpandedEmbed] = useState(null)
   const [detailOpen, setDetailOpen] = useState(openComments)
 
+  const fetchedAuthor = useLiveAuthorProfile(post?.userId, {
+    enabled: Boolean(post?.userId && !authorProfile && post.userId !== user?.id),
+  })
+
   const liveProfile = authorProfile
     ?? (user?.id && post?.userId && String(post.userId) === String(user.id) ? { id: user.id, ...profile } : null)
+    ?? fetchedAuthor
   const displayPost = withLiveAuthorAvatar(post, liveProfile)
 
   const canDelete = Boolean(post.userId && user?.id && post.userId === user.id)

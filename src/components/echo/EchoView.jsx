@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import Modal from '../Modal'
 import { ProfileAvatar } from '../FrogLogo'
 import EchoAuraButton, { EchoAuraCount } from './EchoAuraButton'
@@ -11,6 +11,8 @@ import { spatialTierLabel } from '../../lib/spatialEcho'
 import { senseFilterLabel, normalizeSenseFilter, lidarFilterLabel } from '../../lib/senseFilters'
 import { EchoMetaLine, EchoTypeIcon } from './EchoMeta'
 import { HeadphonesIcon, LocationIcon } from '../icons/UiIcons'
+import useLiveAuthorProfile from '../../hooks/useLiveAuthorProfile'
+import { withLiveAuthorAvatar } from '../../lib/posts'
 
 const SWIPE_THRESHOLD_PX = 48
 
@@ -58,6 +60,30 @@ export default function EchoView({
   const hasPrev = canRangeSwipe && rangeIndex > 0
   const hasNext = canRangeSwipe && rangeIndex < rangeEchoes.length - 1
   const canReact = Boolean(onToggleReaction)
+
+  const liveAuthor = useLiveAuthorProfile(
+    !mine && !echo.anonymous ? echo.ownerId : null,
+  )
+
+  const displayEcho = useMemo(() => {
+    if (echo.anonymous && !mine) {
+      return { ...echo, avatarType: 'frog', avatarUrl: null }
+    }
+    if (mine && (profile?.id || profile?.userId)) {
+      return withLiveAuthorAvatar(echo, {
+        id: profile.id || profile.userId,
+        avatarType: profile.avatarType,
+        avatarUrl: profile.avatarUrl,
+      })
+    }
+    if (liveAuthor) {
+      return {
+        ...withLiveAuthorAvatar(echo, liveAuthor),
+        authorName: liveAuthor.frenName || echo.authorName,
+      }
+    }
+    return echo
+  }, [echo, mine, profile, liveAuthor])
 
   const lookStyle = echo.kind === 'video' && echo.lookFilter
     ? { filter: lookFilterCss(echo.lookFilter) }
@@ -134,15 +160,20 @@ export default function EchoView({
 
   return (
     <>
-      <Modal title={mine ? 'Your aftersound' : 'A fren left an aftersound'} onClose={onClose} maxWidth="max-w-sm">
+      <Modal
+        title={mine ? 'Your aftersound' : 'A fren left an aftersound'}
+        onClose={onClose}
+        maxWidth="max-w-sm"
+        blurBackdrop={false}
+      >
         <div className="flex items-center gap-3 mb-4">
           <ProfileAvatar
-            profile={echo.anonymous && !mine ? { avatarType: 'frog', avatarUrl: null } : echo}
+            profile={displayEcho}
             className="w-11 h-11"
             logoClassName="w-7 h-auto"
           />
           <div className="min-w-0 flex-1">
-            <FrenHandle>{echo.anonymous && !mine ? 'a fren' : echo.authorName}</FrenHandle>
+            <FrenHandle>{echo.anonymous && !mine ? 'a fren' : displayEcho.authorName}</FrenHandle>
             <p className="text-xs frens-muted">
               <EchoMetaLine
                 kind={echo.kind}

@@ -1,6 +1,13 @@
 import { useEffect, useRef } from 'react'
 
-export default function Modal({ title, onClose, children, maxWidth = 'max-w-md', panelClassName = '' }) {
+export default function Modal({
+  title,
+  onClose,
+  children,
+  maxWidth = 'max-w-md',
+  panelClassName = '',
+  blurBackdrop = true,
+}) {
   const backdropRef = useRef(null)
   const panelRef = useRef(null)
 
@@ -34,7 +41,7 @@ export default function Modal({ title, onClose, children, maxWidth = 'max-w-md',
     <div
       ref={backdropRef}
       data-frens-modal-backdrop
-      className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className={`fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60${blurBackdrop ? ' backdrop-blur-sm' : ''}`}
       onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}
     >
       <div

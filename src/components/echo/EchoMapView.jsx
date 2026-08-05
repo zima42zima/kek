@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, memo, forwardRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { batIcon } from './EchoIcon'
@@ -8,9 +8,9 @@ import {
   ECHO_HINT_ZONE_RADIUS_M,
 } from '../../lib/echoConstants'
 import { clampSearchRadius } from '../../lib/echoRange'
-import { clusterEchoes } from '../../lib/echoCluster'
-import { canBrowseGlobally } from '../../lib/echoPrivacy'
-import { addEchoMapTiles, refreshActiveTiles } from '../../lib/mapTiles'
+import { clusterEchoesExplore } from '../../lib/echoCluster'
+import { isFrenOf } from '../../lib/echoPrivacy'
+import { addEchoMapTiles } from '../../lib/mapTiles'
 
 const MARKER_INK = '#1a1a1a'
 const MARKER_RING = '#444444'
@@ -41,8 +41,11 @@ function avatarGlyphHtml(url, size = 28) {
     draggable="false" referrerpolicy="no-referrer" />`
 }
 
-function markerHtml(echo) {
-  const useAvatar = !echo.anonymous && Boolean(echo.avatarUrl)
+function markerHtml(echo, frenGraph) {
+  const useAvatar = (
+    echo.mine
+    || (isFrenOf(echo, frenGraph) && !echo.anonymous && Boolean(echo.avatarUrl))
+  )
   const size = echo.mine ? 16 : 14
   const inner = useAvatar
     ? avatarGlyphHtml(echo.avatarUrl, echo.mine ? 28 : 26)
@@ -76,9 +79,54 @@ function clusterHtml(count) {
     </div>`
 }
 
+function clusterExploreHtml(echoes, frenGraph) {
+  const count = echoes.length
+  const rep = echoes.find(
+    (e) => e.mine || (isFrenOf(e, frenGraph) && !e.anonymous && e.avatarUrl),
+  )
+  if (rep) {
+    return `
+      <div class="frens-echo-cluster" title="${count} aftersound${count === 1 ? '' : 's'} here">
+        <div style="width:32px;height:32px;border-radius:9999px;overflow:hidden;
+          border:1.5px solid ${MARKER_RING};background:#ffffff;
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:0 2px 8px rgba(0,0,0,.12);">
+          ${avatarGlyphHtml(rep.avatarUrl, 28)}
+        </div>
+        <span class="frens-echo-cluster-count">${count}</span>
+      </div>`
+  }
+  return clusterHtml(count)
+}
+
 function mapHasSize(map) {
   const el = map?.getContainer?.()
   return Boolean(el && el.clientWidth > 0 && el.clientHeight > 0)
+}
+
+/** Explore — don't zoom closer than a ~420m × 420m viewport (keeps tiles stable). */
+function maxZoomForSpanM(map, spanM = ECHO_DISCOVER_RADIUS_MIN_M) {
+  if (!map?.getContainer?.() || !mapHasSize(map)) return 15
+  const center = map.getCenter()
+  const lat = center.lat
+  const half = spanM / 2
+  const dLat = half / 111320
+  const cosLat = Math.cos((lat * Math.PI) / 180) || 1e-6
+  const dLon = half / (111320 * cosLat)
+  const bounds = L.latLngBounds(
+    [lat - dLat, center.lng - dLon],
+    [lat + dLat, center.lng + dLon],
+  )
+  const z = map.getBoundsZoom(bounds, false)
+  return Math.max(4, Math.min(z, 17))
+}
+
+function applyExploreZoomCap(map) {
+  if (!map) return 15
+  const cap = maxZoomForSpanM(map)
+  map.setMaxZoom(cap)
+  if (map.getZoom() > cap) map.setZoom(cap, { animate: false })
+  return cap
 }
 
 function emitMapViewport(map, onViewportChange) {
@@ -114,10 +162,16 @@ function destroyEchoMap(refs) {
   refs.userRef.current = null
 }
 
-function refreshMapTiles(map, tileLayer) {
-  if (!map || !mapHasSize(map)) return
-  refreshActiveTiles(map, tileLayer)
-}
+/** Leaflet adds classes to this node — keep it from re-rendering so React won't strip them. */
+const LeafletMount = memo(forwardRef(function LeafletMount(_props, ref) {
+  return (
+    <div
+      ref={ref}
+      className="frens-echo-map w-full h-full"
+      style={{ minHeight: '100%' }}
+    />
+  )
+}))
 
 export default function EchoMapView({
   center,
@@ -129,11 +183,14 @@ export default function EchoMapView({
   searchRadiusM,
   userPos = null,
   placePin = null,
+  frenGraph = null,
   onOpenEcho,
-  onClusterZoom,
+  onOpenCluster,
   onViewportChange,
   className = '',
   visible = true,
+  mapRecoverTick = 0,
+  mapSuspended = false,
 }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
@@ -146,6 +203,10 @@ export default function EchoMapView({
   const cityRef = useRef(null)
   const userRef = useRef(null)
   const zoomRef = useRef(zoom)
+  const modeRef = useRef(mode)
+  modeRef.current = mode
+  const mapSuspendedRef = useRef(mapSuspended)
+  mapSuspendedRef.current = mapSuspended
   const onViewportChangeRef = useRef(onViewportChange)
   onViewportChangeRef.current = onViewportChange
   const [mapZoom, setMapZoom] = useState(zoom)
@@ -170,6 +231,7 @@ export default function EchoMapView({
         zoom,
         zoomControl: true,
         scrollWheelZoom: true,
+        doubleClickZoom: false,
         attributionControl: false,
       })
       mapRef.current = map
@@ -191,28 +253,35 @@ export default function EchoMapView({
         radius: ECHO_DISCOVER_RADIUS_MIN_M,
         color: ZONE_STROKE,
         weight: 1.5,
-        opacity: 0.55,
+        opacity: mode === 'near' ? 0.55 : 0,
         fillColor: ZONE_FILL,
-        fillOpacity: 0.08,
-      }).addTo(map)
-
+        fillOpacity: mode === 'near' ? 0.08 : 0,
+      })
       cityRef.current = L.circle([center.lat, center.lon], {
         radius: scanRadiusM,
         color: ZONE_STROKE,
         weight: 1,
-        opacity: 0.25,
+        opacity: mode === 'near' ? 0.25 : 0,
         dashArray: '6 8',
         fillColor: ZONE_FILL,
-        fillOpacity: 0.03,
-      }).addTo(map)
-
+        fillOpacity: mode === 'near' ? 0.03 : 0,
+      })
       userRef.current = L.circleMarker([center.lat, center.lon], {
         radius: 6,
         color: MARKER_INK,
         weight: 2,
         fillColor: '#6BC06B',
         fillOpacity: 0.9,
-      }).addTo(map)
+      })
+
+      if (mode === 'near') {
+        areaRef.current.addTo(map)
+        cityRef.current.addTo(map)
+        if (userPos) {
+          userRef.current.setLatLng([userPos.lat, userPos.lon])
+          userRef.current.addTo(map)
+        }
+      }
 
       const emitViewport = () => {
         const z = map.getZoom()
@@ -221,21 +290,29 @@ export default function EchoMapView({
         emitMapViewport(map, onViewportChangeRef.current)
       }
 
-      map.on('moveend', emitViewport)
-      map.on('zoomend', emitViewport)
+      map.on('moveend', () => {
+        if (mapSuspendedRef.current) return
+        emitViewport()
+      })
+      map.on('zoomend', () => {
+        if (mapSuspendedRef.current) return
+        if (modeRef.current === 'explore') applyExploreZoomCap(map)
+      })
 
       ro = typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(() => {
             clearTimeout(resizeTimer)
             resizeTimer = setTimeout(() => {
-              refreshMapTiles(map, tileLayerRef.current)
+              if (mapSuspendedRef.current) return
+              if (modeRef.current === 'explore') applyExploreZoomCap(map)
+              if (mapHasSize(map)) map.invalidateSize({ animate: false })
             }, 120)
           })
         : null
       ro?.observe(containerRef.current)
 
       map.whenReady(() => {
-        refreshMapTiles(map, tileLayerRef.current)
+        if (mapHasSize(map)) map.invalidateSize({ animate: false })
         emitViewport()
       })
     }
@@ -259,6 +336,17 @@ export default function EchoMapView({
       })
     }
   }, [])
+
+  // Explore — cap zoom so viewport stays ≥ 420m (prevents tile white-out).
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    if (mode === 'explore') {
+      applyExploreZoomCap(map)
+      return
+    }
+    map.setMaxZoom(20)
+  }, [mode])
 
   // Near-me mode: follow blurred user position.
   useEffect(() => {
@@ -285,18 +373,47 @@ export default function EchoMapView({
   }, [mode, placePin?.lat, placePin?.lon])
 
   useEffect(() => {
+    const map = mapRef.current
     const showNear = mode === 'near'
-    areaRef.current?.setStyle({ opacity: showNear ? 0.55 : 0 })
-    cityRef.current?.setStyle({ opacity: showNear ? 0.25 : 0 })
-    userRef.current?.setStyle({ opacity: showNear && userPos ? 1 : 0 })
+    const marker = userRef.current
+
+    areaRef.current?.setStyle({
+      opacity: showNear ? 0.55 : 0,
+      fillOpacity: showNear ? 0.08 : 0,
+    })
+    cityRef.current?.setStyle({
+      opacity: showNear ? 0.25 : 0,
+      fillOpacity: showNear ? 0.03 : 0,
+    })
+
+    if (!map || !marker) return
 
     if (showNear && userPos) {
+      if (!map.hasLayer(areaRef.current) && areaRef.current) areaRef.current.addTo(map)
+      if (!map.hasLayer(cityRef.current) && cityRef.current) cityRef.current.addTo(map)
       areaRef.current?.setLatLng([userPos.lat, userPos.lon])
       cityRef.current?.setLatLng([userPos.lat, userPos.lon])
       cityRef.current?.setRadius(scanRadiusM)
-      userRef.current?.setLatLng([userPos.lat, userPos.lon])
+      marker.setLatLng([userPos.lat, userPos.lon])
+      if (!map.hasLayer(marker)) marker.addTo(map)
+      marker.setStyle({ opacity: 1, fillOpacity: 0.9 })
+      return
     }
+
+    if (map.hasLayer(marker)) map.removeLayer(marker)
+    if (areaRef.current && map.hasLayer(areaRef.current)) map.removeLayer(areaRef.current)
+    if (cityRef.current && map.hasLayer(cityRef.current)) map.removeLayer(cityRef.current)
   }, [mode, userPos, scanRadiusM])
+
+  // Explore — fly to a searched place.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || mode !== 'explore' || !placePin?.lat || !placePin?.lon) return
+    const targetZoom = Math.max(zoomRef.current, 11)
+    map.setView([placePin.lat, placePin.lon], targetZoom, { animate: false })
+    zoomRef.current = targetZoom
+    setMapZoom(targetZoom)
+  }, [mode, placePin?.lat, placePin?.lon])
 
   useEffect(() => {
     const group = markersRef.current
@@ -308,16 +425,19 @@ export default function EchoMapView({
 
     echoes.forEach((echo) => {
       const icon = L.divIcon({
-        html: markerHtml(echo),
+        html: markerHtml(echo, frenGraph),
         className: 'frens-echo-marker',
         iconSize: [32, 32],
         iconAnchor: [16, 16],
       })
       L.marker([echo.lat, echo.lon], { icon })
         .addTo(group)
-        .on('click', () => onOpenEcho?.(echo.id))
+        .on('click', () => {
+          const echoId = echo.id
+          requestAnimationFrame(() => onOpenEcho?.(echoId))
+        })
     })
-  }, [echoes, onOpenEcho, mode])
+  }, [echoes, frenGraph, onOpenEcho, mode])
 
   useEffect(() => {
     const group = hintsRef.current
@@ -357,60 +477,68 @@ export default function EchoMapView({
     }
     group.clearLayers()
 
-    const clusters = clusterEchoes(browseEchoes, zoomRef.current)
+    const clusters = clusterEchoesExplore(browseEchoes)
+
+    function openExploreGroup(echoes) {
+      if (!echoes?.length) return
+      onOpenCluster?.(echoes)
+    }
+
     clusters.forEach((item) => {
+      const echoes = item.echoes || (item.echo ? [item.echo] : [])
       if (item.type === 'cluster') {
         const icon = L.divIcon({
-          html: clusterHtml(item.count),
+          html: clusterExploreHtml(echoes, frenGraph),
           className: 'frens-echo-cluster-marker',
           iconSize: [44, 44],
           iconAnchor: [22, 22],
         })
         L.marker([item.lat, item.lon], { icon })
           .addTo(group)
-          .on('click', () => {
-            const nextZoom = Math.min((map.getZoom() || 10) + 2, 16)
-            map.setView([item.lat, item.lon], nextZoom, { animate: false })
-            refreshMapTiles(map, tileLayerRef.current)
-            onClusterZoom?.({ lat: item.lat, lon: item.lon, zoom: nextZoom })
+          .on('click', (ev) => {
+            L.DomEvent.stopPropagation(ev)
+            openExploreGroup(echoes)
           })
         return
       }
 
       const echo = item.echo
-      const global = canBrowseGlobally(echo)
       const icon = L.divIcon({
-        html: batHintHtml(false),
-        className: 'frens-echo-bat-marker',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
+        html: markerHtml(echo, frenGraph),
+        className: 'frens-echo-marker',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
       })
-      L.marker([item.lat, item.lon], { icon })
+      L.marker([echo.lat, echo.lon], { icon })
         .addTo(group)
-        .on('click', () => {
-          if (global) onOpenEcho?.(echo.id)
+        .on('click', (ev) => {
+          L.DomEvent.stopPropagation(ev)
+          openExploreGroup(echoes)
         })
     })
-  }, [browseEchoes, mode, mapZoom, onOpenEcho, onClusterZoom])
+  }, [browseEchoes, mode, onOpenCluster, frenGraph])
 
-  // Refresh tiles when map becomes visible or mode changes (not during fly animation).
   useEffect(() => {
-    if (!visible) return
+    if (mapSuspended) return undefined
     const map = mapRef.current
-    if (!map) return
-    const delay = mode === 'explore' ? 280 : 150
-    const t = setTimeout(() => refreshMapTiles(map, tileLayerRef.current), delay)
+    if (!map || !mapHasSize(map)) return undefined
+    const t = setTimeout(() => {
+      map.invalidateSize({ animate: false })
+    }, 80)
     return () => clearTimeout(t)
-  }, [visible, mode])
+  }, [mapSuspended, mapRecoverTick])
 
   const heightClass = mode === 'explore' ? 'h-96' : 'h-80'
   const minHeight = mode === 'explore' ? 384 : 320
 
+  // Outer wrapper holds Tailwind layout/classes — inner div is Leaflet-owned only.
+  // React must not rewrite className on the Leaflet container (strips leaflet-container → white map).
   return (
     <div
-      ref={containerRef}
-      className={`w-full ${heightClass} rounded-xl overflow-hidden border frens-border frens-echo-map shadow-sm ${className}`}
+      className={`w-full ${heightClass} rounded-xl overflow-hidden border frens-border shadow-sm ${className}`}
       style={{ minHeight }}
-    />
+    >
+      <LeafletMount ref={containerRef} />
+    </div>
   )
 }

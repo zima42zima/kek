@@ -12,7 +12,7 @@ function authorIdMatch(a, b) {
 export function withLiveAuthorAvatar(item, liveProfile) {
   if (!item || !liveProfile?.id) return item
   const authorId =
-    item.userId ?? item.user_id ?? item.senderId ?? item.authorId ?? item.author_id
+    item.userId ?? item.user_id ?? item.senderId ?? item.authorId ?? item.author_id ?? item.ownerId
   if (!authorIdMatch(authorId, liveProfile.id)) return item
   return {
     ...item,

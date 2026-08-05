@@ -1,5 +1,7 @@
 /** Grid-based echo clustering for map zoom levels. */
 
+import { distanceMeters } from './geo'
+
 function cellSizeDeg(zoom) {
   if (zoom <= 4) return 12
   if (zoom <= 6) return 4
@@ -51,4 +53,42 @@ export function groupEchoesByPlace(echoes) {
     groups.get(key).echoes.push(echo)
   }
   return [...groups.values()].sort((a, b) => b.echoes.length - a.echoes.length)
+}
+
+/** Explore map — group nearby world echoes (~280m) regardless of zoom. */
+export function clusterEchoesExplore(echoes, clusterRadiusM = 280) {
+  const valid = (echoes ?? []).filter(
+    (e) => e?.id && Number.isFinite(e.lat) && Number.isFinite(e.lon),
+  )
+  const used = new Set()
+  const out = []
+
+  for (const seed of valid) {
+    if (used.has(seed.id)) continue
+    const group = [seed]
+    used.add(seed.id)
+
+    let expanded = true
+    while (expanded) {
+      expanded = false
+      for (const e of valid) {
+        if (used.has(e.id)) continue
+        if (group.some((g) => distanceMeters(g, e) <= clusterRadiusM)) {
+          group.push(e)
+          used.add(e.id)
+          expanded = true
+        }
+      }
+    }
+
+    const lat = group.reduce((s, e) => s + e.lat, 0) / group.length
+    const lon = group.reduce((s, e) => s + e.lon, 0) / group.length
+    if (group.length === 1) {
+      out.push({ type: 'single', echo: group[0], echoes: group, lat, lon, count: 1 })
+    } else {
+      out.push({ type: 'cluster', echoes: group, lat, lon, count: group.length })
+    }
+  }
+
+  return out
 }

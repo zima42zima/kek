@@ -134,18 +134,34 @@ function buildLayerCatalog(L) {
 }
 
 /** Redraw visible tiles after the map moves or resizes. */
-export function refreshActiveTiles(map, layer) {
-  if (!map) return
+export function refreshActiveTiles(map, layer, { forceRedraw = false, invalidate = true } = {}) {
+  if (!map?.getContainer?.()?.clientWidth) return
   try {
-    map.invalidateSize(true)
+    if (invalidate) map.invalidateSize({ animate: false })
+    if (!forceRedraw) return
     const redraw = (l) => {
-      if (typeof l?.redraw === 'function') l.redraw()
+      if (l?._url && typeof l.redraw === 'function') l.redraw()
     }
-    if (layer?.eachLayer) {
-      layer.eachLayer(redraw)
-    } else {
-      redraw(layer)
+    if (layer) redraw(layer)
+    else map.eachLayer(redraw)
+  } catch {
+    // ignore
+  }
+}
+
+/** Recover tiles after a modal/overlay (e.g. backdrop-blur) disrupted rendering. */
+export function recoverEchoMapTiles(map, layer) {
+  if (!map?.getContainer?.()?.clientWidth) return
+  try {
+    map.invalidateSize({ animate: false })
+    const center = map.getCenter()
+    const zoom = map.getZoom()
+    map.setView(center, zoom, { animate: false })
+    const redraw = (l) => {
+      if (l?._url && typeof l.redraw === 'function') l.redraw()
     }
+    if (layer) redraw(layer)
+    else map.eachLayer(redraw)
   } catch {
     // ignore
   }
@@ -184,7 +200,7 @@ export function addEchoMapTiles(L, map, options = {}) {
       const label = catalog.find((e) => e.instance === ev.layer)
       const text = ev.layer.options?.attribution || label?.attribution || ''
       currentAttribution = setAttribution(attributionControl, currentAttribution, text)
-      window.setTimeout(() => refreshActiveTiles(map, ev.layer), 50)
+      window.setTimeout(() => refreshActiveTiles(map, ev.layer, { forceRedraw: true }), 50)
     })
   }
 

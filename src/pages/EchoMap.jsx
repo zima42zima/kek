@@ -66,6 +66,13 @@ import {
   echoMapNavTarget,
 } from '../lib/echoRange'
 import { listFollowing, listFollowers, getProfileCard } from '../lib/social'
+import {
+  hydrateItemAvatar,
+  hydrateItemAvatars,
+  liveProfilesRecord,
+  peekLiveProfile,
+  prefetchLiveProfiles,
+} from '../lib/liveAvatars'
 import { distanceMeters, blurCoord, randomOffsetInRadius, fuzzHintCoord, reverseGeocode, approxLocationByIp } from '../lib/geo'
 import { canHintEcho, canDiscoverEcho, canShowEchoPin, canBrowseGlobally } from '../lib/echoPrivacy'
 import { applyCommentReactionToggle } from '../lib/commentReactions'
@@ -124,6 +131,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   ))
   const [followingIds, setFollowingIds] = useState(() => new Set())
   const [followerIds, setFollowerIds] = useState(() => new Set())
+  const [ownerProfiles, setOwnerProfiles] = useState({})
   const [showCreate, setShowCreate] = useState(false)
   const [showIntro, setShowIntro] = useState(() => {
     try {
@@ -133,6 +141,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     }
   })
   const [openId, setOpenId] = useState(null)
+  const [exploreClusterEchoes, setExploreClusterEchoes] = useState([])
+  const [mapRecoverTick, setMapRecoverTick] = useState(0)
   const [editEcho, setEditEcho] = useState(null)
   const [pendingDeleteEchoId, setPendingDeleteEchoId] = useState(null)
   const [commentsByEchoId, setCommentsByEchoId] = useState({})
@@ -153,7 +163,12 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   const [browseEchoes, setBrowseEchoes] = useState([])
   const [exploreCityEchoes, setExploreCityEchoes] = useState([])
   const [explorePlace, setExplorePlace] = useState(null)
-  const [exploreCenter, setExploreCenter] = useState({ lat: 20, lon: 0 })
+  const [exploreCenter, setExploreCenter] = useState(null)
+  useEffect(() => {
+    if (mapMode !== 'explore' || explorePlace || !userPos) return
+    setExploreCenter((prev) => prev ?? blurCoord(userPos))
+  }, [mapMode, explorePlace, userPos])
+
   const refreshBrowseEchoes = useCallback(async (bounds) => {
     if (!backendReady || !bounds) return
     try {
@@ -191,21 +206,30 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   function handleClearExplorePlace() {
     setExplorePlace(null)
+    if (userPos) setExploreCenter(blurCoord(userPos))
   }
 
-  function handleMapModeChange(mode) {
-    setMapMode(mode)
+  function handleMapModeChange(nextMode) {
+    if (nextMode === 'explore' && !explorePlace) {
+      if (userPos) setExploreCenter(blurCoord(userPos))
+      else if (!exploreCenter) setExploreCenter({ lat: 20, lon: 0 })
+    }
+    setMapMode(nextMode)
   }
 
   const mapCenter = useMemo(() => {
     if (mapMode === 'explore') {
       if (explorePlace) return { lat: explorePlace.lat, lon: explorePlace.lon }
-      return exploreCenter
+      if (exploreCenter) return exploreCenter
+      if (userPos) return blurCoord(userPos)
+      return { lat: 20, lon: 0 }
     }
-    return userPos ? blurCoord(userPos) : (explorePlace || exploreCenter)
+    return userPos ? blurCoord(userPos) : (explorePlace || exploreCenter || { lat: 20, lon: 0 })
   }, [mapMode, exploreCenter, explorePlace, userPos])
 
-  const mapZoom = mapMode === 'explore' ? (explorePlace?.zoom ?? 12) : 14
+  const mapZoom = mapMode === 'explore'
+    ? (explorePlace?.zoom ?? 3)
+    : 14
 
   const mapInstanceKey = useMemo(() => {
     if (mapMode !== 'explore') return 'near'
@@ -425,31 +449,49 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       .catch(() => {})
   }, [userId])
 
-  // Refresh author handles from profiles for world echoes (local mode only).
+  const avatarHydrateOpts = useMemo(
+    () => ({ selfUserId: userId, selfProfile: profile }),
+    [userId, profile],
+  )
+
+  const hydrateEchoList = useCallback(
+    (list) => hydrateItemAvatars(list, ownerProfiles, avatarHydrateOpts),
+    [ownerProfiles, avatarHydrateOpts],
+  )
+
+  // Keep echo author avatars + handles in sync with live profiles.
   useEffect(() => {
-    if (!userId || backendReady) return
-    const owners = [...new Set(
-      echoes.filter((e) => !e.mine && e.ownerId).map((e) => e.ownerId),
+    if (!userId) return undefined
+
+    const ownerIds = [...new Set(
+      [...echoes, ...browseEchoes, ...exploreCityEchoes]
+        .filter((e) => e.ownerId && !e.mine && !e.anonymous)
+        .map((e) => e.ownerId),
     )]
-    if (owners.length === 0) return
+    if (ownerIds.length === 0) return undefined
 
     let cancelled = false
-    ;(async () => {
-      const updates = {}
-      for (const oid of owners) {
-        try {
-          const card = await getProfileCard(oid)
-          if (card?.frenName) updates[oid] = card.frenName
-        } catch { /* ignore */ }
-      }
-      if (cancelled || Object.keys(updates).length === 0) return
-      setEchoes((prev) => prev.map((e) => (
-        updates[e.ownerId] ? { ...e, authorName: updates[e.ownerId] } : e
-      )))
-    })()
-
+    prefetchLiveProfiles(ownerIds).then(() => {
+      if (cancelled) return
+      const next = liveProfilesRecord()
+      setOwnerProfiles((prev) => {
+        const keys = new Set([...Object.keys(prev), ...Object.keys(next)])
+        for (const k of keys) {
+          const a = prev[k]
+          const b = next[k]
+          if (
+            a?.avatarUrl !== b?.avatarUrl
+            || a?.avatarType !== b?.avatarType
+            || a?.frenName !== b?.frenName
+          ) {
+            return next
+          }
+        }
+        return prev
+      })
+    })
     return () => { cancelled = true }
-  }, [userId, echoes.length, backendReady])
+  }, [userId, echoes, browseEchoes, exploreCityEchoes])
 
   useEffect(() => {
     if (!focusEchoId) {
@@ -501,6 +543,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   function closeOpenEcho() {
     setOpenId(null)
+    setExploreClusterEchoes([])
+    setMapRecoverTick((t) => t + 1)
     if (focusEchoId) onClearEchoFocus?.()
   }
 
@@ -601,6 +645,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   const resolveActorName = useCallback(async (echo) => {
     if (echo.ownerId && echo.ownerId !== userId) {
+      const cached = peekLiveProfile(echo.ownerId)
+      if (cached?.frenName) return cached.frenName
       try {
         const card = await getProfileCard(echo.ownerId)
         if (card?.frenName) return card.frenName
@@ -714,7 +760,20 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     })
   }, [userPos, echoes, discovered, frenGraph, pushLocal, resolveActorName])
 
-  const liveEchoes = echoes
+  const liveEchoes = useMemo(
+    () => hydrateEchoList(echoes),
+    [echoes, hydrateEchoList],
+  )
+
+  const liveBrowseEchoes = useMemo(
+    () => hydrateEchoList(browseEchoes),
+    [browseEchoes, hydrateEchoList],
+  )
+
+  const liveExploreCityEchoes = useMemo(
+    () => hydrateEchoList(exploreCityEchoes),
+    [exploreCityEchoes, hydrateEchoList],
+  )
 
   const mapEchoes = useMemo(
     () => liveEchoes.filter((e) => canShowEchoPin(e, { discovered })),
@@ -823,13 +882,13 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       const anchor = explorePlace || exploreCenter
       const placeLabel = explorePlace?.label
       const fromBrowse = explorePlace
-        ? browseEchoes.filter(
+        ? liveBrowseEchoes.filter(
             (e) =>
               echoMatchesExplorePlace(e, explorePlace)
               || (placeLabel && echoInSameCity(e, placeLabel)),
           )
-        : browseEchoes
-      const merged = mergeDiscoverable(explorePlace ? exploreCityEchoes : [], fromBrowse)
+        : liveBrowseEchoes
+      const merged = mergeDiscoverable(explorePlace ? liveExploreCityEchoes : [], fromBrowse)
       if (merged.length === 0) return []
       return decorate(merged, anchor)
     }
@@ -843,10 +902,26 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     searchRadiusM,
     explorePlace,
     exploreCenter,
-    browseEchoes,
-    exploreCityEchoes,
+    liveBrowseEchoes,
+    liveExploreCityEchoes,
     frenGraph,
   ])
+
+  const exploreMapEchoes = useMemo(() => {
+    if (mapMode !== 'explore') return []
+    const byId = new Map()
+    for (const echo of liveExploreCityEchoes) {
+      if (echo?.id && Number.isFinite(echo.lat) && Number.isFinite(echo.lon)) {
+        byId.set(echo.id, echo)
+      }
+    }
+    for (const echo of liveBrowseEchoes) {
+      if (echo?.id && Number.isFinite(echo.lat) && Number.isFinite(echo.lon)) {
+        byId.set(echo.id, echo)
+      }
+    }
+    return [...byId.values()]
+  }, [mapMode, liveExploreCityEchoes, liveBrowseEchoes])
 
   const swipeGalleryTitle = useMemo(() => {
     if (mapMode === 'near') {
@@ -858,7 +933,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     return 'World aftersounds in this view'
   }, [mapMode, cityLabel, explorePlace])
 
-  const mapHidden = showCreate || !!openId || showIntro
+  const mapOverlayOpen = showCreate || !!openId || showIntro
+  const mapHidden = mapOverlayOpen
 
   const myEchoes = useMemo(() => {
     const list = liveEchoes.filter((e) => e.mine)
@@ -931,21 +1007,21 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     return sorted
   }, [displayCollection, collectionKindFilter, sortBy])
 
+  const findEchoById = useCallback((id) => {
+    if (!id) return null
+    return liveEchoes.find((e) => e.id === id)
+      || liveBrowseEchoes.find((e) => e.id === id)
+      || liveExploreCityEchoes.find((e) => e.id === id)
+      || displayCollection.find((e) => e.id === id)
+      || historyEchoCache[id]
+      || null
+  }, [liveEchoes, liveBrowseEchoes, liveExploreCityEchoes, displayCollection, historyEchoCache])
+
   function handleMineViewChange(view) {
     setMineView(view)
     try {
       localStorage.setItem(ECHO_MINE_VIEW_KEY, view)
     } catch { /* ignore */ }
-  }
-
-  function findEchoById(id) {
-    if (!id) return null
-    return echoes.find((e) => e.id === id)
-      || browseEchoes.find((e) => e.id === id)
-      || exploreCityEchoes.find((e) => e.id === id)
-      || displayCollection.find((e) => e.id === id)
-      || historyEchoCache[id]
-      || null
   }
 
   function touchEchoHistory(echo, { interaction } = {}) {
@@ -980,7 +1056,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           mediaUrl: live.mediaUrl || (live.kind === 'image' ? previewUrl : live.mediaUrl),
           coverUrl: live.coverUrl || (live.kind !== 'image' ? previewUrl : live.coverUrl),
         }
-      : {
+      : hydrateItemAvatar({
         id: h.echoId,
         kind: h.kind,
         authorName: h.authorName,
@@ -997,13 +1073,13 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         avatarType: h.avatarType,
         avatarUrl: h.avatarUrl,
         mine: false,
-      }
+      }, ownerProfiles, avatarHydrateOpts)
     return {
       heardAt: h.listenedAt,
       interaction: h.interaction,
       echo,
     }
-  }), [history, echoes, browseEchoes, exploreCityEchoes, displayCollection, historyEchoCache])
+  }), [history, liveEchoes, liveBrowseEchoes, liveExploreCityEchoes, displayCollection, historyEchoCache, ownerProfiles, avatarHydrateOpts])
 
   useEffect(() => {
     if (tab !== 'history' || !userId || history.length === 0) return undefined
@@ -1521,11 +1597,11 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     touchEchoHistory(echo, { interaction: 'viewed' })
   }
 
-  const openEchoBase = echoes.find((e) => e.id === openId)
-    || browseEchoes.find((e) => e.id === openId)
-    || exploreCityEchoes.find((e) => e.id === openId)
-    || displayCollection.find((e) => e.id === openId)
-    || null
+  const openEchoBase = useMemo(() => {
+    if (!openId) return null
+    return exploreClusterEchoes.find((e) => e.id === openId)
+      || findEchoById(openId)
+  }, [openId, exploreClusterEchoes, findEchoById])
   const openEcho = openEchoBase
     ? {
         ...openEchoBase,
@@ -1537,16 +1613,19 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     ? isInDiscoverRange(openEcho, userPos)
     : false
   const openRangeEchoes = useMemo(() => {
-    if (!openId || !swipeGalleryEchoes.some((e) => e.id === openId)) return []
-    return swipeGalleryEchoes
-  }, [openId, swipeGalleryEchoes])
+    if (!openId) return []
+    if (exploreClusterEchoes.some((e) => e.id === openId)) return exploreClusterEchoes
+    if (swipeGalleryEchoes.some((e) => e.id === openId)) return swipeGalleryEchoes
+    return []
+  }, [openId, exploreClusterEchoes, swipeGalleryEchoes])
 
   function openGalleryEcho(id) {
     if (!id) return
+    setExploreClusterEchoes([])
     const echo = swipeGalleryEchoes.find((e) => e.id === id)
-      || echoes.find((e) => e.id === id)
-      || browseEchoes.find((e) => e.id === id)
-      || exploreCityEchoes.find((e) => e.id === id)
+      || liveEchoes.find((e) => e.id === id)
+      || liveBrowseEchoes.find((e) => e.id === id)
+      || liveExploreCityEchoes.find((e) => e.id === id)
     if (!echo) return
     if (canBrowseGlobally(echo) || echo.mine || (userPos && isInDiscoverRange(echo, userPos))) {
       setDiscovered((prev) => new Set([...prev, id]))
@@ -1554,7 +1633,26 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     setOpenId(id)
   }
 
-  function handleOpenEcho(id, flyTarget) {
+  function handleRangeEchoChange(nextId) {
+    if (!nextId) return
+    if (exploreClusterEchoes.some((e) => e.id === nextId)) {
+      setOpenId(nextId)
+      return
+    }
+    openGalleryEcho(nextId)
+  }
+
+  const handleOpenCluster = useCallback((echoes) => {
+    const list = (Array.isArray(echoes) ? echoes : [])
+      .map((e) => findEchoById(e.id) || e)
+      .filter((e) => e?.id)
+    if (list.length === 0) return
+    setExploreClusterEchoes(list)
+    setDiscovered((prev) => new Set([...prev, ...list.map((e) => e.id)]))
+    setOpenId(list[0].id)
+  }, [findEchoById])
+
+  const handleOpenEcho = useCallback(async (id, flyTarget, echoHint = null) => {
     if (flyTarget?.lat != null) {
       handleSearchPlace({
         lat: flyTarget.lat,
@@ -1564,17 +1662,50 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       return
     }
     if (!id) return
+    setExploreClusterEchoes([])
+
     if (swipeGalleryEchoes.some((e) => e.id === id)) {
       openGalleryEcho(id)
       return
     }
-    const echo = echoes.find((e) => e.id === id) || browseEchoes.find((e) => e.id === id)
+
+    let echo = echoHint || findEchoById(id)
+    if (!echo && backendReady && userId) {
+      try {
+        const fetched = await getEchoById(id, userId)
+        if (fetched) {
+          const [withUrl] = await attachMediaUrls([{
+            ...fetched,
+            mine: fetched.ownerId === userId,
+          }])
+          echo = hydrateItemAvatar(withUrl, ownerProfiles, avatarHydrateOpts)
+          setBrowseEchoes((prev) => (
+            prev.some((e) => e.id === id) ? prev : [...prev, withUrl]
+          ))
+        }
+      } catch { /* ignore */ }
+    }
     if (!echo) return
-    if (canBrowseGlobally(echo) || echo.mine) {
+
+    if (
+      mapMode === 'explore'
+      || canBrowseGlobally(echo)
+      || echo.mine
+      || (userPos && isInDiscoverRange(echo, userPos))
+    ) {
       setDiscovered((prev) => new Set([...prev, id]))
     }
     setOpenId(id)
-  }
+  }, [
+    swipeGalleryEchoes,
+    mapMode,
+    backendReady,
+    userId,
+    ownerProfiles,
+    avatarHydrateOpts,
+    userPos,
+    findEchoById,
+  ])
 
   return (
     <div className="space-y-4">
@@ -1665,25 +1796,26 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
                   {explorePlace.label} · 🌍 = open from anywhere
                 </p>
               ) : null}
-              {!mapHidden ? (
-                <EchoMapView
-                  key={mapInstanceKey}
-                  visible={!mapHidden}
-                  center={mapCenter}
-                  zoom={mapZoom}
-                  mode={mapMode}
-                  userPos={userPos}
-                  echoes={mapEchoes}
-                  hints={mapMode === 'near' ? batHints : []}
-                  browseEchoes={mapMode === 'explore' ? browseEchoes : []}
-                  searchRadiusM={searchRadiusM}
-                  placePin={explorePlace}
-                  onOpenEcho={handleOpenEcho}
-                  onViewportChange={handleViewportChange}
-                />
-              ) : (
-                <div className="w-full h-96 rounded-xl border frens-border bg-[#d8dde8]" aria-hidden />
-              )}
+              <EchoMapView
+                key={mapInstanceKey}
+                visible={!showCreate && !showIntro}
+                className={mapOverlayOpen ? 'pointer-events-none' : ''}
+                center={mapCenter}
+                zoom={mapZoom}
+                mode={mapMode}
+                userPos={mapMode === 'near' ? userPos : null}
+                echoes={mapEchoes}
+                hints={mapMode === 'near' ? batHints : []}
+                browseEchoes={mapMode === 'explore' ? exploreMapEchoes : []}
+                searchRadiusM={searchRadiusM}
+                placePin={explorePlace}
+                frenGraph={frenGraph}
+                onOpenEcho={handleOpenEcho}
+                onOpenCluster={handleOpenCluster}
+                onViewportChange={handleViewportChange}
+                mapRecoverTick={mapRecoverTick}
+                mapSuspended={!!openId}
+              />
               {!mapHidden && mapMode === 'explore' && explorePlace && swipeGalleryEchoes.length === 0 && (
                 <p className="text-xs frens-muted px-1 text-center">
                   {browseEchoes.length > 0
@@ -1881,7 +2013,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           spatialNearby={openEchoNearby}
           useRemoteAura={backendReady}
           rangeEchoes={openRangeEchoes}
-          onRangeEchoChange={openGalleryEcho}
+          onRangeEchoChange={handleRangeEchoChange}
           onAuraChange={applyAuraChange}
           onSave={saveEcho}
           onUnsave={unsaveEcho}
