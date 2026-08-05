@@ -46,7 +46,19 @@ function DmDaySep({ label }) {
 
 function DmBubble({ message, avatarProfile, mine, canReact, onReact }) {
   const hasText = Boolean(message.text?.trim())
-  const hasMedia = Boolean(message.image || message.video)
+  const hasImage = Boolean(message.image && !message.video)
+  const hasVideo = Boolean(message.video)
+  const hasMedia = hasImage || hasVideo
+
+  const reactionControls = canReact ? (
+    <EmojiReactions
+      reactions={message.reactions || []}
+      mine={mine}
+      canReact={canReact}
+      onReact={onReact}
+      controlsOnly
+    />
+  ) : null
 
   return (
     <div className={`flex gap-2.5 min-w-0 items-start ${mine ? 'flex-row-reverse' : ''}`}>
@@ -55,35 +67,38 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact }) {
         className="w-8 h-8 shrink-0 mt-0.5"
         logoClassName="w-5 h-auto"
       />
-      <div className={`min-w-0 max-w-[78%] flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
-        <div className={`flex items-center gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
-          <div className="min-w-0">
-            {message.sticker ? (
-              <span className="text-4xl leading-none block">{message.sticker}</span>
-            ) : (
-              <>
-                {hasMedia && (
-                  <div className={`max-w-full min-w-0 ${hasText ? 'mb-1' : ''}`}>
-                    {message.video && <SharedVideo src={message.video} />}
-                    {message.image && !message.video && <SharedImage src={message.image} />}
+      <div className={`flex-1 min-w-0 max-w-[85%] flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
+        {message.sticker ? (
+          <span className="text-4xl leading-none block">{message.sticker}</span>
+        ) : (
+          <>
+            {hasMedia ? (
+              <div className={`max-w-full ${hasText ? 'mb-1' : ''}`}>
+                {hasVideo && <SharedVideo src={message.video} variant="chat" />}
+                {hasImage && <SharedImage src={message.image} variant="chat" />}
+                {!hasText && reactionControls ? (
+                  <div className={`flex mt-0.5 ${mine ? 'justify-end' : 'justify-start'}`}>
+                    {reactionControls}
                   </div>
-                )}
-                {hasText ? (
+                ) : null}
+              </div>
+            ) : null}
+            {hasText ? (
+              <div className={`flex items-start gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
+                <div className="min-w-0 max-w-full">
                   <div className={textBubbleClass(mine)}>
                     <RichText text={message.text} className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words" />
                   </div>
-                ) : null}
-              </>
-            )}
-          </div>
-          <EmojiReactions
-            reactions={message.reactions || []}
-            mine={mine}
-            canReact={canReact}
-            onReact={onReact}
-            controlsOnly
-          />
-        </div>
+                </div>
+                {reactionControls}
+              </div>
+            ) : !hasMedia && reactionControls ? (
+              <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                {reactionControls}
+              </div>
+            ) : null}
+          </>
+        )}
         <EmojiReactions
           reactions={message.reactions || []}
           mine={mine}
@@ -270,9 +285,9 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
 
       <div
         data-frens-panel-scroll
-        className="flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll frens-panel-scroll-bleed"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll"
       >
-        <div className="px-3 py-3 space-y-2.5 frens-content-max">
+        <div className="px-3 py-3 space-y-2.5 frens-content-max w-full">
           {messages.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center text-center">
               <p className="text-sm frens-body-text mb-1 font-light">Say hi to {thread.otherName}</p>

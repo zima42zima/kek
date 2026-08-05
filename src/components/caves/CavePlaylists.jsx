@@ -418,7 +418,7 @@ export default function CavePlaylists({ cave, currentUserId }) {
     : (selected?.trackCount ?? tracks.length)
 
   return (
-    <div className="px-3 pb-8 pt-2 space-y-3">
+    <div className="space-y-3">
       {selected ? (
         <div className="flex items-center gap-2">
           <button
