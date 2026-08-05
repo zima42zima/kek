@@ -1087,9 +1087,11 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
       {caveView === 'playlists' ? (
         <div
           data-frens-panel-scroll
-          className="flex-1 min-h-0 overflow-y-auto frens-scroll frens-panel-scroll-bleed"
+          className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-none frens-scroll"
         >
-          <CavePlaylists cave={cave} currentUserId={currentUserId} />
+          <div className="frens-content-max w-full px-3 pt-2 pb-8">
+            <CavePlaylists cave={cave} currentUserId={currentUserId} />
+          </div>
         </div>
       ) : null}
 
