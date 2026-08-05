@@ -16,7 +16,7 @@ export default function CavesManager({ onOpenCave }) {
     <ul className="space-y-2">
       {myCaves.map((c) => {
         const shown = !c.hiddenOnProfile
-        const isOwner = c.ownerId === meId
+        const isOwner = String(c.ownerId) === String(meId)
         const isPublic = c.access === 'public'
         return (
           <li key={c.id} className="border frens-border rounded-lg px-3 py-2">

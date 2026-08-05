@@ -7,6 +7,7 @@ import {
   mergeCaveSnapshot,
   createCaveRemote,
   syncCaveRemote,
+  publishOwnedCaveRemote,
   sendCaveMessageRemote,
   setCaveCoverRemote,
   deleteCaveRemote,
@@ -113,9 +114,7 @@ export function CavesProvider({ children }) {
     if (!visible.length) return
     for (const cave of visible) {
       try {
-        await createCaveRemote(cave.id, cave.name, cave.emoji || '🕳️')
-        await syncCaveRemote(cave, { forceOwnerId: ownerId })
-        await setCaveProfileHidden(cave.id, false)
+        await publishOwnedCaveRemote(cave, ownerId)
         setRemote(true)
       } catch (err) {
         if (err instanceof CavesNotInstalledError) {
@@ -146,12 +145,18 @@ export function CavesProvider({ children }) {
       const membershipSnapshots = applyMembershipRows(memberships)
       let rows = remoteRows
 
+      // Push owned public/profile caves first so server catches up with local toggles.
+      await pushProfileCavesToServer()
+
       if (rows.length === 0 && cavesRef.current.length > 0) {
         const owned = cavesRef.current.filter((c) => String(c.ownerId) === String(meId))
         await Promise.all(
-          owned.map((c) => syncCaveRemote(c, { forceOwnerId: user.id }).catch(() => {})),
+          owned.map((c) => publishOwnedCaveRemote(c, user.id).catch(() => {})),
         )
         rows = await listMyCavesRemote()
+      } else if (rows.length > 0) {
+        // Refresh after push so merge does not re-apply stale invite access.
+        try { rows = await listMyCavesRemote() } catch { /* keep prior rows */ }
       }
 
       const accessibleIds = new Set([
@@ -161,13 +166,15 @@ export function CavesProvider({ children }) {
 
       const merged = []
       const byId = new Map()
+      // Seed with current local owned caves so public/shown intent survives merge.
+      cavesRef.current.forEach((c) => {
+        if (c?.id && String(c.ownerId) === String(meId)) byId.set(c.id, c)
+      })
       ;[...membershipSnapshots, ...rows].forEach((r) => {
         if (!r?.id) return
         byId.set(r.id, mergeCaveSnapshot(byId.get(r.id), r))
       })
       merged.push(...byId.values())
-
-      await pushProfileCavesToServer()
 
       if (merged.length || accessibleIds.size) {
         mergeRemoteCaves(merged, accessibleIds)
@@ -284,11 +291,12 @@ export function CavesProvider({ children }) {
   function createCave(name, { coverUrl = null } = {}) {
     const id = `cave-${Date.now()}`
     const p = profileRef.current
+    const ownerId = user?.id || meId
     const newCave = {
       id,
       name,
       emoji: '🕳️',
-      ownerId: meId,
+      ownerId,
       banned: [],
       emojiPacks: [],
       hiddenOnProfile: false,
@@ -296,7 +304,7 @@ export function CavesProvider({ children }) {
       coverUrl: coverUrl || null,
       roles: DEFAULT_CAVE_ROLES.map((r) => ({ ...r })),
       members: [{
-        id: meId,
+        id: ownerId,
         name: p?.frenName || 'you',
         avatarType: p?.avatarType || 'frog',
         avatarUrl: p?.avatarUrl || null,
@@ -305,10 +313,10 @@ export function CavesProvider({ children }) {
       messages: [],
     }
     setCaves((prev) => [newCave, ...prev])
-    if (remote) {
+    if (remote && user?.id) {
       createCaveRemote(id, name)
         .then(async () => {
-          await syncCaveRemote(newCave)
+          await syncCaveRemote(newCave, { forceOwnerId: user.id }).catch(() => {})
           if (coverUrl) {
             try {
               await setCaveCoverRemote(id, coverUrl)
@@ -402,17 +410,17 @@ export function CavesProvider({ children }) {
     setCaves((prev) =>
       prev.map((c) => {
         if (c.id !== caveId) return c
-        if (c.ownerId !== meId) return c
+        if (String(c.ownerId) !== String(meId)) return c
         if (!hiddenOnProfile && c.access !== 'public') return c
         updated = { ...c, hiddenOnProfile }
         return updated
       }),
     )
     if (!updated) return
-    if (remote) {
+    if (remote && user?.id) {
       ;(async () => {
         try {
-          await syncCaveRemote(updated, { forceOwnerId: user?.id })
+          await publishOwnedCaveRemote(updated, user.id)
           await setCaveProfileHidden(caveId, hiddenOnProfile)
         } catch (err) {
           if (err instanceof CavesNotInstalledError) setRemote(false)
@@ -430,23 +438,19 @@ export function CavesProvider({ children }) {
     setCaves((prev) =>
       prev.map((c) => {
         if (c.id !== caveId) return c
-        if (c.ownerId !== meId) return c
+        if (String(c.ownerId) !== String(meId)) return c
         const next = { ...c, access }
-        if (access === 'invite') next.hiddenOnProfile = true
+        // Public caves default to shown on profile; invite-only never show.
+        next.hiddenOnProfile = access === 'invite' ? true : false
         updated = next
         return next
       }),
     )
     if (!updated) return
-    if (remote) {
+    if (remote && user?.id) {
       ;(async () => {
         try {
-          await syncCaveRemote(updated, { forceOwnerId: user?.id })
-          if (access === 'invite') {
-            await setCaveProfileHidden(caveId, true)
-          } else if (!updated.hiddenOnProfile) {
-            await setCaveProfileHidden(caveId, false)
-          }
+          await publishOwnedCaveRemote(updated, user.id)
         } catch (err) {
           if (err instanceof CavesNotInstalledError) setRemote(false)
           else console.error('Could not update cave access:', err.message)

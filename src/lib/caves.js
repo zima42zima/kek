@@ -103,11 +103,11 @@ export function mapRemoteCave(row) {
     id: row.id,
     name: row.name,
     emoji: row.emoji || '🕳️',
-    ownerId: row.ownerId,
+    ownerId: row.ownerId ?? row.owner_id,
     access: row.access || 'invite',
     banned: Array.isArray(row.banned) ? row.banned.map(String) : [],
-    emojiPacks: row.emojiPacks || [],
-    hiddenOnProfile: row.hiddenOnProfile ?? false,
+    emojiPacks: row.emojiPacks || row.emoji_packs || [],
+    hiddenOnProfile: row.hiddenOnProfile ?? row.hidden_on_profile ?? false,
     coverUrl: row.coverUrl ?? row.cover_url ?? null,
     roles: Array.isArray(row.roles) ? row.roles : (row.roles ? row.roles : null),
     members: (row.members || []).map(mapMember),
@@ -235,6 +235,18 @@ export async function syncCaveRemote(cave, { forceOwnerId } = {}) {
   }
 }
 
+/** Owner-only access toggle. Prefer this over sync_cave for public/invite flips. */
+export async function setCaveAccessRemote(caveId, access) {
+  const { error } = await supabase.rpc('set_cave_access', {
+    p_cave_id: caveId,
+    p_access: access,
+  })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+}
+
 export async function setCaveProfileHidden(caveId, hidden) {
   const { error } = await supabase.rpc('set_cave_profile_hidden', {
     p_cave_id: caveId,
@@ -243,6 +255,27 @@ export async function setCaveProfileHidden(caveId, hidden) {
   if (error) {
     throwIfNotInstalled(error)
     throw error
+  }
+}
+
+/**
+ * Ensure an owned cave exists on the server as public/invite and profile-visible.
+ * Uses set_cave_access when available; falls back to sync_cave.
+ */
+export async function publishOwnedCaveRemote(cave, ownerId) {
+  if (!cave?.id || !ownerId) return
+  await createCaveRemote(cave.id, cave.name, cave.emoji || '🕳️')
+  const access = cave.access === 'public' ? 'public' : 'invite'
+  try {
+    await setCaveAccessRemote(cave.id, access)
+  } catch (err) {
+    if (!(err instanceof CavesNotInstalledError)) throw err
+    await syncCaveRemote({ ...cave, access, ownerId }, { forceOwnerId: ownerId })
+  }
+  if (access === 'public' && !cave.hiddenOnProfile) {
+    await setCaveProfileHidden(cave.id, false)
+  } else if (access === 'invite') {
+    await setCaveProfileHidden(cave.id, true)
   }
 }
 

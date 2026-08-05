@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../Modal'
-import { listProfileCaves, CavesNotInstalledError } from '../../lib/caves'
+import { listProfileCaves, searchPublicCaves, CavesNotInstalledError } from '../../lib/caves'
 import { useCaves } from '../../context/CavesContext'
 import CaveIcon from './CaveIcon'
 import { CaveCoverThumb } from './CaveCover'
@@ -67,15 +67,33 @@ export default function ProfileCavesPublic({ userId, frenName = 'this fren', onN
     }
     let cancelled = false
     setCaves([])
-    listProfileCaves(userId)
-      .then((rows) => {
+
+    async function load() {
+      try {
+        let rows = await listProfileCaves(userId)
+        // Fallback: owned public caves from discover list (covers lagging SQL patches).
+        if (rows.length === 0) {
+          const publicRows = await searchPublicCaves('').catch(() => [])
+          rows = publicRows
+            .filter((r) => String(r.ownerId) === String(userId))
+            .map((r) => ({
+              id: r.id,
+              name: r.name,
+              emoji: r.emoji,
+              access: 'public',
+              isOwner: true,
+              coverUrl: r.coverUrl ?? null,
+            }))
+        }
         if (!cancelled) setCaves(rows)
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!cancelled && !(err instanceof CavesNotInstalledError)) {
           console.error('Could not load profile caves:', err.message)
         }
-      })
+      }
+    }
+
+    load()
     return () => { cancelled = true }
   }, [userId])
 

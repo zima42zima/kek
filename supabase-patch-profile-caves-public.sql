@@ -1,9 +1,65 @@
--- Profile caves: public caves the fren owns and chose to show (not joined caves).
--- Invite-only caves stay off profile lists entirely.
+-- Profile caves: owned public caves that the fren chose to show.
+-- Also adds set_cave_access so "Make public" always persists even when sync_cave is outdated.
 -- Safe to re-run.
 
 alter table public.caves add column if not exists cover_url text;
 
+-- ---------------------------------------------------------------------------
+-- Dedicated access toggle (owner only). Does not depend on sync_cave / roles.
+-- ---------------------------------------------------------------------------
+create or replace function public.set_cave_access(
+  p_cave_id text,
+  p_access text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  next_access text := lower(trim(coalesce(p_access, 'invite')));
+begin
+  if uid is null then raise exception 'Not authenticated'; end if;
+  if p_cave_id is null or length(trim(p_cave_id)) = 0 then
+    raise exception 'Cave id required';
+  end if;
+  if next_access not in ('public', 'invite') then
+    raise exception 'access must be public or invite';
+  end if;
+
+  if not exists (
+    select 1 from public.caves c
+    where c.id = p_cave_id and c.owner_id = uid
+  ) then
+    raise exception 'Only the cave owner can change access';
+  end if;
+
+  update public.caves
+  set access = next_access, updated_at = now()
+  where id = p_cave_id and owner_id = uid;
+
+  insert into public.cave_members (cave_id, user_id, role, hidden_on_profile)
+  values (
+    p_cave_id,
+    uid,
+    'owner',
+    case when next_access = 'invite' then true else false end
+  )
+  on conflict (cave_id, user_id) do update
+    set role = 'owner',
+        hidden_on_profile = case
+          when next_access = 'invite' then true
+          else coalesce(cave_members.hidden_on_profile, false)
+        end;
+end;
+$$;
+
+grant execute on function public.set_cave_access(text, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Profile list: public caves this fren owns and did not hide.
+-- ---------------------------------------------------------------------------
 drop function if exists public.list_profile_caves(uuid);
 
 create or replace function public.list_profile_caves(p_user uuid)
@@ -38,7 +94,9 @@ $$;
 
 grant execute on function public.list_profile_caves(uuid) to authenticated;
 
--- Ensure owner membership row exists when toggling profile visibility.
+-- ---------------------------------------------------------------------------
+-- Profile hide toggle: upsert owner membership row.
+-- ---------------------------------------------------------------------------
 create or replace function public.set_cave_profile_hidden(p_cave_id text, p_hidden boolean)
 returns void
 language plpgsql
