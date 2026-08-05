@@ -42,7 +42,7 @@ export default function ProfilePlaylistsPublic({
     <button
       type="button"
       onClick={openPlaylists}
-      className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex items-center justify-center relative shrink-0 text-black dark:text-white"
+      className="profile-hub-chip"
       title={`${frenName}'s playlists`}
       aria-label={`${frenName}'s playlists`}
     >

@@ -19,7 +19,6 @@ import ProfilePlaylistsPublic from './playlists/ProfilePlaylistsPublic'
 import ProfileGathererPublic from './gatherer/ProfileGathererPublic'
 import SendLetterModal from './folds-letters/SendLetterModal'
 import ProfileOwlPost from './owl/ProfileOwlPost'
-import ProfileFoldsPublic from './folds-letters/ProfileFoldsPublic'
 import { loadShowcasePrefs, isShowcaseOn } from '../lib/profileShowcase'
 
 export default function UserProfileModal({ userId, onClose, onOpenList, onNavigate, onOpenProfile, onOpenEcho, onOpenPlaylists, onOpenGatherer }) {
@@ -245,9 +244,8 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
                 const showEchoes = isShowcaseOn(showcase, 'echoes')
                 const showPlaylists = isShowcaseOn(showcase, 'playlists')
                 const showMoodboards = isShowcaseOn(showcase, 'moodboards')
-                const showFolds = isShowcaseOn(showcase, 'folds')
                 const any =
-                  showCaves || showEchoes || showPlaylists || showMoodboards || showFolds
+                  showCaves || showEchoes || showPlaylists || showMoodboards
                 if (!any) return null
                 return (
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -277,13 +275,6 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
                         frenName={card.frenName}
                         onOpenGatherer={onOpenGatherer}
                         onNavigate={onNavigate}
-                        onCloseProfile={onClose}
-                      />
-                    ) : null}
-                    {showFolds ? (
-                      <ProfileFoldsPublic
-                        userId={userId}
-                        frenName={card.frenName}
                         onCloseProfile={onClose}
                       />
                     ) : null}

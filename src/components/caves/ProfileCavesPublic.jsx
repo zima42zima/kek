@@ -88,7 +88,7 @@ export default function ProfileCavesPublic({ userId, frenName = 'this fren', onN
         type="button"
         onClick={() => setOpen(true)}
         disabled={loading}
-        className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex flex-col items-center justify-center gap-0.5 relative shrink-0 text-black dark:text-white"
+        className="profile-hub-chip profile-hub-chip--stack"
         title={`${frenName}'s caves`}
         aria-label={`${frenName}'s caves`}
       >

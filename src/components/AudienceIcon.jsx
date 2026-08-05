@@ -1,5 +1,5 @@
 import worldIcon from '../assets/icons/world.png'
-import cavesIcon from '../assets/icons/caves.svg'
+import cavesIcon from '../assets/icons/caves-mark.png'
 import frogIcon from '../assets/icons/frog-icon.svg'
 import { maskImageStyle } from '../lib/maskIcon'
 

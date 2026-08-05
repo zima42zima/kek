@@ -37,7 +37,7 @@ export default function ProfileGathererPublic({
     <button
       type="button"
       onClick={open}
-      className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex items-center justify-center relative shrink-0 text-black dark:text-white"
+      className="profile-hub-chip"
       title={`${frenName}'s moodboard`}
       aria-label={`${frenName}'s moodboard`}
     >

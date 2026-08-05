@@ -1,4 +1,4 @@
-import cavesIcon from '../../assets/icons/caves.svg'
+import cavesIcon from '../../assets/icons/caves-mark.png'
 import { maskImageStyle } from '../../lib/maskIcon'
 
 // The exact caves icon from the dashboard nav, rendered as a monochrome masked

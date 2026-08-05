@@ -293,6 +293,15 @@ export function PlayIcon({ className = 'w-4 h-4' }) {
   )
 }
 
+export function PauseIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg {...base} className={`inline-block align-middle ${className}`}>
+      <line x1="10" y1="6" x2="10" y2="18" />
+      <line x1="14" y1="6" x2="14" y2="18" />
+    </svg>
+  )
+}
+
 export function MusicNoteIcon({ className = 'w-4 h-4' }) {
   // Matches assets/icons/playlist.svg (RESOURCE FRENSAPP/playlist.svg)
   return (

@@ -110,7 +110,7 @@ export default function ProfileEchoesPublic({ userId, frenName = 'this fren', on
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex flex-col items-center justify-center gap-0.5 relative shrink-0 text-black dark:text-white"
+        className="profile-hub-chip profile-hub-chip--stack"
         title={`${frenName}'s aftersounds`}
         aria-label={`${frenName}'s aftersounds`}
       >

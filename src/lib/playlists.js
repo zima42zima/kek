@@ -67,11 +67,11 @@ function mapLikedTrack(row) {
 }
 
 export function trackToEmbed(track) {
-  return {
-    type: track.videoType,
-    id: track.videoId,
-    url: track.videoUrl,
-  }
+  const type = track?.videoType || track?.video_type
+  const id = track?.videoId || track?.video_id
+  const url = track?.videoUrl || track?.video_url
+  if (!type || !id) return null
+  return { type, id, url }
 }
 
 /** Validate a URL for playlist use (YouTube or Vimeo — free embeddable video). */

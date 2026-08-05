@@ -25,7 +25,7 @@ import messagesIcon from '../assets/icons/messages.svg'
 import homeIcon from '../assets/icons/home.svg'
 import echoesIcon from '../assets/icons/echo.svg'
 import rabbitholeIcon from '../assets/icons/rabbithole.svg'
-import cavesIcon from '../assets/icons/caves.svg'
+import cavesIcon from '../assets/icons/caves-mark.png'
 import profileIcon from '../assets/icons/profile.svg'
 import { useDms } from '../context/DmsContext'
 import {
@@ -300,7 +300,6 @@ export default function Home() {
         <FrogLogo className="w-8 h-8 shrink-0" />
         <h1 className="frens-title-xl">{APP_NAME}</h1>
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <GlobalPlaylistPauseButton />
           <button
             type="button"
             onClick={() => setShowPeopleSearch(true)}
@@ -310,6 +309,7 @@ export default function Home() {
           >
             <SearchIcon className="w-5 h-5" />
           </button>
+          <GlobalPlaylistPauseButton />
           <button
             type="button"
             onClick={() => setShowNotifs(true)}

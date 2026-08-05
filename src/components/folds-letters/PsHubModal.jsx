@@ -55,9 +55,6 @@ export default function PsHubModal({ onClose, onSettingsChange, initialSection =
       onClose={onClose}
       maxWidth="max-w-md"
     >
-      <p className="text-xs frens-muted -mt-2 mb-5">
-        Two pockets — letters for frens, or folds on A4.
-      </p>
       <div className="grid gap-3">
         <ChoiceCard
           title="Letters"

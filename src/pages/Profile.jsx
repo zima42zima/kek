@@ -28,13 +28,13 @@ import ProfilePlaylists from '../components/playlists/ProfilePlaylists'
 import ProfileGatherer from '../components/gatherer/ProfileGatherer'
 import ProfileLikedTracks from '../components/playlists/ProfileLikedTracks'
 import ProfileOwlPost from '../components/owl/ProfileOwlPost'
-import ProfileFolds from '../components/folds-letters/ProfileFolds'
 import PsHubModal from '../components/folds-letters/PsHubModal'
 import { consumeOpenPsFlag } from '../lib/psNav'
 import { consumeOpenFounderConsoleFlag, peekOpenFounderConsoleFlag } from '../lib/founderNav'
 import { consumeOpenTrailFlag } from '../lib/trailNav'
 import { getMyOwlSettings, OwlPostNotInstalledError } from '../lib/owlPost'
-import { markPsHubSeen, psHubBadgeCount } from '../lib/profileHubBadges'
+import { foldInboxUnread } from '../lib/foldsSocial'
+import { markFoldsHubSeen, markPsHubSeen, foldsHubBadgeCount, psHubBadgeCount } from '../lib/profileHubBadges'
 import ProfileTrail from '../components/ProfileTrail'
 import FounderConsole from '../components/FounderConsole'
 const SHOW_EMAIL_KEY = 'frens-show-email'
@@ -79,6 +79,7 @@ export default function Profile({
   const [showToolsMenu, setShowToolsMenu] = useState(false)
   const [owlSettings, setOwlSettings] = useState(null)
   const [hubBadgeTick, setHubBadgeTick] = useState(0)
+  const [foldsUnread, setFoldsUnread] = useState(0)
   /** Profile feed: posts vs _log (replies / aura — no quotes or reposts). */
   const [profileView, setProfileView] = useState(() => (consumeOpenTrailFlag() ? 'log' : 'posts'))
   const fileInputRef = useRef(null)
@@ -199,6 +200,36 @@ export default function Profile({
     return () => window.removeEventListener('frens:notifications-refreshed', refreshOwl)
   }, [userId])
 
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    async function refreshFoldsUnread() {
+      try {
+        const n = await foldInboxUnread(userId)
+        if (!cancelled) setFoldsUnread(n)
+      } catch {
+        if (!cancelled) setFoldsUnread(0)
+      }
+      if (!cancelled) setHubBadgeTick((t) => t + 1)
+    }
+    refreshFoldsUnread()
+    window.addEventListener('frens:notifications-refreshed', refreshFoldsUnread)
+    return () => {
+      cancelled = true
+      window.removeEventListener('frens:notifications-refreshed', refreshFoldsUnread)
+    }
+  }, [userId])
+
+  function combineHubBadge(...parts) {
+    const total = parts.reduce((sum, p) => {
+      if (p === '9+') return sum + 10
+      const n = Number(p) || 0
+      return sum + n
+    }, 0)
+    if (total <= 0) return 0
+    return total > 9 ? '9+' : total
+  }
+
   function openPsHub(section = null) {
     setPsSection(section)
     setShowPsPanel(true)
@@ -214,7 +245,10 @@ export default function Profile({
   const openReportCount = Number(accountStatus?.openReports ?? 0)
 
   const psBadgeCount = userId && owlSettings
-    ? psHubBadgeCount(userId, owlSettings.pendingCount)
+    ? combineHubBadge(
+        psHubBadgeCount(userId, owlSettings.pendingCount),
+        foldsHubBadgeCount(userId, foldsUnread),
+      )
     : 0
   void hubBadgeTick
   const psOpenedMarked = useRef(false)
@@ -226,9 +260,10 @@ export default function Profile({
     }
     if (!userId || !owlSettings || psOpenedMarked.current) return
     markPsHubSeen(userId, owlSettings.pendingCount)
+    markFoldsHubSeen(userId, foldsUnread)
     setHubBadgeTick((t) => t + 1)
     psOpenedMarked.current = true
-  }, [showPsPanel, userId, owlSettings])
+  }, [showPsPanel, userId, owlSettings, foldsUnread])
 
   useEffect(() => {
     const open = consumeOpenPsFlag()
@@ -457,12 +492,11 @@ export default function Profile({
                 onClick={() => openPsHub(null)}
               />
             )}
-            {userId ? <ProfileFolds userId={userId} /> : null}
             <div className="relative ml-auto shrink-0" ref={toolsMenuRef}>
               <button
                 type="button"
                 onClick={() => setShowToolsMenu((v) => !v)}
-                className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex items-center justify-center text-black dark:text-white"
+                className="profile-hub-chip"
                 aria-label="Profile tools"
                 aria-haspopup="menu"
                 aria-expanded={showToolsMenu}

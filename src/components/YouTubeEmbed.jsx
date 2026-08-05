@@ -113,10 +113,11 @@ export function VideoTimelineCard({
     : embedSrc.replace('autoplay=1', 'api=1&autoplay=1')
 
   function handleThumbnailClick() {
-    if (controlled) {
-      onPlayRequest?.()
+    if (onPlayRequest) {
+      onPlayRequest()
       return
     }
+    if (controlled) return
     setLocalPlaying(true)
   }
 

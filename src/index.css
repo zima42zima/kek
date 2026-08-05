@@ -185,6 +185,14 @@
     border-color: var(--frens-outline);
   }
 
+  /** Profile hub row — icon only, no circle frame (caves, echoes, P.S., etc.). */
+  .profile-hub-chip {
+    @apply flex items-center justify-center relative shrink-0 w-[2.34rem] h-[2.34rem] p-0 border-0 bg-transparent text-black dark:text-white transition hover:opacity-60;
+  }
+  .profile-hub-chip--stack {
+    @apply flex-col gap-0.5;
+  }
+
   .frens-btn-primary {
     @apply bg-black text-white rounded-xl font-medium tracking-wide hover:bg-gray-800 transition
            dark:bg-white dark:text-black dark:hover:bg-gray-200;

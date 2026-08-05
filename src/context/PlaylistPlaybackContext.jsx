@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react'
 import { playlistPlayerSrc } from '../lib/playlistEmbed'
+import { PauseIcon, PlayIcon } from '../components/icons/UiIcons'
 
 const PlaylistPlaybackContext = createContext(null)
 
@@ -19,11 +20,12 @@ export function PlaylistPlaybackProvider({ children }) {
   const [activeIndex, setActiveIndex] = useState(-1)
   const [isPlaying, setIsPlaying] = useState(false)
   const [meta, setMeta] = useState(null)
+  const [inlinePreferred, setInlinePreferred] = useState(false)
 
   const currentTrack = activeIndex >= 0 ? tracks[activeIndex] : null
   const playerSrc = useMemo(
-    () => playlistPlayerSrc(currentTrack, isPlaying),
-    [currentTrack, isPlaying],
+    () => (!inlinePreferred ? playlistPlayerSrc(currentTrack, isPlaying) : null),
+    [inlinePreferred, currentTrack, isPlaying],
   )
 
   const trackEnded = useCallback(() => {
@@ -93,14 +95,20 @@ export function PlaylistPlaybackProvider({ children }) {
     setMeta(null)
   }, [])
 
+  const setInlinePreferredStable = useCallback((value) => {
+    setInlinePreferred(Boolean(value))
+  }, [])
+
   const value = useMemo(() => ({
     tracks,
     activeIndex,
     isPlaying,
     meta,
+    inlinePreferred,
     currentTrack,
     isActivePlaylist: (playlistId) => meta?.playlistId === playlistId,
     setQueue,
+    setInlinePreferred: setInlinePreferredStable,
     play,
     pause,
     toggle,
@@ -112,8 +120,10 @@ export function PlaylistPlaybackProvider({ children }) {
     activeIndex,
     isPlaying,
     meta,
+    inlinePreferred,
     currentTrack,
     setQueue,
+    setInlinePreferredStable,
     play,
     pause,
     toggle,
@@ -159,13 +169,17 @@ export function GlobalPlaylistPauseButton({ className = '' }) {
     <button
       type="button"
       onClick={toggle}
-      className={`frens-btn-outline w-9 h-9 rounded-full flex items-center justify-center text-sm shrink-0 ${className}`}
+      className={`relative w-9 h-9 rounded-full flex items-center justify-center text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10 shrink-0 ${
+        isPlaying ? 'ring-2 ring-[#6BC06B]/60 dark:ring-[#e0703a]/60' : ''
+      } ${className}`}
       aria-label={isPlaying ? `Pause ${label}` : `Resume ${label}`}
       title={`${isPlaying ? 'Pause' : 'Play'}: ${label}${ownerHint}`}
     >
-      <span className="text-[11px] leading-none tracking-tight" aria-hidden>
-        {isPlaying ? 'II' : '▶'}
-      </span>
+      {isPlaying ? (
+        <PauseIcon className="w-5 h-5" />
+      ) : (
+        <PlayIcon className="w-5 h-5" />
+      )}
     </button>
   )
 }

@@ -51,7 +51,6 @@ function TrackRow({
   index,
   activeIndex,
   isPlaying,
-  queueActive,
   editable,
   busy,
   canAura,
@@ -61,7 +60,15 @@ function TrackRow({
 }) {
   const embed = trackToEmbed(track)
   const isActive = index === activeIndex
-  const useGlobal = queueActive && isActive && isPlaying
+
+  if (!embed) {
+    return (
+      <div className="relative group my-2 border frens-border rounded-xl p-3">
+        <p className="text-xs frens-muted truncate">{track.title || 'Track'}</p>
+        <p className="text-[10px] text-red-500 dark:text-red-400 mt-1">Could not load this link.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="relative group">
@@ -69,7 +76,6 @@ function TrackRow({
         embed={embed}
         caption={track.title}
         showAddToPlaylist={false}
-        externalPlayback={useGlobal}
         forcePlaying={isActive ? isPlaying : false}
         onPlayRequest={() => onPlayTrack(index)}
       />
@@ -128,9 +134,13 @@ export default function Playlists({
   const editable = editableProp ?? Boolean(user?.id && userId && user.id === userId)
   const canAura = Boolean(user?.id && !editable)
   const isThisQueue = Boolean(selected && playback?.isActivePlaylist(selected.id))
-  const queueActive = Boolean(playback?.meta?.playlistId && playback.tracks?.length > 0)
   const activeIndex = isThisQueue ? playback.activeIndex : -1
   const isPlaying = isThisQueue && playback.isPlaying
+
+  useEffect(() => {
+    playback?.setInlinePreferred?.(true)
+    return () => playback?.setInlinePreferred?.(false)
+  }, [playback])
 
   function queueMeta() {
     return {
@@ -256,6 +266,10 @@ export default function Playlists({
 
   function playTrack(index) {
     if (!selected || !playback) return
+    if (isThisQueue && playback.activeIndex === index && playback.isPlaying) {
+      playback.pause()
+      return
+    }
     playback.setQueue(tracks, queueMeta(), index)
     playback.play(index)
   }
@@ -649,7 +663,6 @@ export default function Playlists({
                     index={index}
                     activeIndex={activeIndex}
                     isPlaying={isPlaying}
-                    queueActive={queueActive}
                     editable={editable && editing}
                     busy={busy}
                     canAura={canAura}

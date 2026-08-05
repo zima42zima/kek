@@ -74,7 +74,7 @@ export default function ProfileFolds({ userId }) {
       <button
         type="button"
         onClick={openModal}
-        className="frens-btn-outline w-[2.34rem] h-[2.34rem] rounded-full flex items-center justify-center relative shrink-0 text-black dark:text-white"
+        className="profile-hub-chip"
         title="Your published folds"
         aria-label="Your published folds"
       >
