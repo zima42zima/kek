@@ -58,21 +58,21 @@ function CavesListModal({ caves, myIds, frenName, onClose, onOpenCave }) {
 export default function ProfileCavesPublic({ userId, frenName = 'this fren', onNavigate }) {
   const { myCaves } = useCaves()
   const [caves, setCaves] = useState([])
-  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (!userId) return undefined
     let cancelled = false
-    setLoading(true)
     listProfileCaves(userId)
-      .then((rows) => { if (!cancelled) setCaves(rows) })
+      .then((rows) => {
+        if (cancelled) return
+        if (rows.length > 0) setCaves(rows)
+      })
       .catch((err) => {
         if (!cancelled && !(err instanceof CavesNotInstalledError)) {
           console.error('Could not load profile caves:', err.message)
         }
       })
-      .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [userId])
 
@@ -83,14 +83,13 @@ export default function ProfileCavesPublic({ userId, frenName = 'this fren', onN
     setOpen(false)
   }
 
-  if (!loading && caves.length === 0) return null
+  if (caves.length === 0) return null
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        disabled={loading}
         className="profile-hub-chip profile-hub-chip--stack"
         title={`${frenName}'s caves`}
         aria-label={`${frenName}'s caves`}
