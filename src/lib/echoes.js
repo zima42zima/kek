@@ -1,6 +1,7 @@
 import { supabase } from '../supabaseClient'
 import { ECHO_CITY_RADIUS_M, ECHO_DEFAULT_DISCOVER_RADIUS_M } from './echoConstants'
 import { clampDiscoverRadius } from './echoRange'
+import { mapReactions } from './commentReactions'
 
 export class EchoesNotInstalledError extends Error {}
 
@@ -304,22 +305,35 @@ export async function toggleEchoAura(echoId) {
 }
 
 function mapEchoComment(row) {
+  const parentId = row.parent_id ?? row.parentId ?? null
+  const replyAuthor = row.reply_author_name ?? row.replyAuthorName ?? null
+  const replyBody = row.reply_body ?? row.replyBody ?? null
   return {
     id: row.id,
-    echoId: row.echo_id,
-    authorId: row.user_id,
-    userId: row.user_id,
-    authorName: row.author_name || 'a fren',
-    frenName: row.author_name || 'a fren',
-    avatarType: row.avatar_type || 'frog',
-    avatarUrl: row.avatar_url || null,
-    text: row.body,
-    body: row.body,
-    createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+    echoId: row.echo_id ?? row.echoId,
+    authorId: row.user_id ?? row.authorId,
+    userId: row.user_id ?? row.userId,
+    authorName: row.author_name || row.authorName || 'a fren',
+    frenName: row.author_name || row.frenName || row.authorName || 'a fren',
+    avatarType: row.avatar_type || row.avatarType || 'frog',
+    avatarUrl: row.avatar_url ?? row.avatarUrl ?? null,
+    text: row.body ?? row.text,
+    body: row.body ?? row.text,
+    createdAt: row.created_at
+      ? new Date(row.created_at).getTime()
+      : (row.createdAt ?? Date.now()),
     timestamp: row.created_at
       ? new Date(row.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-      : '',
-    reactions: [],
+      : (row.timestamp || ''),
+    parentId: parentId != null ? parentId : null,
+    replyPreview: parentId
+      ? {
+          authorName: replyAuthor || 'a fren',
+          text: replyBody || '',
+          parentId,
+        }
+      : (row.replyPreview ?? null),
+    reactions: mapReactions(row.reactions),
   }
 }
 
@@ -334,15 +348,55 @@ export async function listEchoComments(echoId) {
   return (data ?? []).map(mapEchoComment)
 }
 
-export async function addEchoComment(echoId, body, profile = {}, userId = null) {
-  const { data, error } = await supabase.rpc('add_echo_comment', {
+export async function addEchoComment(echoId, body, profile = {}, userId = null, parentId = null) {
+  const payload = {
     p_echo: echoId,
     p_body: body,
     p_author_name: profile.frenName || null,
     p_avatar_type: profile.avatarType || 'frog',
     p_avatar_url: profile.avatarUrl || null,
-  })
+  }
+  if (parentId != null && parentId !== '') {
+    payload.p_parent_id = parentId
+  }
+  const { data, error } = await supabase.rpc('add_echo_comment', payload)
   if (error) {
+    // Older installs without p_parent_id — retry without reply link.
+    if (
+      parentId != null
+      && (/p_parent_id|could not find/i.test(error.message || '') || error.code === 'PGRST202')
+    ) {
+      const retry = await supabase.rpc('add_echo_comment', {
+        p_echo: echoId,
+        p_body: body,
+        p_author_name: profile.frenName || null,
+        p_avatar_type: profile.avatarType || 'frog',
+        p_avatar_url: profile.avatarUrl || null,
+      })
+      if (retry.error) {
+        throwIfNotInstalled(retry.error)
+        throw retry.error
+      }
+      const id = Array.isArray(retry.data) ? retry.data[0] : retry.data
+      const authorId = userId || profile.userId || profile.id || null
+      return {
+        id,
+        echoId,
+        authorId,
+        userId: authorId,
+        authorName: profile.frenName || 'you',
+        frenName: profile.frenName || 'you',
+        avatarType: profile.avatarType || 'frog',
+        avatarUrl: profile.avatarUrl || null,
+        text: body,
+        body,
+        createdAt: Date.now(),
+        timestamp: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        parentId: null,
+        replyPreview: null,
+        reactions: [],
+      }
+    }
     throwIfNotInstalled(error)
     throw error
   }
@@ -361,6 +415,8 @@ export async function addEchoComment(echoId, body, profile = {}, userId = null) 
     body,
     createdAt: Date.now(),
     timestamp: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    parentId: parentId != null ? parentId : null,
+    replyPreview: null,
     reactions: [],
   }
 }
@@ -371,6 +427,18 @@ export async function deleteEchoComment(commentId) {
     throwIfNotInstalled(error)
     throw error
   }
+}
+
+export async function toggleEchoCommentReaction(commentId, emoji) {
+  const { data, error } = await supabase.rpc('toggle_echo_comment_reaction', {
+    p_comment: commentId,
+    p_emoji: emoji,
+  })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+  return mapReactions(data)
 }
 
 export async function listEchoFeedReactions(echoId) {

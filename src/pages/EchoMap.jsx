@@ -93,6 +93,7 @@ import {
   mapEchoComment,
   listEchoFeedReactions,
   toggleEchoFeedReaction,
+  toggleEchoCommentReaction,
   EchoesNotInstalledError,
 } from '../lib/echoes'
 import { applyPostReactionToggle, normalizeReactions } from '../lib/postReactions'
@@ -1448,15 +1449,30 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           setCommentsByEchoId((prev) => {
             const list = prev[echoId] ?? []
             if (list.some((c) => String(c.id) === String(mapped.id))) return prev
+            // Attach reply preview from already-loaded parents when realtime row is raw.
+            let next = mapped
+            if (mapped.parentId && !mapped.replyPreview?.text) {
+              const parent = list.find((c) => String(c.id) === String(mapped.parentId))
+              if (parent) {
+                next = {
+                  ...mapped,
+                  replyPreview: {
+                    authorName: parent.authorName || parent.frenName || 'a fren',
+                    text: String(parent.text || parent.body || '').slice(0, 120),
+                    parentId: mapped.parentId,
+                  },
+                }
+              }
+            }
             // Drop optimistic temp rows from the same author with the same body.
             const withoutTemps = list.filter((c) => {
               if (!String(c.id).startsWith('ec-')) return true
-              if (String(c.authorId || c.userId) !== String(mapped.authorId)) return true
-              return String(c.text || c.body || '') !== String(mapped.text || '')
+              if (String(c.authorId || c.userId) !== String(next.authorId)) return true
+              return String(c.text || c.body || '') !== String(next.text || '')
             })
             return {
               ...prev,
-              [echoId]: [...withoutTemps, mapped].sort(
+              [echoId]: [...withoutTemps, next].sort(
                 (a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0),
               ),
             }
@@ -1547,20 +1563,41 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     // Invalidate in-flight list fetches so a stale empty result can't wipe this comment.
     commentsFetchGen.current += 1
     const tempId = comment.id
+    const parentId = comment.parentId ?? null
+    let replyPreview = comment.replyPreview ?? null
+    if (parentId && !replyPreview) {
+      const parent = (commentsByEchoId[echoId] ?? []).find((c) => String(c.id) === String(parentId))
+      if (parent) {
+        replyPreview = {
+          authorName: parent.authorName || parent.frenName || 'a fren',
+          text: String(parent.text || parent.body || '').slice(0, 120),
+          parentId,
+        }
+      }
+    }
+    const optimistic = {
+      ...comment,
+      parentId,
+      replyPreview,
+      reactions: comment.reactions ?? [],
+    }
     setCommentsByEchoId((prev) => ({
       ...prev,
-      [echoId]: [...(prev[echoId] ?? []), comment],
+      [echoId]: [...(prev[echoId] ?? []), optimistic],
     }))
 
-    let nextComment = comment
+    let nextComment = optimistic
     if (backendReady) {
       try {
-        const saved = await addEchoComment(echoId, comment.text, profile, user?.id)
+        const saved = await addEchoComment(echoId, comment.text, profile, user?.id, parentId)
         nextComment = {
-          ...comment,
+          ...optimistic,
           ...saved,
           authorId: saved.authorId || comment.authorId || user?.id,
           userId: saved.userId || comment.userId || user?.id,
+          parentId: saved.parentId ?? parentId,
+          replyPreview: saved.replyPreview ?? replyPreview,
+          reactions: saved.reactions ?? [],
         }
         setCommentsByEchoId((prev) => ({
           ...prev,
@@ -1620,9 +1657,10 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     }
   }
 
-  function toggleCommentReaction(echoId, commentId, emoji) {
+  async function toggleCommentReaction(echoId, commentId, emoji) {
     const em = (emoji || '').trim()
     if (!em || !commentId) return
+    const prevList = commentsByEchoId[echoId] ?? []
     setCommentsByEchoId((prev) => ({
       ...prev,
       [echoId]: (prev[echoId] ?? []).map((c) => (
@@ -1631,6 +1669,20 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           : c
       )),
     }))
+    if (!backendReady || String(commentId).startsWith('ec-')) return
+    try {
+      const reactions = await toggleEchoCommentReaction(commentId, em)
+      setCommentsByEchoId((prev) => ({
+        ...prev,
+        [echoId]: (prev[echoId] ?? []).map((c) => (
+          String(c.id) === String(commentId) ? { ...c, reactions } : c
+        )),
+      }))
+    } catch (err) {
+      if (!(err instanceof EchoesNotInstalledError)) {
+        setCommentsByEchoId((prev) => ({ ...prev, [echoId]: prevList }))
+      }
+    }
   }
 
   async function toggleEchoReaction(echoId, reactionId) {
