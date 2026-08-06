@@ -344,7 +344,7 @@ export default function EchoView({
               onReact={canReact ? (id) => onToggleReaction(echo.id, id) : undefined}
             />
           </div>
-          {mine && (
+          {mine ? (
             <label className="flex items-center gap-2 text-xs frens-muted cursor-pointer ml-auto">
               <input
                 type="checkbox"
@@ -354,6 +354,34 @@ export default function EchoView({
               />
               Allow comments
             </label>
+          ) : (
+            <div className="flex items-center gap-0.5 ml-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => (echo.saved ? onUnsave?.(echo.id) : onSave?.(echo.id))}
+                disabled={!echo.saved && !reviewed}
+                className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition disabled:opacity-30 ${
+                  echo.saved
+                    ? 'text-black dark:text-white'
+                    : 'frens-muted opacity-45 hover:opacity-100 hover:text-black dark:hover:text-white'
+                }`}
+                aria-label={echo.saved ? 'Remove from collection' : reviewed ? 'Save to my collection' : 'Watch first to save'}
+                title={echo.saved ? 'Remove from collection' : reviewed ? 'Save to my collection' : 'Watch first to save'}
+              >
+                <BookmarkIcon className="w-4 h-4" filled={Boolean(echo.saved)} />
+              </button>
+              {echo.id ? (
+                <ReportContentButton
+                  kind="echo"
+                  refId={echo.id}
+                  reportedUserId={echo.anonymous ? null : echo.ownerId}
+                  preview={echo.title || echo.caption || displayEcho.authorName}
+                  subjectLabel="this echo"
+                  variant="flag"
+                  className="w-8 h-8 opacity-45 hover:opacity-100"
+                />
+              ) : null}
+            </div>
           )}
         </div>
 
@@ -376,36 +404,6 @@ export default function EchoView({
             onRemoveComment={onRemoveComment}
             onToggleCommentReaction={onToggleCommentReaction}
           />
-        )}
-
-        {!mine && (
-          <div className="flex items-center justify-end gap-0.5 mt-3">
-            <button
-              type="button"
-              onClick={() => (echo.saved ? onUnsave?.(echo.id) : onSave?.(echo.id))}
-              disabled={!echo.saved && !reviewed}
-              className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition disabled:opacity-30 ${
-                echo.saved
-                  ? 'text-black dark:text-white'
-                  : 'frens-muted opacity-45 hover:opacity-100 hover:text-black dark:hover:text-white'
-              }`}
-              aria-label={echo.saved ? 'Remove from collection' : reviewed ? 'Save to my collection' : 'Watch first to save'}
-              title={echo.saved ? 'Remove from collection' : reviewed ? 'Save to my collection' : 'Watch first to save'}
-            >
-              <BookmarkIcon className="w-4 h-4" filled={Boolean(echo.saved)} />
-            </button>
-            {echo.id ? (
-              <ReportContentButton
-                kind="echo"
-                refId={echo.id}
-                reportedUserId={echo.anonymous ? null : echo.ownerId}
-                preview={echo.title || echo.caption || displayEcho.authorName}
-                subjectLabel="this echo"
-                variant="flag"
-                className="w-8 h-8 opacity-45 hover:opacity-100"
-              />
-            ) : null}
-          </div>
         )}
 
         {mine && onDelete ? (
