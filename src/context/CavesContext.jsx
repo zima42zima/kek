@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useAuth } from './AuthContext'
 import { useNotifications } from './NotificationsContext'
 import {
@@ -107,8 +108,17 @@ export function CavesProvider({ children }) {
   const profileRef = useRef(profile)
   profileRef.current = profile
   const membershipsRef = useRef([])
+  const pendingJoinedRef = useRef(new Map())
   const cavesRef = useRef(caves)
   cavesRef.current = caves
+
+  const findCaveById = useCallback((id) => {
+    if (!id) return null
+    const sid = String(id)
+    return caves.find((c) => String(c.id) === sid)
+      ?? pendingJoinedRef.current.get(sid)
+      ?? null
+  }, [caves])
 
   const mergeRemoteCaves = useCallback((remoteCaves, accessibleIds) => {
     if (!remoteCaves?.length && !accessibleIds?.size) return
@@ -215,16 +225,27 @@ export function CavesProvider({ children }) {
           byId.set(c.id, c)
         }
       })
+      pendingJoinedRef.current.forEach((c, id) => {
+        byId.set(id, mergeCaveSnapshot(byId.get(id), c))
+      })
       ;[...membershipSnapshots, ...rows].forEach((r) => {
         if (!r?.id) return
         byId.set(r.id, mergeCaveSnapshot(byId.get(r.id), r))
       })
       merged.push(...byId.values())
 
+      accessibleIds.forEach((id) => {
+        pendingJoinedRef.current.delete(String(id))
+      })
+
       if (merged.length || accessibleIds.size) {
         mergeRemoteCaves(merged, accessibleIds)
       } else if (accessibleIds.size === 0 && memberships.length === 0 && rows.length === 0) {
-        setCaves((prev) => prev.filter((c) => String(c.ownerId) === String(meId)))
+        setCaves((prev) => prev.filter((c) =>
+          String(c.ownerId) === String(meId)
+          || isLocalMember(c, meId)
+          || pendingJoinedRef.current.has(String(c.id)),
+        ))
       }
     } catch (err) {
       if (err instanceof CavesNotInstalledError) {
@@ -886,22 +907,37 @@ export function CavesProvider({ children }) {
     requestOpenCave(caveId)
   }
 
+  const ensureCaveLoaded = useCallback(async (caveId) => {
+    const sid = String(caveId)
+    if (cavesRef.current.some((c) => String(c.id) === sid)) return true
+    if (pendingJoinedRef.current.has(sid)) return true
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await syncRemoteCaves()
+      if (cavesRef.current.some((c) => String(c.id) === sid)) return true
+      await new Promise((resolve) => { setTimeout(resolve, 300) })
+    }
+    return pendingJoinedRef.current.has(sid)
+  }, [syncRemoteCaves])
+
   async function joinPublicCaveAndOpen(caveId, preview) {
     if (!user?.id || !caveId) return
+    const sid = String(caveId)
     await joinPublicCave(caveId)
     const seed = joinedCavePreview(caveId, preview, user.id, profileRef.current)
-    const prev = cavesRef.current
-    const existing = prev.find((c) => c.id === caveId)
-    const next = existing
-      ? prev.map((c) => (c.id === caveId ? mergeCaveSnapshot(c, seed) : c))
-      : [seed, ...prev]
-    cavesRef.current = next
-    setCaves(next)
-    setMemberCaveIds((memberIds) => new Set([...memberIds, caveId]))
-    await syncRemoteCaves()
-    if (!cavesRef.current.some((c) => c.id === caveId)) {
-      await new Promise((resolve) => { setTimeout(resolve, 400) })
-      await syncRemoteCaves()
+    pendingJoinedRef.current.set(sid, seed)
+    flushSync(() => {
+      setCaves((prev) => {
+        const existing = prev.find((c) => String(c.id) === sid)
+        if (existing) {
+          return prev.map((c) => (String(c.id) === sid ? mergeCaveSnapshot(c, seed) : c))
+        }
+        return [seed, ...prev]
+      })
+      setMemberCaveIds((memberIds) => new Set([...memberIds, sid]))
+    })
+    await ensureCaveLoaded(caveId)
+    if (cavesRef.current.some((c) => String(c.id) === sid)) {
+      pendingJoinedRef.current.delete(sid)
     }
     requestOpenCave(caveId)
   }
@@ -941,6 +977,8 @@ export function CavesProvider({ children }) {
     requestOpenCave,
     joinCaveFromInvite,
     joinPublicCaveAndOpen,
+    findCaveById,
+    ensureCaveLoaded,
     syncMemberships: syncRemoteCaves,
     syncRemoteCaves,
     pushProfileCavesToServer,

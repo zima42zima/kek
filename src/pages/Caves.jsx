@@ -16,7 +16,8 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
     sendCaveMessage,
     pendingOpenId,
     clearPendingOpen,
-    syncRemoteCaves,
+    findCaveById,
+    ensureCaveLoaded,
   } = useCaves()
   const [selectedId, setSelectedId] = useState(urlCaveId)
   const [showCreate, setShowCreate] = useState(false)
@@ -42,24 +43,29 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
   }, [pendingOpenId, clearPendingOpen])
 
   const selectedCave =
-    caves.find((c) => c.id === selectedId)
-    ?? myCaves.find((c) => c.id === selectedId)
+    findCaveById(selectedId)
+    ?? caves.find((c) => String(c.id) === String(selectedId))
+    ?? myCaves.find((c) => String(c.id) === String(selectedId))
     ?? null
 
   if (selectedCave) heldCaveRef.current = selectedCave
 
   const displayCave =
     selectedCave
-    ?? (selectedId && heldCaveRef.current?.id === selectedId ? heldCaveRef.current : null)
+    ?? (selectedId && String(heldCaveRef.current?.id) === String(selectedId) ? heldCaveRef.current : null)
 
   useEffect(() => {
     if (!selectedId || displayCave) {
       setLoadingCave(false)
-      return
+      return undefined
     }
+    let cancelled = false
     setLoadingCave(true)
-    syncRemoteCaves().finally(() => setLoadingCave(false))
-  }, [selectedId, displayCave, syncRemoteCaves])
+    ensureCaveLoaded(selectedId).finally(() => {
+      if (!cancelled) setLoadingCave(false)
+    })
+    return () => { cancelled = true }
+  }, [selectedId, displayCave, ensureCaveLoaded])
 
   function handleCreate(name, options = {}) {
     const id = createCave(name, options)
@@ -82,7 +88,7 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
         <p className="text-xs frens-hint">If you were just invited, wait a moment and try again.</p>
         <button
           type="button"
-          onClick={() => { selectCave(null); syncRemoteCaves() }}
+          onClick={() => selectCave(null)}
           className="frens-btn-outline px-4 py-2 text-sm"
         >
           Back to caves
@@ -119,7 +125,7 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
         onOpenCave={selectCave}
         onCreateClick={() => setShowCreate(true)}
         onJoinedPublic={async (id) => {
-          await syncRemoteCaves()
+          await ensureCaveLoaded(id)
           selectCave(id)
         }}
       />
