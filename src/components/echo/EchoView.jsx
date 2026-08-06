@@ -45,6 +45,7 @@ export default function EchoView({
   onAddComment,
   onRemoveComment,
   onToggleCommentReaction,
+  onToggleCommentAura,
   onToggleComments,
   onToggleReaction,
   onReviewed,
@@ -392,6 +393,7 @@ export default function EchoView({
             onAddComment={onAddComment}
             onRemoveComment={onRemoveComment}
             onToggleCommentReaction={onToggleCommentReaction}
+            onToggleCommentAura={onToggleCommentAura}
           />
         )}
 
@@ -403,6 +405,7 @@ export default function EchoView({
             canCompose={false}
             onRemoveComment={onRemoveComment}
             onToggleCommentReaction={onToggleCommentReaction}
+            onToggleCommentAura={onToggleCommentAura}
           />
         )}
 

@@ -156,7 +156,7 @@ export default function EmojiButton({ onPick, label = '😊', align = 'left', di
     ? createPortal(
         <div
           ref={panelRef}
-          className="fixed z-[200] frens-surface border frens-border rounded-2xl shadow-xl overflow-hidden"
+          className="fixed z-[1300] frens-surface border frens-border rounded-2xl shadow-xl overflow-hidden"
           style={{
             left: panelPos.left,
             top: panelPos.top,

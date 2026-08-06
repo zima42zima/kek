@@ -94,6 +94,7 @@ import {
   listEchoFeedReactions,
   toggleEchoFeedReaction,
   toggleEchoCommentReaction,
+  toggleEchoCommentAura,
   EchoesNotInstalledError,
 } from '../lib/echoes'
 import { applyPostReactionToggle, normalizeReactions } from '../lib/postReactions'
@@ -1685,6 +1686,42 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     }
   }
 
+  async function toggleCommentAura(echoId, commentId) {
+    if (!commentId || String(commentId).startsWith('ec-')) return
+    const prevList = commentsByEchoId[echoId] ?? []
+    const prev = prevList.find((c) => String(c.id) === String(commentId))
+    const prevGave = Boolean(prev?.iGaveAura)
+    const prevCount = Number(prev?.auraCount ?? 0)
+    setCommentsByEchoId((prevMap) => ({
+      ...prevMap,
+      [echoId]: (prevMap[echoId] ?? []).map((c) => (
+        String(c.id) === String(commentId)
+          ? {
+              ...c,
+              iGaveAura: !prevGave,
+              auraCount: Math.max(0, prevCount + (prevGave ? -1 : 1)),
+            }
+          : c
+      )),
+    }))
+    if (!backendReady) return
+    try {
+      const result = await toggleEchoCommentAura(commentId)
+      setCommentsByEchoId((prevMap) => ({
+        ...prevMap,
+        [echoId]: (prevMap[echoId] ?? []).map((c) => (
+          String(c.id) === String(commentId)
+            ? { ...c, auraCount: result.auraCount, iGaveAura: result.iGaveAura }
+            : c
+        )),
+      }))
+    } catch (err) {
+      if (!(err instanceof EchoesNotInstalledError)) {
+        setCommentsByEchoId((prevMap) => ({ ...prevMap, [echoId]: prevList }))
+      }
+    }
+  }
+
   async function toggleEchoReaction(echoId, reactionId) {
     const id = (reactionId || '').trim()
     if (!echoId || !id) return
@@ -2136,6 +2173,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           onAddComment={addComment}
           onRemoveComment={removeComment}
           onToggleCommentReaction={toggleCommentReaction}
+          onToggleCommentAura={toggleCommentAura}
           onToggleComments={toggleComments}
           onToggleReaction={userId ? toggleEchoReaction : undefined}
           onReviewed={handleReviewed}

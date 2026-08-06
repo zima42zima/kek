@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ProfileAvatar } from '../FrogLogo'
 import FrenHandle from '../FrenHandle'
 import CommentBody from '../CommentBody'
@@ -6,6 +6,7 @@ import PillComposer from '../PillComposer'
 import EmojiReactions from '../EmojiReactions'
 import ConfirmDialog from '../ConfirmDialog'
 import CaveReplyIcon from '../caves/CaveReplyIcon'
+import AuraIcon, { AURA_COLORS, AURA_IDLE } from '../AuraIcon'
 import { useAuth } from '../../context/AuthContext'
 import { appendGifUrlToText, prepareCommentText } from '../../lib/imageAttach'
 import { insertAtCaret } from '../../lib/insertText'
@@ -13,6 +14,8 @@ import { relativeTime } from '../../lib/notifications'
 import { normalizeEmojiReactions } from '../../lib/emojiReactions'
 import { withLiveAuthorAvatar } from '../../lib/posts'
 import ReportContentButton from '../ReportContentButton'
+import { MessageIcon, POST_ACTION_BTN, POST_ACTION_ICON, POST_ACTION_BADGE } from '../icons/UiIcons'
+import PostActionTip from '../PostActionTip'
 
 function commentText(c) {
   return c.text ?? c.body ?? ''
@@ -57,6 +60,95 @@ function ReplyPreview({ preview, onJump = null }) {
   )
 }
 
+/** Compact aura control — same look as post aura on the action row. */
+function CommentAuraButton({
+  auraCount = 0,
+  iGaveAura = false,
+  canToggle = false,
+  onToggle,
+}) {
+  const [colorIndex, setColorIndex] = useState(0)
+  const [animating, setAnimating] = useState(false)
+  const [flashColor, setFlashColor] = useState(null)
+  const [displayGave, setDisplayGave] = useState(iGaveAura)
+  const [displayCount, setDisplayCount] = useState(auraCount)
+  const [pending, setPending] = useState(false)
+
+  useEffect(() => {
+    setDisplayGave(iGaveAura)
+    setDisplayCount(auraCount)
+  }, [iGaveAura, auraCount])
+
+  const savedColor = AURA_COLORS[colorIndex % AURA_COLORS.length]
+  const iconColor = animating && flashColor
+    ? flashColor
+    : displayGave
+      ? savedColor
+      : AURA_IDLE
+
+  async function handleClick(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!canToggle || pending || !onToggle) return
+
+    const prevGave = displayGave
+    const prevCount = displayCount
+    const next = (colorIndex + 1) % AURA_COLORS.length
+    setColorIndex(next)
+    setFlashColor(AURA_COLORS[next])
+    setAnimating(true)
+    setDisplayGave(!prevGave)
+    setDisplayCount(Math.max(0, prevCount + (prevGave ? -1 : 1)))
+    window.setTimeout(() => {
+      setAnimating(false)
+      setFlashColor(null)
+    }, 380)
+
+    setPending(true)
+    try {
+      await onToggle()
+    } catch {
+      setDisplayGave(prevGave)
+      setDisplayCount(prevCount)
+    } finally {
+      setPending(false)
+    }
+  }
+
+  if (!canToggle) {
+    return (
+      <PostActionTip label="aura">
+        <span className={`relative ${POST_ACTION_BTN} frens-muted pointer-events-none`}>
+          <AuraIcon color={displayCount > 0 ? AURA_COLORS[0] : AURA_IDLE} className={POST_ACTION_ICON} />
+          {displayCount > 0 ? (
+            <span className={POST_ACTION_BADGE}>{displayCount}</span>
+          ) : null}
+        </span>
+      </PostActionTip>
+    )
+  }
+
+  return (
+    <PostActionTip label="aura">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={pending}
+        aria-pressed={displayGave}
+        aria-label={displayGave ? 'Remove aura' : 'Give aura'}
+        className={`${POST_ACTION_BTN} ${
+          displayGave ? 'ring-1 ring-black/15 dark:ring-white/25' : 'frens-muted'
+        }`}
+      >
+        <AuraIcon color={iconColor} animate={animating} active={displayGave} className={POST_ACTION_ICON} />
+        {displayCount > 0 ? (
+          <span className={POST_ACTION_BADGE}>{displayCount}</span>
+        ) : null}
+      </button>
+    </PostActionTip>
+  )
+}
+
 export default function EchoComments({
   echo,
   reviewed,
@@ -65,6 +157,7 @@ export default function EchoComments({
   onAddComment,
   onRemoveComment,
   onToggleCommentReaction,
+  onToggleCommentAura,
 }) {
   const { user, profile } = useAuth()
   const [draft, setDraft] = useState('')
@@ -115,6 +208,8 @@ export default function EchoComments({
         createdAt: Date.now(),
         timestamp: relativeTime(new Date().toISOString()),
         reactions: [],
+        auraCount: 0,
+        iGaveAura: false,
         parentId,
         replyPreview: parentId
           ? {
@@ -150,9 +245,10 @@ export default function EchoComments({
                 : null,
             )
             const isOwn = Boolean(user?.id && uid && String(uid) === String(user.id))
-            const canAct = Boolean(user?.id && c.id && !String(c.id).startsWith('ec-'))
-            const canReact = canAct
+            const persisted = Boolean(c.id && !String(c.id).startsWith('ec-'))
+            const canReact = Boolean(user?.id && persisted)
             const canReply = Boolean(showComposer && c.id)
+            const canAura = Boolean(user?.id && persisted && !isOwn && onToggleCommentAura)
 
             return (
               <li key={c.id} id={`echo-comment-${c.id}`} className="flex gap-2 group/comment">
@@ -186,16 +282,37 @@ export default function EchoComments({
                     <ReplyPreview preview={c.replyPreview} onJump={jumpToComment} />
                   ) : null}
                   <CommentBody text={commentText(c)} />
-                  <EmojiReactions
-                    reactions={normalizeEmojiReactions(c.reactions)}
-                    canReact={canReact}
-                    onReact={
-                      canReact && onToggleCommentReaction
-                        ? (emoji) => onToggleCommentReaction(echo.id, c.id, emoji)
-                        : null
-                    }
-                    onReply={canReply ? () => startReply(c) : null}
-                  />
+
+                  {/* Same action language as posts / caves: aura · reply · reactions */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    <CommentAuraButton
+                      auraCount={c.auraCount ?? 0}
+                      iGaveAura={Boolean(c.iGaveAura)}
+                      canToggle={canAura}
+                      onToggle={canAura ? () => onToggleCommentAura(echo.id, c.id) : undefined}
+                    />
+                    {canReply ? (
+                      <PostActionTip label="reply">
+                        <button
+                          type="button"
+                          onClick={() => startReply(c)}
+                          aria-label={`Reply to ${commentName(c)}`}
+                          className={`${POST_ACTION_BTN} frens-muted`}
+                        >
+                          <MessageIcon className={POST_ACTION_ICON} />
+                        </button>
+                      </PostActionTip>
+                    ) : null}
+                    <EmojiReactions
+                      reactions={normalizeEmojiReactions(c.reactions)}
+                      canReact={canReact}
+                      onReact={
+                        canReact && onToggleCommentReaction
+                          ? (emoji) => onToggleCommentReaction(echo.id, c.id, emoji)
+                          : null
+                      }
+                    />
+                  </div>
                 </div>
               </li>
             )
@@ -213,6 +330,7 @@ export default function EchoComments({
         <div className="space-y-2">
           {replyTo ? (
             <div className="flex items-center gap-2 rounded-xl border frens-border bg-black/[0.03] dark:bg-white/[0.04] px-2.5 py-1.5">
+              <CaveReplyIcon className="w-3.5 h-3.5 frens-muted shrink-0" />
               <div className="min-w-0 flex-1 text-[11px] frens-muted truncate">
                 Reply to <span className="font-medium text-black dark:text-white">{replyTo.authorName}</span>
                 {replyTo.text ? <span className="opacity-75"> · {replyTo.text}</span> : null}

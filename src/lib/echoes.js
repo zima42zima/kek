@@ -334,6 +334,8 @@ function mapEchoComment(row) {
         }
       : (row.replyPreview ?? null),
     reactions: mapReactions(row.reactions),
+    auraCount: Number(row.aura_count ?? row.auraCount ?? 0),
+    iGaveAura: Boolean(row.i_gave_aura ?? row.iGaveAura),
   }
 }
 
@@ -395,6 +397,8 @@ export async function addEchoComment(echoId, body, profile = {}, userId = null, 
         parentId: null,
         replyPreview: null,
         reactions: [],
+        auraCount: 0,
+        iGaveAura: false,
       }
     }
     throwIfNotInstalled(error)
@@ -418,6 +422,8 @@ export async function addEchoComment(echoId, body, profile = {}, userId = null, 
     parentId: parentId != null ? parentId : null,
     replyPreview: null,
     reactions: [],
+    auraCount: 0,
+    iGaveAura: false,
   }
 }
 
@@ -439,6 +445,21 @@ export async function toggleEchoCommentReaction(commentId, emoji) {
     throw error
   }
   return mapReactions(data)
+}
+
+export async function toggleEchoCommentAura(commentId) {
+  const { data, error } = await supabase.rpc('toggle_echo_comment_aura', {
+    p_comment: commentId,
+  })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+  const row = Array.isArray(data) ? data[0] : data
+  return {
+    auraCount: Number(row?.aura_count ?? 0),
+    iGaveAura: Boolean(row?.i_gave_aura),
+  }
 }
 
 export async function listEchoFeedReactions(echoId) {

@@ -91,7 +91,7 @@ export default function ReactionEmojiPicker({
           ref={panelRef}
           role="dialog"
           aria-label="Message actions"
-          className="fixed z-[200] frens-surface border frens-border rounded-2xl shadow-xl p-2.5"
+          className="fixed z-[1300] frens-surface border frens-border rounded-2xl shadow-xl p-2.5"
           style={{
             left: panelPos.left,
             top: panelPos.top,
