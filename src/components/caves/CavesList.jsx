@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import CaveIcon from './CaveIcon'
 import { CaveCoverThumb } from './CaveCover'
-import { searchPublicCaves, joinPublicCave, CavesNotInstalledError } from '../../lib/caves'
+import { searchPublicCaves, CavesNotInstalledError } from '../../lib/caves'
+import { useCaves } from '../../context/CavesContext'
 
 export default function CavesList({
   caves,
@@ -10,6 +11,7 @@ export default function CavesList({
   onCreateClick,
   onJoinedPublic,
 }) {
+  const { joinPublicCaveAndOpen } = useCaves()
   const [tab, setTab] = useState('mine') // mine | discover
   const [query, setQuery] = useState('')
   const [publicCaves, setPublicCaves] = useState([])
@@ -57,11 +59,20 @@ export default function CavesList({
     setJoiningId(cave.id)
     setPublicError('')
     try {
-      await joinPublicCave(cave.id)
+      await joinPublicCaveAndOpen(cave.id, {
+        name: cave.name,
+        emoji: cave.emoji,
+        ownerId: cave.ownerId,
+        coverUrl: cave.coverUrl,
+      })
       await onJoinedPublic?.(cave.id)
       onOpenCave?.(cave.id)
     } catch (err) {
-      setPublicError(err.message || 'Could not join cave.')
+      if (err instanceof CavesNotInstalledError) {
+        setPublicError('Run supabase-patch-public-cave-join-fix.sql to enable joining.')
+      } else {
+        setPublicError(err.message || 'Could not join cave.')
+      }
     } finally {
       setJoiningId(null)
     }

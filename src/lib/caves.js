@@ -196,13 +196,16 @@ export async function deleteCaveRemote(caveId) {
   }
 }
 
-/** Self-join a public cave. Needs join_public_cave RPC. */
+/** Self-join a public cave. Needs join_public_cave RPC. Returns full cave when SQL returns jsonb. */
 export async function joinPublicCave(caveId) {
-  const { error } = await supabase.rpc('join_public_cave', { p_cave_id: caveId })
+  const { data, error } = await supabase.rpc('join_public_cave', { p_cave_id: caveId })
   if (error) {
     throwIfNotInstalled(error)
     throw error
   }
+  if (!data) return null
+  const row = typeof data === 'string' ? JSON.parse(data) : data
+  return mapRemoteCave(row)
 }
 
 /** Public caves this fren owns and chose to show on profile (not joined caves). */

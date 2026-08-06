@@ -27,7 +27,7 @@ export const NOTIFICATION_SECTIONS = [
     id: 'community',
     label: 'Community',
     hint: 'Caves and rabbit hole threads',
-    types: new Set(['cave', 'cave_add', 'cave_deleted', 'rabbit_reply', 'rabbit_follow']),
+    types: new Set(['cave', 'cave_add', 'cave_join', 'cave_deleted', 'rabbit_reply', 'rabbit_follow']),
   },
   {
     id: 'places',

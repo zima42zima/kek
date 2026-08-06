@@ -71,6 +71,12 @@ function NotifText({ n }) {
           {name} added you to <span className="frens-stat">{n.caveName || 'a cave'}</span>
         </span>
       )
+    case 'cave_join':
+      return (
+        <span>
+          {name} joined <span className="frens-stat">{n.caveName || 'your cave'}</span>
+        </span>
+      )
     case 'cave_deleted':
       return (
         <span>
@@ -291,7 +297,7 @@ export default function NotificationsPanel({
       onClose?.()
       return
     }
-    if ((n.type === 'cave' || n.type === 'cave_add') && n.caveId) {
+    if ((n.type === 'cave' || n.type === 'cave_add' || n.type === 'cave_join') && n.caveId) {
       if (n.type === 'cave_add') {
         await joinCaveFromInvite(n.caveId)
       }

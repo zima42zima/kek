@@ -143,7 +143,7 @@ export function isNotificationClickable(n) {
   if (n.type === 'owl_letter') return true
   if (n.type === 'platform_report') return true
   if (n.type === 'fold_received') return true
-  if ((n.type === 'cave' || n.type === 'cave_add') && n.caveId) return true
+  if ((n.type === 'cave' || n.type === 'cave_add' || n.type === 'cave_join') && n.caveId) return true
   // Deleted caves have no destination — not clickable
   if (n.type === 'cave_deleted') return false
   if (n.type === 'echo' && n.echoId) return true

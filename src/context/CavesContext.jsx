@@ -74,11 +74,26 @@ function isLocalMember(cave, userId) {
   return cave?.members?.some((m) => String(m.id) === String(userId))
 }
 
-function keepLocalCave(cave, meId, accessibleIds) {
+function keepLocalCave(cave, meId, accessibleIds, pendingJoined) {
   if (!accessibleIds) return true
   if (String(cave.ownerId) === String(meId)) return true
-  if (accessibleIds.has(cave.id)) return true
-  return isLocalMember(cave, meId)
+  if (accessibleIds.has(cave.id) || accessibleIds.has(String(cave.id))) return true
+  // Keep only while a join is in flight — never orphan empty seeds forever.
+  return Boolean(pendingJoined?.has(String(cave.id)))
+}
+
+/** True once we have server-shaped cave data (not a one-member join seed). */
+function isHydratedCave(cave, meId) {
+  if (!cave?.id) return false
+  const members = cave.members || []
+  if (members.length >= 2) return true
+  if ((cave.messages || []).length > 0) return true
+  if (cave.coverUrl) return true
+  // Owner-only cave with no messages yet is still "real" if owner is present.
+  if (members.some((m) => String(m.id) === String(cave.ownerId) && String(m.id) !== String(meId))) {
+    return true
+  }
+  return false
 }
 
 function storageKey(userId) {
@@ -125,7 +140,7 @@ export function CavesProvider({ children }) {
     setCaves((prev) => {
       const byId = new Map()
       prev
-        .filter((c) => keepLocalCave(c, meId, accessibleIds))
+        .filter((c) => keepLocalCave(c, meId, accessibleIds, pendingJoinedRef.current))
         .forEach((c) => byId.set(c.id, c))
       remoteCaves.forEach((r) => {
         if (!r?.id) return
@@ -243,7 +258,6 @@ export function CavesProvider({ children }) {
       } else if (accessibleIds.size === 0 && memberships.length === 0 && rows.length === 0) {
         setCaves((prev) => prev.filter((c) =>
           String(c.ownerId) === String(meId)
-          || isLocalMember(c, meId)
           || pendingJoinedRef.current.has(String(c.id)),
         ))
       }
@@ -907,36 +921,61 @@ export function CavesProvider({ children }) {
     requestOpenCave(caveId)
   }
 
-  const ensureCaveLoaded = useCallback(async (caveId) => {
-    const sid = String(caveId)
-    if (cavesRef.current.some((c) => String(c.id) === sid)) return true
-    if (pendingJoinedRef.current.has(sid)) return true
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      await syncRemoteCaves()
-      if (cavesRef.current.some((c) => String(c.id) === sid)) return true
-      await new Promise((resolve) => { setTimeout(resolve, 300) })
-    }
-    return pendingJoinedRef.current.has(sid)
-  }, [syncRemoteCaves])
-
-  async function joinPublicCaveAndOpen(caveId, preview) {
-    if (!user?.id || !caveId) return
-    const sid = String(caveId)
-    await joinPublicCave(caveId)
-    const seed = joinedCavePreview(caveId, preview, user.id, profileRef.current)
-    pendingJoinedRef.current.set(sid, seed)
+  const applyJoinedCave = useCallback((cave) => {
+    if (!cave?.id) return
+    const sid = String(cave.id)
     flushSync(() => {
       setCaves((prev) => {
         const existing = prev.find((c) => String(c.id) === sid)
         if (existing) {
-          return prev.map((c) => (String(c.id) === sid ? mergeCaveSnapshot(c, seed) : c))
+          return prev.map((c) => (String(c.id) === sid ? mergeCaveSnapshot(c, cave) : c))
         }
-        return [seed, ...prev]
+        return [cave, ...prev]
       })
       setMemberCaveIds((memberIds) => new Set([...memberIds, sid]))
     })
-    await ensureCaveLoaded(caveId)
-    if (cavesRef.current.some((c) => String(c.id) === sid)) {
+  }, [])
+
+  const ensureCaveLoaded = useCallback(async (caveId, { requireHydrated = false } = {}) => {
+    const sid = String(caveId)
+    const ready = () => {
+      const cave = cavesRef.current.find((c) => String(c.id) === sid)
+        ?? pendingJoinedRef.current.get(sid)
+      if (!cave) return false
+      if (!requireHydrated) return true
+      return isHydratedCave(cave, meId)
+    }
+    if (ready()) return true
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      await syncRemoteCaves()
+      if (ready()) return true
+      await new Promise((resolve) => { setTimeout(resolve, 350) })
+    }
+    return ready()
+  }, [syncRemoteCaves, meId])
+
+  async function joinPublicCaveAndOpen(caveId, preview) {
+    if (!user?.id || !caveId) return
+    const sid = String(caveId)
+    const seed = joinedCavePreview(caveId, preview, user.id, profileRef.current)
+    pendingJoinedRef.current.set(sid, seed)
+    applyJoinedCave(seed)
+
+    let remoteCave = null
+    try {
+      remoteCave = await joinPublicCave(caveId)
+    } catch (err) {
+      pendingJoinedRef.current.delete(sid)
+      throw err
+    }
+
+    if (remoteCave) {
+      pendingJoinedRef.current.set(sid, remoteCave)
+      applyJoinedCave(remoteCave)
+    }
+
+    await ensureCaveLoaded(caveId, { requireHydrated: true })
+    if (isHydratedCave(cavesRef.current.find((c) => String(c.id) === sid), meId)) {
       pendingJoinedRef.current.delete(sid)
     }
     requestOpenCave(caveId)

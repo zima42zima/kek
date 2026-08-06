@@ -153,7 +153,7 @@ export default function ProfileCavesPublic({
       openCave(cave.id)
     } catch (err) {
       if (err instanceof CavesNotInstalledError) {
-        setError('Joining public caves needs a database update.')
+        setError('Joining public caves needs supabase-patch-public-cave-join-fix.sql.')
       } else {
         setError(err.message || 'Could not join cave.')
       }

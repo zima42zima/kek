@@ -55,17 +55,27 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
     ?? (selectedId && String(heldCaveRef.current?.id) === String(selectedId) ? heldCaveRef.current : null)
 
   useEffect(() => {
-    if (!selectedId || displayCave) {
+    if (!selectedId) {
+      setLoadingCave(false)
+      return undefined
+    }
+    // Seed/join preview can look "present" with 1 member and no messages — keep hydrating.
+    const needsHydrate = !displayCave
+      || ((displayCave.members?.length || 0) < 2
+        && !(displayCave.messages?.length)
+        && !displayCave.coverUrl
+        && String(displayCave.ownerId) !== String(meId))
+    if (!needsHydrate) {
       setLoadingCave(false)
       return undefined
     }
     let cancelled = false
     setLoadingCave(true)
-    ensureCaveLoaded(selectedId).finally(() => {
+    ensureCaveLoaded(selectedId, { requireHydrated: true }).finally(() => {
       if (!cancelled) setLoadingCave(false)
     })
     return () => { cancelled = true }
-  }, [selectedId, displayCave, ensureCaveLoaded])
+  }, [selectedId, displayCave, ensureCaveLoaded, meId])
 
   function handleCreate(name, options = {}) {
     const id = createCave(name, options)
@@ -125,7 +135,7 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
         onOpenCave={selectCave}
         onCreateClick={() => setShowCreate(true)}
         onJoinedPublic={async (id) => {
-          await ensureCaveLoaded(id)
+          await ensureCaveLoaded(id, { requireHydrated: true })
           selectCave(id)
         }}
       />
