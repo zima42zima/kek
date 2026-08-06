@@ -139,6 +139,7 @@ export async function listProfileCaves(userId) {
       emoji: r.emoji || '🕳️',
       access: r.access || 'invite',
       isOwner: r.is_owner ?? true,
+      ownerId: r.owner_id ?? userId,
       coverUrl: r.cover_url ?? r.coverUrl ?? null,
     }))
 

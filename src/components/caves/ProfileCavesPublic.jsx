@@ -3,7 +3,6 @@ import Modal from '../Modal'
 import {
   listProfileCaves,
   searchPublicCaves,
-  joinPublicCave,
   CavesNotInstalledError,
 } from '../../lib/caves'
 import { useCaves } from '../../context/CavesContext'
@@ -88,7 +87,7 @@ export default function ProfileCavesPublic({
   onNavigate,
   onCloseProfile,
 }) {
-  const { myCaves, syncRemoteCaves } = useCaves()
+  const { myCaves, joinPublicCaveAndOpen } = useCaves()
   const [caves, setCaves] = useState([])
   const [open, setOpen] = useState(false)
   const [joiningId, setJoiningId] = useState(null)
@@ -116,6 +115,7 @@ export default function ProfileCavesPublic({
               emoji: r.emoji,
               access: 'public',
               isOwner: true,
+              ownerId: userId,
               coverUrl: r.coverUrl ?? null,
             }))
         }
@@ -144,8 +144,12 @@ export default function ProfileCavesPublic({
     setJoiningId(cave.id)
     setError('')
     try {
-      await joinPublicCave(cave.id)
-      await syncRemoteCaves()
+      await joinPublicCaveAndOpen(cave.id, {
+        name: cave.name,
+        emoji: cave.emoji,
+        ownerId: cave.ownerId ?? userId,
+        coverUrl: cave.coverUrl,
+      })
       openCave(cave.id)
     } catch (err) {
       if (err instanceof CavesNotInstalledError) {
