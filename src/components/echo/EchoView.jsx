@@ -233,7 +233,7 @@ export default function EchoView({
         ) : null}
 
         <div
-          className={`relative rounded-xl bg-black/30 overflow-hidden mb-3 ${canRangeSwipe ? 'touch-pan-x' : 'touch-pan-y'}`}
+          className={`relative rounded-xl bg-black/30 overflow-hidden mb-3 ${canRangeSwipe ? 'touch-pan-x' : ''}`}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -267,7 +267,7 @@ export default function EchoView({
               <img
                 src={echo.mediaUrl}
                 alt=""
-                className="w-full object-contain max-h-[60vh] bg-black"
+                className="w-full object-contain max-h-[min(48vh,420px)] bg-black"
                 onLoad={markReviewed}
               />
             ) : echo.kind === 'video' ? (

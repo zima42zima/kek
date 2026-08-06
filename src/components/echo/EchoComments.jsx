@@ -85,7 +85,7 @@ export default function EchoComments({
       {comments.length === 0 && !showComposer ? (
         <p className="text-xs frens-muted">No comments yet.</p>
       ) : comments.length > 0 ? (
-        <ul className="space-y-3 max-h-48 overflow-y-auto">
+        <ul className="space-y-3">
           {comments.map((c) => {
             const uid = commentUserId(c)
             const commentAuthor = withLiveAuthorAvatar(
