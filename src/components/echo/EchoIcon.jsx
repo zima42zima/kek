@@ -3,7 +3,7 @@ import batIcon from '../../assets/icons/echo.png'
 import { maskImageStyle } from '../../lib/maskIcon'
 
 /**
- * Echo / Aftersound brand mark — nav, buttons, headers.
+ * Echo / Echo brand mark — nav, buttons, headers.
  * CSS mask + currentColor so light/dark both work.
  */
 export default function EchoIcon({ className = 'w-5 h-4' }) {

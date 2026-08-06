@@ -12,13 +12,13 @@ import EchoPreviewMedia from './EchoPreviewMedia'
 function EchoesListModal({ echoes, frenName, onClose, onFindOnMap }) {
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2"><EchoIcon className="w-[1.06rem] h-[0.85rem]" /> {frenName}&apos;s aftersounds</span>}
+      title={<span className="inline-flex items-center gap-2"><EchoIcon className="w-[1.06rem] h-[0.85rem]" /> {frenName}&apos;s echoes</span>}
       onClose={onClose}
       maxWidth="max-w-sm"
     >
       {echoes.length === 0 ? (
         <p className="text-sm frens-muted text-center py-6">
-          No public aftersounds on profile yet — check the map when you&apos;re nearby.
+          No public echoes on profile yet — check the map when you&apos;re nearby.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -53,7 +53,7 @@ function EchoesListModal({ echoes, frenName, onClose, onFindOnMap }) {
         </ul>
       )}
       <p className="text-[11px] frens-hint text-center mt-4">
-        Aftersounds stay on the map until deleted — walk within ~80m to listen.
+        Echoes stay on the map until deleted — walk within ~80m to listen.
       </p>
     </Modal>
   )
@@ -111,8 +111,8 @@ export default function ProfileEchoesPublic({ userId, frenName = 'this fren', on
         type="button"
         onClick={() => setOpen(true)}
         className="profile-hub-chip profile-hub-chip--stack"
-        title={`${frenName}'s aftersounds`}
-        aria-label={`${frenName}'s aftersounds`}
+        title={`${frenName}'s echoes`}
+        aria-label={`${frenName}'s echoes`}
       >
         <EchoIcon className="w-[1.06rem] h-[0.85rem]" />
       </button>

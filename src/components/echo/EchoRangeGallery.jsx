@@ -37,7 +37,7 @@ export default function EchoRangeGallery({
 
   if (!echoes.length) return null
 
-  const heading = title || `${echoes.length} aftersound${echoes.length === 1 ? '' : 's'} here`
+  const heading = title || `${echoes.length} echo${echoes.length === 1 ? '' : 's'} here`
 
   function onScrollPointerDown(e) {
     dragRef.current = {

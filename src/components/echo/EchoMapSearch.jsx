@@ -182,7 +182,7 @@ export default function EchoMapSearch({
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
           className="flex-1 bg-transparent text-sm outline-none min-w-0"
-          aria-label="Search places on the aftersound map"
+          aria-label="Search places on the echo map"
         />
         {busy ? <span className="text-[10px] frens-muted">…</span> : null}
         {selectedPlace ? (
@@ -223,7 +223,7 @@ export default function EchoMapSearch({
           )}
           {echoPlaces.length > 0 && (
             <div className="p-2 border-b frens-border">
-              <p className="text-[10px] uppercase tracking-wide frens-muted px-2 py-1">Aftersound places</p>
+              <p className="text-[10px] uppercase tracking-wide frens-muted px-2 py-1">Echo places</p>
               <ul>
                 {echoPlaces.map((p) => (
                   <li key={p.placeKey}>
@@ -234,7 +234,7 @@ export default function EchoMapSearch({
                     >
                       <EchoIcon className="w-4 h-3 shrink-0" />
                       <span className="min-w-0 truncate">{p.placeLabel || p.cityLabel}</span>
-                      <span className="text-[10px] frens-muted ml-auto shrink-0">{p.echoCount} aftersound{p.echoCount === 1 ? '' : 's'}</span>
+                      <span className="text-[10px] frens-muted ml-auto shrink-0">{p.echoCount} echo{p.echoCount === 1 ? '' : 's'}</span>
                     </button>
                   </li>
                 ))}

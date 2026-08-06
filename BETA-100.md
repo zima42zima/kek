@@ -42,7 +42,7 @@ If a patch says “safe to re-run”, you can run it again.
 |------|---------|
 | **P.S. letters** | `supabase-patch-owl-post.sql`, `supabase-patch-owl-anon-notifications.sql` |
 | **Folds** | `supabase-patch-folds.sql` |
-| **Aftersound map** | See `PROGRESS.md` echo SQL order |
+| **Echo map** | See `PROGRESS.md` echo SQL order |
 | **Playlists** | `supabase-patch-playlists.sql` + social/saves/covers as needed |
 | **Gatherer** | `supabase-patch-moodboards.sql` |
 | **DM calls** | `supabase-patch-dm-calls.sql` |

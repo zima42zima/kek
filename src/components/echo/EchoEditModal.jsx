@@ -31,7 +31,7 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
   }
 
   return (
-    <Modal title="Edit aftersound" onClose={onClose} maxWidth="max-w-md">
+    <Modal title="Edit echo" onClose={onClose} maxWidth="max-w-md">
       <div className="space-y-4">
         <label className="block space-y-1">
           <span className="text-xs frens-muted">Label (only you see this)</span>
@@ -110,7 +110,7 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
           onClick={handleDelete}
           className="w-full py-2.5 text-sm text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/10 transition"
         >
-          Delete aftersound
+          Delete echo
         </button>
       </div>
     </Modal>

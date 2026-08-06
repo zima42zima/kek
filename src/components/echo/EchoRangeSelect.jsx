@@ -35,7 +35,7 @@ export function EchoDiscoverRadiusPicker({ value, onChange, className = '' }) {
     <div className={`space-y-2 ${className}`}>
       <p className="text-sm frens-body-text text-center">How close must someone be?</p>
       <p className="text-xs frens-muted text-center -mt-1">
-        Frens discover your aftersound when they walk within this range. Exact pin stays hidden.
+        Frens discover your echo when they walk within this range. Exact pin stays hidden.
       </p>
       <div className="grid gap-2">
         {ECHO_RANGE_PRESETS.map((preset) => (

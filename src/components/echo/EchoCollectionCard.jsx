@@ -51,7 +51,7 @@ export default function EchoCollectionCard({
         type="button"
         onClick={handlePrimary}
         className="shrink-0 w-[5.5rem] sm:w-[6.5rem] aspect-square rounded-l-xl bg-black/5 dark:bg-white/5 flex items-center justify-center overflow-hidden border-r frens-border"
-        aria-label={openOnTap ? `Open ${echo.label || 'aftersound'}` : `Show ${echo.label || 'aftersound'} on map`}
+        aria-label={openOnTap ? `Open ${echo.label || 'echo'}` : `Show ${echo.label || 'echo'} on map`}
       >
         <EchoPreviewMedia echo={echo} ownerPreview={ownerPreview} watchedPreview={openOnTap} />
       </button>

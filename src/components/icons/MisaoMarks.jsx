@@ -45,7 +45,7 @@ export function HomeMark({ className }) {
   )
 }
 
-/** Echo / Aftersound mark — same asset as EchoIcon. */
+/** Echo / Echo mark — same asset as EchoIcon. */
 export function EchoMark({ className }) {
   return (
     <span

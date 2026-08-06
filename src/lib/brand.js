@@ -2,15 +2,15 @@
 export const APP_NAME = 'MISAO'
 
 /** Location map feature — UI copy only (code/API still uses echo). */
-export const AFTERSOUND_LABEL = 'Aftersound'
-export const AFTERSOUNDS_LABEL = 'Aftersounds'
+export const ECHO_LABEL = 'Echo'
+export const ECHOES_LABEL = 'Echoes'
 
-export function aftersoundWord(count = 1) {
-  return count === 1 ? 'aftersound' : 'aftersounds'
+export function echoWord(count = 1) {
+  return count === 1 ? 'echo' : 'echoes'
 }
 
-export function aftersoundCountLabel(count) {
-  return `${count} ${aftersoundWord(count)}`
+export function echoCountLabel(count) {
+  return `${count} ${echoWord(count)}`
 }
 
 /** Production domain — used for fallbacks and docs. */

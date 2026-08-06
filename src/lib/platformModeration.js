@@ -66,6 +66,7 @@ export async function listPlatformReports(status = 'open') {
 }
 
 export async function resolvePlatformReport(id, status = 'dismissed', note = '') {
+  if (!id) throw new Error('Missing report id')
   const { error } = await supabase.rpc('resolve_platform_report', {
     p_id: id,
     p_status: status,
@@ -147,8 +148,8 @@ export function reportKindLabel(kind) {
     case 'cave_message': return 'Cave message'
     case 'profile': return 'Profile'
     case 'fold': return 'Fold'
-    case 'echo': return 'Aftersound'
-    case 'echo_comment': return 'Aftersound comment'
+    case 'echo': return 'Echo'
+    case 'echo_comment': return 'Echo comment'
     case 'owl_letter': return 'P.S. letter'
     default: return kind || 'Report'
   }

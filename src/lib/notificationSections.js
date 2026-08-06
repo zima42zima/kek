@@ -31,8 +31,8 @@ export const NOTIFICATION_SECTIONS = [
   },
   {
     id: 'places',
-    label: 'Aftersound',
-    hint: 'Nearby aftersounds, published spots, and friends-only drops',
+    label: 'Echo',
+    hint: 'Nearby echoes, published spots, and friends-only drops',
     types: new Set(['echo', 'echo_follow', 'echo_published', 'echo_friends', 'echo_aura']),
   },
 ]

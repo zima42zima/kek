@@ -13,19 +13,19 @@ import ProfileShareToggle from '../ProfileShareToggle'
 function EchoesProfileModal({ echoes, onClose, onOpenEcho }) {
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2"><EchoIcon className="w-[1.06rem] h-[0.85rem]" /> Your aftersounds</span>}
+      title={<span className="inline-flex items-center gap-2"><EchoIcon className="w-[1.06rem] h-[0.85rem]" /> Your echoes</span>}
       onClose={onClose}
       maxWidth="max-w-sm"
     >
       <div className="space-y-3">
         <ProfileShareToggle
           showcaseKey="echoes"
-          label="Show aftersounds on my profile"
-          hint="You always open aftersounds here or on the map. When on, other frens see this icon on your profile."
+          label="Show echoes on my profile"
+          hint="You always open echoes here or on the map. When on, other frens see this icon on your profile."
         />
         {echoes.length === 0 ? (
           <p className="text-sm frens-muted text-center py-6">
-            No public aftersounds yet. Leave a <strong>world</strong> aftersound on the map to list it here.
+            No public echoes yet. Leave a <strong>world</strong> echo on the map to list it here.
           </p>
         ) : (
           <ul className="space-y-2">
@@ -60,7 +60,7 @@ function EchoesProfileModal({ echoes, onClose, onOpenEcho }) {
           </ul>
         )}
         <p className="text-[11px] frens-hint text-center">
-          Private memories stay off the public list. World aftersounds can appear when sharing is on.
+          Private memories stay off the public list. World echoes can appear when sharing is on.
         </p>
       </div>
     </Modal>
@@ -103,8 +103,8 @@ export default function ProfileEchoes({ userId, onNavigate, onOpenEcho }) {
         type="button"
         onClick={() => setOpen(true)}
         className="profile-hub-chip"
-        title="Your aftersounds"
-        aria-label="Your aftersounds"
+        title="Your echoes"
+        aria-label="Your echoes"
       >
         <EchoIcon className="w-[1.06rem] h-[0.85rem]" />
       </button>

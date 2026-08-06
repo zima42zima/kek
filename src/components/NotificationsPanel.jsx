@@ -85,13 +85,13 @@ function NotifText({ n }) {
         </span>
       )
     case 'echo_aura':
-      return <span>{name} gave aura to your aftersound</span>
+      return <span>{name} gave aura to your echo</span>
     case 'echo':
-      return <span>{name} left an aftersound near you — tap to listen</span>
+      return <span>{name} left an echo near you — tap to listen</span>
     case 'echo_follow':
       return (
         <span>
-          {name} left an aftersound in {n.cityLabel || 'your area'} — a bat is flying nearby
+          {name} left an echo in {n.cityLabel || 'your area'} — a bat is flying nearby
         </span>
       )
     case 'echo_published':
@@ -103,7 +103,7 @@ function NotifText({ n }) {
     case 'echo_friends':
       return (
         <span>
-          {name} left a friends-only aftersound{n.cityLabel ? ` near ${n.cityLabel}` : ''} — tap to open
+          {name} left a friends-only echo{n.cityLabel ? ` near ${n.cityLabel}` : ''} — tap to open
         </span>
       )
     case 'dm':
@@ -349,7 +349,7 @@ export default function NotificationsPanel({
               <p className="text-xs frens-hint mt-1 px-6">
                 {section === 'personal' && 'Follows, aura, comments, and DMs show up here.'}
                 {section === 'community' && 'Cave posts and rabbit hole replies land here.'}
-                {section === 'places' && 'Aftersound activity — nearby drops and published spots — shows here.'}
+                {section === 'places' && 'Echo activity — nearby drops and published spots — shows here.'}
               </p>
             </div>
           ) : (

@@ -90,7 +90,7 @@ export default function EchoMineToolbar({
             value={sortBy}
             onChange={(e) => onSortChange(e.target.value)}
             className="frens-input py-1 px-2 text-xs w-auto"
-            aria-label="Sort aftersounds"
+            aria-label="Sort echoes"
           >
             <option value="newest">Newest</option>
             <option value="oldest">Oldest</option>

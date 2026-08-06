@@ -1,5 +1,5 @@
 -- Live comment feeds: echo_comments + post_comments on supabase_realtime.
--- Required so open aftersounds / home threads pick up inserts & deletes without refresh.
+-- Required so open echoes / home threads pick up inserts & deletes without refresh.
 
 alter table public.echo_comments replica identity full;
 alter table public.post_comments replica identity full;

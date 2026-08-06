@@ -50,7 +50,7 @@ export default function EchoComments({
 
   if (!echo.allowComments) {
     return (
-      <p className="text-xs frens-muted text-center py-2">Comments are off for this aftersound.</p>
+      <p className="text-xs frens-muted text-center py-2">Comments are off for this echo.</p>
     )
   }
 

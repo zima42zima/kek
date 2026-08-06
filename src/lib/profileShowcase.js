@@ -8,7 +8,7 @@ import { supabase } from '../supabaseClient'
 
 export const SHOWCASE_KEYS = [
   { id: 'caves', label: 'Caves', group: 'social', hint: 'Caves you join or host' },
-  { id: 'echoes', label: 'Aftersounds', group: 'social', hint: 'Public aftersounds on the map' },
+  { id: 'echoes', label: 'Echoes', group: 'social', hint: 'Public echoes on the map' },
   { id: 'playlists', label: 'Playlists', group: 'taste', hint: 'Playlists you keep' },
   { id: 'moodboards', label: 'Moodboards', group: 'taste', hint: 'Gatherer boards' },
   { id: 'folds', label: 'Folds', group: 'taste', hint: 'Published paper folds' },

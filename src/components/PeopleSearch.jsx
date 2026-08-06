@@ -120,7 +120,7 @@ export default function PeopleSearch({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Frens, posts, aftersounds, places…"
+            placeholder="Frens, posts, echoes, places…"
             className="frens-input py-2.5 pl-9 w-full"
             autoComplete="off"
             autoCorrect="off"
@@ -130,7 +130,7 @@ export default function PeopleSearch({
 
         {!query.trim() ? (
           <p className="text-xs frens-muted text-center py-6">
-            Find frens by @handle, words from public posts, and aftersound taglines or places.
+            Find frens by @handle, words from public posts, and echo taglines or places.
           </p>
         ) : searching ? (
           <p className="text-sm frens-muted py-4 text-center">Searching…</p>
@@ -200,7 +200,7 @@ export default function PeopleSearch({
 
             {echoes.length > 0 && (
               <section>
-                <h3 className="text-[11px] uppercase tracking-wide frens-muted px-2 mb-1">Aftersounds</h3>
+                <h3 className="text-[11px] uppercase tracking-wide frens-muted px-2 mb-1">Echoes</h3>
                 <ul className="space-y-0.5">
                   {echoes.map((echo) => (
                     <li key={echo.id}>
@@ -214,7 +214,7 @@ export default function PeopleSearch({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm frens-body-text truncate">
-                            {echo.label?.trim() || echo.placeLabel || echo.kind || 'Aftersound'}
+                            {echo.label?.trim() || echo.placeLabel || echo.kind || 'Echo'}
                           </span>
                           <span className="block text-[11px] frens-muted truncate mt-0.5">
                             {[echo.authorName, echo.placeLabel || echo.cityLabel].filter(Boolean).join(' · ')}
@@ -248,7 +248,7 @@ export default function PeopleSearch({
                             <span className="block text-sm truncate">{label}</span>
                             <span className="block text-[11px] frens-muted truncate">
                               {[place.cityLabel && place.cityLabel !== label ? place.cityLabel : null,
-                                place.echoCount != null ? `${place.echoCount} aftersound${place.echoCount === 1 ? '' : 's'}` : null]
+                                place.echoCount != null ? `${place.echoCount} echo${place.echoCount === 1 ? '' : 's'}` : null]
                                 .filter(Boolean)
                                 .join(' · ')}
                             </span>

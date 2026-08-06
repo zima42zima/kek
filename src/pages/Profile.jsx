@@ -643,7 +643,7 @@ export default forwardRef(function Profile({
             <PostComposer collapsible />
             {myPosts.length === 0 ? (
               <div className="p-6 text-center">
-                <p className="text-sm frens-muted">No posts yet — share your first aftersound</p>
+                <p className="text-sm frens-muted">No posts yet — share your first echo</p>
               </div>
             ) : (
               myPosts.map((post) => (
@@ -827,7 +827,7 @@ export default forwardRef(function Profile({
             />
 
             <SettingToggle
-              title="Share my city on Aftersounds"
+              title="Share my city on Echoes"
               hint="Only city level, never exact location."
               checked={shareLocation}
               onToggle={handleToggleLocation}

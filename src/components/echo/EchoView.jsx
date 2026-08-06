@@ -162,7 +162,7 @@ export default function EchoView({
   return (
     <>
       <Modal
-        title={mine ? 'Your aftersound' : 'A fren left an aftersound'}
+        title={mine ? 'Your echo' : 'A fren left an echo'}
         onClose={onClose}
         maxWidth="max-w-sm"
         blurBackdrop={false}
@@ -222,7 +222,7 @@ export default function EchoView({
             </p>
             <p className="text-[11px] frens-muted mt-0.5">
               {mine
-                ? 'See where you pinned this aftersound'
+                ? 'See where you pinned this echo'
                 : 'Open your camera to find the pinned spot'}
             </p>
           </button>
@@ -243,7 +243,7 @@ export default function EchoView({
                 type="button"
                 onClick={() => navigateRange(-1)}
                 disabled={!hasPrev}
-                aria-label="Previous aftersound in range"
+                aria-label="Previous echo in range"
                 className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/45 text-white text-lg leading-none disabled:opacity-25"
               >
                 ‹
@@ -252,7 +252,7 @@ export default function EchoView({
                 type="button"
                 onClick={() => navigateRange(1)}
                 disabled={!hasNext}
-                aria-label="Next aftersound in range"
+                aria-label="Next echo in range"
                 className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/45 text-white text-lg leading-none disabled:opacity-25"
               >
                 ›
@@ -400,7 +400,7 @@ export default function EchoView({
                 refId={echo.id}
                 reportedUserId={echo.anonymous ? null : echo.ownerId}
                 preview={echo.title || echo.caption || displayEcho.authorName}
-                subjectLabel="this aftersound"
+                subjectLabel="this echo"
                 variant="flag"
                 className="w-8 h-8 opacity-45 hover:opacity-100"
               />
@@ -414,7 +414,7 @@ export default function EchoView({
             onClick={() => onDelete(echo.id)}
             className="w-full mt-4 py-2.5 text-sm text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/10 transition"
           >
-            Delete aftersound
+            Delete echo
           </button>
         ) : null}
       </Modal>

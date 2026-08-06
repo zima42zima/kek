@@ -3,7 +3,7 @@
 export const COMMUNITY_RULES_TITLE = 'Community rules'
 
 export const COMMUNITY_RULES_INTRO =
-  'MISAO is a social space for real people. We want everyone — and everyone on MISAO — to feel safe. These rules apply everywhere: posts, messages, caves, aftersounds, P.S. letters, folds, and profiles.'
+  'MISAO is a social space for real people. We want everyone — and everyone on MISAO — to feel safe. These rules apply everywhere: posts, messages, caves, echoes, P.S. letters, folds, and profiles.'
 
 export const COMMUNITY_RULES_SECTIONS = [
   {
@@ -23,7 +23,7 @@ export const COMMUNITY_RULES_SECTIONS = [
   },
   {
     title: 'Reporting',
-    body: 'If something crosses the line, use Report on that post, message, aftersound, letter, or profile. Reports go to MISAO review. You can add a short note about what happened.',
+    body: 'If something crosses the line, use Report on that post, message, echo, letter, or profile. Reports go to MISAO review. You can add a short note about what happened.',
   },
   {
     title: 'Enforcement',

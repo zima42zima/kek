@@ -76,7 +76,7 @@ function FeedRefreshIndicator({ offset = 0, refreshing = false }) {
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: homeIcon },
-  { id: 'echoes', label: 'Aftersound', icon: echoesIcon },
+  { id: 'echoes', label: 'Echo', icon: echoesIcon },
   { id: 'rabbit', label: 'Rabbit Hole', icon: rabbitholeIcon, iconScale: 0.9 },
   { id: 'messages', label: 'Messages', icon: messagesIcon },
   { id: 'caves', label: 'Caves', icon: cavesIcon },

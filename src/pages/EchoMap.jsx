@@ -927,11 +927,11 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   const swipeGalleryTitle = useMemo(() => {
     if (mapMode === 'near') {
       return cityLabel && cityLabel !== 'your region'
-        ? `Public aftersounds · ${cityLabel}`
-        : 'Public aftersounds near you'
+        ? `Public echoes · ${cityLabel}`
+        : 'Public echoes near you'
     }
-    if (explorePlace?.label) return `Public aftersounds · ${explorePlace.label}`
-    return 'World aftersounds in this view'
+    if (explorePlace?.label) return `Public echoes · ${explorePlace.label}`
+    return 'World echoes in this view'
   }, [mapMode, cityLabel, explorePlace])
 
   const mapOverlayOpen = showCreate || !!openId || showIntro
@@ -1218,9 +1218,9 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         return
       } catch (err) {
         console.error('Echo publish failed:', err)
-        const raw = err?.message || 'Could not publish aftersound'
+        const raw = err?.message || 'Could not publish echo'
         if (kind === 'image' && /kind|check|invalid/i.test(raw)) {
-          throw new Error('Meme aftersounds need supabase-patch-echoes-images.sql run in Supabase SQL Editor.')
+          throw new Error('Meme echoes need supabase-patch-echoes-images.sql run in Supabase SQL Editor.')
         }
         throw new Error(raw)
       }
@@ -1272,7 +1272,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         await deleteEchoRemote(id)
       } catch (err) {
         console.error('Echo delete failed:', err)
-        window.alert(err?.message || 'Could not delete aftersound.')
+        window.alert(err?.message || 'Could not delete echo.')
         return
       }
     } else {
@@ -1427,7 +1427,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     return () => { cancelled = true }
   }, [openId, backendReady])
 
-  // Live comments while an aftersound is open.
+  // Live comments while an echo is open.
   useEffect(() => {
     if (!openId || !backendReady || !userId) return undefined
     const echoId = openId
@@ -1772,16 +1772,16 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="frens-title-xl leading-tight">Aftersound</h2>
+          <h2 className="frens-title-xl leading-tight">Echo</h2>
         </div>
         <button
           type="button"
           onClick={openCreateFlow}
           className="frens-btn-primary px-3 py-2 text-sm rounded-full inline-flex items-center gap-1"
-          title={userPos ? 'Drop an aftersound' : 'Enable location first'}
+          title={userPos ? 'Drop an echo' : 'Enable location first'}
         >
           <span className="text-base leading-none font-medium" aria-hidden>+</span>
-          Aftersound
+          Echo
         </button>
       </div>
 
@@ -1794,7 +1794,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
             className={`text-xs px-3 py-1.5 rounded-full capitalize ${tab === t ? 'frens-btn-primary' : 'frens-btn-outline'}`}
           >
             {t === 'mine'
-              ? `My Aftersounds (${myEchoes.length})`
+              ? `My Echoes (${myEchoes.length})`
               : t === 'collection'
                 ? `Collection (${displayCollection.length})`
                 : t === 'history'
@@ -1824,9 +1824,9 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           {mapMode === 'near' && status !== 'located' && !explorePlace ? (
             <div className="border frens-border rounded-xl p-8 text-center">
               <MapIcon className="w-10 h-10 mx-auto mb-2 opacity-70" />
-              <p className="text-sm frens-body-text mb-1">See aftersounds around you</p>
+              <p className="text-sm frens-body-text mb-1">See echoes around you</p>
               <p className="text-xs frens-muted mb-4">
-                Bats fly where frens left aftersounds — walk close to discover them. Or search a city above to explore.
+                Bats fly where frens left echoes — walk close to discover them. Or search a city above to explore.
               </p>
               <button type="button" onClick={locate} className="frens-btn-outline px-4 py-2 text-sm inline-flex items-center gap-1.5">
                 <LocationIcon className="w-4 h-4" />
@@ -1880,8 +1880,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
               {!mapHidden && mapMode === 'explore' && explorePlace && swipeGalleryEchoes.length === 0 && (
                 <p className="text-xs frens-muted px-1 text-center">
                   {browseEchoes.length > 0
-                    ? `${browseEchoes.length} world aftersound${browseEchoes.length === 1 ? '' : 's'} in this view — pan the map or pick a closer spot`
-                    : 'No world aftersounds here yet — drop one with 🌍 Browsable from anywhere'}
+                    ? `${browseEchoes.length} world echo${browseEchoes.length === 1 ? '' : 's'} in this view — pan the map or pick a closer spot`
+                    : 'No world echoes here yet — drop one with 🌍 Browsable from anywhere'}
                 </p>
               )}
               {!mapHidden && mapMode === 'near' && (
@@ -1939,12 +1939,12 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           {myEchoes.length === 0 ? (
             <div className="border frens-border rounded-xl p-8 text-center">
               <p className="text-sm frens-muted inline-flex items-center gap-1 justify-center">
-                No aftersounds yet — tap <EchoIcon className="w-4 h-3" /> Meme to leave audio or a short video.
+                No echoes yet — tap <EchoIcon className="w-4 h-3" /> Meme to leave audio or a short video.
               </p>
             </div>
           ) : filteredMyEchoes.length === 0 ? (
             <div className="border frens-border rounded-xl p-8 text-center">
-              <p className="text-sm frens-muted">No aftersounds match this filter.</p>
+              <p className="text-sm frens-muted">No echoes match this filter.</p>
             </div>
           ) : (
             <div className={
@@ -1985,12 +1985,12 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           {displayCollection.length === 0 ? (
             <div className="border frens-border rounded-xl p-8 text-center">
               <p className="text-sm frens-muted">
-                Aftersounds you save from frens and discoveries show up here — open one on the map and tap Save to my collection.
+                Echoes you save from frens and discoveries show up here — open one on the map and tap Save to my collection.
               </p>
             </div>
           ) : filteredCollection.length === 0 ? (
             <div className="border frens-border rounded-xl p-8 text-center">
-              <p className="text-sm frens-muted">No aftersounds match this filter.</p>
+              <p className="text-sm frens-muted">No echoes match this filter.</p>
             </div>
           ) : (
             <div className={
@@ -2023,7 +2023,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         <div className="space-y-2">
           {heardCollection.length === 0 ? (
             <div className="border frens-border rounded-xl p-8 text-center">
-              <p className="text-sm frens-muted">Aftersounds you open — meme, video, or audio — show up here.</p>
+              <p className="text-sm frens-muted">Echoes you open — meme, video, or audio — show up here.</p>
             </div>
           ) : (
             heardCollection.map(({ echo, heardAt, interaction }) => (
@@ -2092,7 +2092,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       )}
       <ConfirmDialog
         open={Boolean(pendingDeleteEchoId)}
-        title="Delete aftersound?"
+        title="Delete echo?"
         message="This can’t be undone."
         confirmLabel="Delete"
         onCancel={() => setPendingDeleteEchoId(null)}
