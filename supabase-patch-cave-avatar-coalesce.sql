@@ -3,6 +3,18 @@
 -- is empty but cave_messages.avatar_url still has the URL from send time.
 -- Safe to re-run.
 
+-- Ensure reply / pin columns exist (may be missing if earlier patches were skipped).
+alter table public.cave_messages
+  add column if not exists parent_id bigint references public.cave_messages(id) on delete set null;
+alter table public.cave_messages
+  add column if not exists pinned boolean default false;
+alter table public.cave_messages
+  add column if not exists hidden boolean default false;
+
+create index if not exists cave_messages_parent_idx
+  on public.cave_messages (cave_id, parent_id)
+  where parent_id is not null;
+
 -- ---------------------------------------------------------------------------
 -- list_cave_messages
 -- ---------------------------------------------------------------------------
