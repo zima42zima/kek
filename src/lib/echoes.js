@@ -323,6 +323,8 @@ function mapEchoComment(row) {
   }
 }
 
+export { mapEchoComment }
+
 export async function listEchoComments(echoId) {
   const { data, error } = await supabase.rpc('list_echo_comments', { p_echo: echoId })
   if (error) {

@@ -10,7 +10,7 @@ import { ECHO_LOOK_FILTERS, ECHO_VOICE_FILTERS } from '../../lib/echoConstants'
 import { spatialTierLabel } from '../../lib/spatialEcho'
 import { senseFilterLabel, normalizeSenseFilter, lidarFilterLabel } from '../../lib/senseFilters'
 import { EchoMetaLine, EchoTypeIcon } from './EchoMeta'
-import { HeadphonesIcon, LocationIcon } from '../icons/UiIcons'
+import { HeadphonesIcon, LocationIcon, BookmarkIcon } from '../icons/UiIcons'
 import useLiveAuthorProfile from '../../hooks/useLiveAuthorProfile'
 import { withLiveAuthorAvatar } from '../../lib/posts'
 import ReportContentButton from '../ReportContentButton'
@@ -379,25 +379,21 @@ export default function EchoView({
         )}
 
         {!mine && (
-          <div className="flex items-center gap-2 mt-4">
-            {echo.saved ? (
-              <button
-                type="button"
-                onClick={() => onUnsave?.(echo.id)}
-                className="frens-btn-outline flex-1 py-2.5 text-sm"
-              >
-                Remove from collection
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onSave(echo.id)}
-                disabled={!reviewed}
-                className="frens-btn-primary flex-1 py-2.5 text-sm disabled:opacity-40"
-              >
-                {reviewed ? 'Save to my collection' : 'Watch first to save'}
-              </button>
-            )}
+          <div className="flex items-center justify-end gap-0.5 mt-3">
+            <button
+              type="button"
+              onClick={() => (echo.saved ? onUnsave?.(echo.id) : onSave?.(echo.id))}
+              disabled={!echo.saved && !reviewed}
+              className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition disabled:opacity-30 ${
+                echo.saved
+                  ? 'text-black dark:text-white'
+                  : 'frens-muted opacity-45 hover:opacity-100 hover:text-black dark:hover:text-white'
+              }`}
+              aria-label={echo.saved ? 'Remove from collection' : reviewed ? 'Save to my collection' : 'Watch first to save'}
+              title={echo.saved ? 'Remove from collection' : reviewed ? 'Save to my collection' : 'Watch first to save'}
+            >
+              <BookmarkIcon className="w-4 h-4" filled={Boolean(echo.saved)} />
+            </button>
             {echo.id ? (
               <ReportContentButton
                 kind="echo"

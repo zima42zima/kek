@@ -90,6 +90,7 @@ import {
   listEchoComments,
   addEchoComment,
   deleteEchoComment,
+  mapEchoComment,
   listEchoFeedReactions,
   toggleEchoFeedReaction,
   EchoesNotInstalledError,
@@ -1425,6 +1426,66 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     })()
     return () => { cancelled = true }
   }, [openId, backendReady])
+
+  // Live comments while an aftersound is open.
+  useEffect(() => {
+    if (!openId || !backendReady || !userId) return undefined
+    const echoId = openId
+    const channel = supabase
+      .channel(`echo-comments:${echoId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'echo_comments',
+          filter: `echo_id=eq.${echoId}`,
+        },
+        (payload) => {
+          const row = payload.new
+          if (!row?.id) return
+          const mapped = mapEchoComment(row)
+          setCommentsByEchoId((prev) => {
+            const list = prev[echoId] ?? []
+            if (list.some((c) => String(c.id) === String(mapped.id))) return prev
+            // Drop optimistic temp rows from the same author with the same body.
+            const withoutTemps = list.filter((c) => {
+              if (!String(c.id).startsWith('ec-')) return true
+              if (String(c.authorId || c.userId) !== String(mapped.authorId)) return true
+              return String(c.text || c.body || '') !== String(mapped.text || '')
+            })
+            return {
+              ...prev,
+              [echoId]: [...withoutTemps, mapped].sort(
+                (a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0),
+              ),
+            }
+          })
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'echo_comments',
+          filter: `echo_id=eq.${echoId}`,
+        },
+        (payload) => {
+          const id = payload.old?.id
+          if (!id) return
+          setCommentsByEchoId((prev) => ({
+            ...prev,
+            [echoId]: (prev[echoId] ?? []).filter((c) => String(c.id) !== String(id)),
+          }))
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [openId, backendReady, userId])
 
   function updateEchoSettings(id, patch) {
     setEchoes((prev) => prev.map((e) => {

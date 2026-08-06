@@ -10,6 +10,7 @@ import {
   listPostComments,
   createComment,
   deleteMyComment,
+  mapDbComment,
   toggleCommentReaction as toggleCommentReactionRpc,
   togglePostReaction as togglePostReactionRpc,
   toggleShowToFrens as toggleShowToFrensRpc,
@@ -227,6 +228,71 @@ export function PostsProvider({ children }) {
           fetchPostReactions(postId, user.id)
             .then((reactions) => patchPostReactions(postId, reactions))
             .catch(() => {})
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id, remote])
+
+  // Live comments / replies on the home feed.
+  useEffect(() => {
+    if (!user?.id || !remote) return undefined
+
+    const channel = supabase
+      .channel(`post-comments:${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'post_comments' },
+        (payload) => {
+          const row = payload.new
+          if (!row?.id || !row.post_id) return
+          const mapped = mapDbComment(row)
+          setCommentsByPost((prev) => {
+            const list = prev[row.post_id]
+            // Only append into threads already open/loaded so we don't invent empty threads.
+            if (!list) return prev
+            if (list.some((c) => String(c.id) === String(mapped.id))) return prev
+            const withoutOptimistic = list.filter((c) => {
+              if (!String(c.id).startsWith('local-')) return true
+              if (String(c.userId) !== String(mapped.userId)) return true
+              return String(c.text || '') !== String(mapped.text || '')
+            })
+            return { ...prev, [row.post_id]: [...withoutOptimistic, mapped] }
+          })
+          setPosts((prev) =>
+            prev.map((p) => {
+              if (!postIdMatch(p.id, row.post_id)) return p
+              // Avoid double-count when this viewer already added optimistically.
+              if (String(row.user_id) === String(user.id)) return p
+              return { ...p, commentCount: (p.commentCount ?? 0) + 1 }
+            }),
+          )
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'post_comments' },
+        (payload) => {
+          const row = payload.old
+          if (!row?.id || !row.post_id) return
+          setCommentsByPost((prev) => {
+            const list = prev[row.post_id]
+            if (!list?.some((c) => String(c.id) === String(row.id))) return prev
+            return {
+              ...prev,
+              [row.post_id]: list.filter((c) => String(c.id) !== String(row.id)),
+            }
+          })
+          setPosts((prev) =>
+            prev.map((p) =>
+              postIdMatch(p.id, row.post_id)
+                ? { ...p, commentCount: Math.max(0, (p.commentCount ?? 1) - 1) }
+                : p,
+            ),
+          )
         },
       )
       .subscribe()

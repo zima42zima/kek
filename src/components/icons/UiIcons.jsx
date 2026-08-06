@@ -274,6 +274,24 @@ export function TextIcon({ className = 'w-4 h-4' }) {
   )
 }
 
+/** Bookmark / save-to-collection mark. */
+export function BookmarkIcon({ className = 'w-4 h-4', filled = false }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={`inline-block align-middle ${className}`}
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
 export function MicIcon({ className = 'w-4 h-4' }) {
   return (
     <svg {...base} className={`inline-block align-middle ${className}`}>
