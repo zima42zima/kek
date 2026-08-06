@@ -1,5 +1,7 @@
 import { supabase } from '../supabaseClient'
 import { applyEmojiReactionToggle } from './emojiReactions'
+import { uploadMedia, StorageNotInstalledError } from './storage'
+import { isDataImageUrl } from './urls'
 
 export { applyEmojiReactionToggle as applyReactionToggle }
 
@@ -187,6 +189,38 @@ export async function setCaveCoverRemote(caveId, coverUrl) {
   }
 }
 
+/**
+ * Publish a cover so every member can load it.
+ * Migrates data:/blob: URLs to public storage first (local-only covers are invisible to others).
+ * Returns the public URL stored on the server (or null when cleared).
+ */
+export async function publishCaveCoverRemote(caveId, coverUrl) {
+  if (!caveId) return null
+  if (!coverUrl) {
+    await setCaveCoverRemote(caveId, null)
+    return null
+  }
+
+  let url = coverUrl
+  if (isDataImageUrl(coverUrl) || String(coverUrl).startsWith('blob:')) {
+    try {
+      const res = await fetch(coverUrl)
+      const blob = await res.blob()
+      url = await uploadMedia(blob, { prefix: 'cave-covers' })
+    } catch (err) {
+      if (err instanceof StorageNotInstalledError) {
+        // Last resort: try persisting the data URL (may fail if too large).
+        await setCaveCoverRemote(caveId, coverUrl)
+        return coverUrl
+      }
+      throw err
+    }
+  }
+
+  await setCaveCoverRemote(caveId, url)
+  return url
+}
+
 /** Owner permanently deletes a cave (notifies former members). Needs delete_cave RPC. */
 export async function deleteCaveRemote(caveId) {
   const { error } = await supabase.rpc('delete_cave', { p_cave_id: caveId })
@@ -290,9 +324,10 @@ export async function publishOwnedCaveRemote(cave, ownerId) {
     await syncCaveRemote({ ...cave, access, ownerId }, { forceOwnerId: ownerId })
   }
   // Push cover so joiners see the same banner the owner set locally.
+  let publishedCover = null
   if (cave.coverUrl) {
     try {
-      await setCaveCoverRemote(cave.id, cave.coverUrl)
+      publishedCover = await publishCaveCoverRemote(cave.id, cave.coverUrl)
     } catch (err) {
       if (!(err instanceof CavesNotInstalledError)) {
         console.error('Could not push cave cover:', err.message)
@@ -304,6 +339,7 @@ export async function publishOwnedCaveRemote(cave, ownerId) {
   } else if (access === 'invite') {
     await setCaveProfileHidden(cave.id, true)
   }
+  return { coverUrl: publishedCover }
 }
 
 export async function sendCaveMessageRemote(caveId, fields) {

@@ -9,11 +9,11 @@ import {
   createCaveRemote,
   syncCaveRemote,
   publishOwnedCaveRemote,
+  publishCaveCoverRemote,
   joinPublicCave,
   getCaveRemote,
   listCaveMessagesRemote,
   sendCaveMessageRemote,
-  setCaveCoverRemote,
   deleteCaveRemote,
   setCaveRolesRemote,
   setCaveProfileHidden,
@@ -29,6 +29,7 @@ import {
 } from '../lib/caves'
 import { ensureShowcaseOn } from '../lib/profileShowcase'
 import { DEFAULT_CAVE_ROLES, normalizeCaveRoles } from '../lib/caveRoles'
+import { isDataImageUrl } from '../lib/urls'
 
 const CavesContext = createContext(undefined)
 
@@ -125,6 +126,7 @@ export function CavesProvider({ children }) {
   profileRef.current = profile
   const membershipsRef = useRef([])
   const pendingJoinedRef = useRef(new Map())
+  const coverPushRef = useRef(new Set())
   const cavesRef = useRef(caves)
   cavesRef.current = caves
 
@@ -170,6 +172,41 @@ export function CavesProvider({ children }) {
       .filter(Boolean)
   }, [user?.id])
 
+  /** Upload local-only covers (data URLs) and write cover_url for every owned cave. */
+  const pushOwnedCaveCovers = useCallback(async (remoteRows = []) => {
+    if (!user?.id) return
+    const remoteById = new Map((remoteRows || []).map((r) => [String(r.id), r]))
+    for (const cave of cavesRef.current) {
+      if (!cave?.id || !cave.coverUrl) continue
+      if (String(cave.ownerId) !== String(meId)) continue
+      const sid = String(cave.id)
+      const remoteCover = remoteById.get(sid)?.coverUrl || null
+      const needsPush = isDataImageUrl(cave.coverUrl)
+        || String(cave.coverUrl).startsWith('blob:')
+        || !remoteCover
+      if (!needsPush || coverPushRef.current.has(sid)) continue
+      coverPushRef.current.add(sid)
+      try {
+        const published = await publishCaveCoverRemote(cave.id, cave.coverUrl)
+        setRemote(true)
+        if (published && published !== cave.coverUrl) {
+          setCaves((prev) => prev.map((c) => (
+            String(c.id) === sid ? { ...c, coverUrl: published } : c
+          )))
+        }
+      } catch (err) {
+        if (err instanceof CavesNotInstalledError) {
+          setRemote(false)
+          return
+        }
+        console.error('Could not publish cave cover:', cave.id, err.message)
+      } finally {
+        // Allow a later retry if server still has no cover.
+        setTimeout(() => coverPushRef.current.delete(sid), 20_000)
+      }
+    }
+  }, [user?.id, meId])
+
   const pushProfileCavesToServer = useCallback(async () => {
     if (!user?.id) return
     const ownerId = user.id
@@ -182,8 +219,13 @@ export function CavesProvider({ children }) {
     if (!visible.length) return
     for (const cave of visible) {
       try {
-        await publishOwnedCaveRemote(cave, ownerId)
+        const result = await publishOwnedCaveRemote(cave, ownerId)
         setRemote(true)
+        if (result?.coverUrl && result.coverUrl !== cave.coverUrl) {
+          setCaves((prev) => prev.map((c) => (
+            c.id === cave.id ? { ...c, coverUrl: result.coverUrl } : c
+          )))
+        }
       } catch (err) {
         if (err instanceof CavesNotInstalledError) {
           setRemote(false)
@@ -215,6 +257,8 @@ export function CavesProvider({ children }) {
 
       // Push owned public/profile caves first so server catches up with local toggles.
       await pushProfileCavesToServer()
+      // Migrate local-only covers (data URLs) so joiners can see banners/thumbs.
+      await pushOwnedCaveCovers(rows)
 
       if (rows.length === 0 && cavesRef.current.length > 0) {
         const owned = cavesRef.current.filter((c) => String(c.ownerId) === String(meId))
@@ -275,7 +319,7 @@ export function CavesProvider({ children }) {
         console.error('Could not sync caves:', err.message)
       }
     }
-  }, [user?.id, meId, remote, mergeRemoteCaves, applyMembershipRows, pushProfileCavesToServer])
+  }, [user?.id, meId, remote, mergeRemoteCaves, applyMembershipRows, pushProfileCavesToServer, pushOwnedCaveCovers])
 
   // Load local cache first, then pull server caves + messages.
   useEffect(() => {
@@ -400,7 +444,12 @@ export function CavesProvider({ children }) {
           await syncCaveRemote(newCave, { forceOwnerId: user.id }).catch(() => {})
           if (coverUrl) {
             try {
-              await setCaveCoverRemote(id, coverUrl)
+              const published = await publishCaveCoverRemote(id, coverUrl)
+              if (published && published !== coverUrl) {
+                setCaves((prev) => prev.map((c) => (
+                  c.id === id ? { ...c, coverUrl: published } : c
+                )))
+              }
             } catch { /* cover column/RPC optional until SQL patch */ }
           }
         })
@@ -417,15 +466,17 @@ export function CavesProvider({ children }) {
     updateCave(caveId, (c) => ({ ...c, coverUrl: coverUrl || null }))
     if (!remote) return { ok: true }
     try {
-      await setCaveCoverRemote(caveId, coverUrl || null)
+      const published = await publishCaveCoverRemote(caveId, coverUrl || null)
+      if (published && published !== coverUrl) {
+        updateCave(caveId, (c) => ({ ...c, coverUrl: published }))
+      }
       return { ok: true }
     } catch (err) {
       if (err instanceof CavesNotInstalledError) {
-        // sync_cave may still persist coverUrl when column exists; warn if not.
         return {
           ok: true,
           localOnly: true,
-          message: 'Cover saved here only. Run supabase-patch-cave-covers-fix.sql in Supabase SQL Editor.',
+          message: 'Cover saved here only. Run supabase-patch-cave-cover-publish.sql in Supabase SQL Editor.',
         }
       }
       updateCave(caveId, (c) => ({ ...c, coverUrl: previous }))
