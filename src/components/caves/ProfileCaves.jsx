@@ -90,7 +90,7 @@ export default function ProfileCaves({ onNavigate }) {
         title="Your caves"
         aria-label="Your caves"
       >
-        <CaveIcon className="w-[1.06rem] h-[1.06rem]" />
+        <CaveIcon className="profile-hub-icon--cave" />
       </button>
 
       {open && !manage && (

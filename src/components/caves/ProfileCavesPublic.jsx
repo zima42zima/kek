@@ -159,7 +159,7 @@ export default function ProfileCavesPublic({
         title={`${frenName}'s caves`}
         aria-label={`${frenName}'s caves`}
       >
-        <CaveIcon className="w-[1.06rem] h-[1.06rem]" />
+        <CaveIcon className="profile-hub-icon--cave" />
       </button>
 
       {open && (

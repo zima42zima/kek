@@ -52,7 +52,7 @@ export default function ProfileGathererPublic({
       title={`${frenName}'s moodboard`}
       aria-label={`${frenName}'s moodboard`}
     >
-      <GathererIcon className="w-[1.06rem] h-[1.06rem]" />
+      <GathererIcon className="profile-hub-icon--gatherer" />
     </button>
   )
 }

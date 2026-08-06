@@ -193,6 +193,23 @@
     @apply flex-col gap-0.5;
   }
 
+  /* Optical sizes — solid/tall marks shrink, airy landscape marks grow. */
+  .profile-hub-icon--cave {
+    @apply w-[1.05rem] h-[0.92rem];
+  }
+  .profile-hub-icon--echo {
+    @apply w-[1.3rem] h-[0.76rem];
+  }
+  .profile-hub-icon--playlist {
+    @apply w-[0.8rem] h-[0.92rem];
+  }
+  .profile-hub-icon--gatherer {
+    @apply w-[0.9rem] h-[0.9rem];
+  }
+  .profile-hub-icon--ps {
+    @apply w-[0.84rem] h-[0.84rem];
+  }
+
   .frens-btn-primary {
     @apply bg-black text-white rounded-xl font-medium tracking-wide hover:bg-gray-800 transition
            dark:bg-white dark:text-black dark:hover:bg-gray-200;

@@ -519,10 +519,10 @@ export default forwardRef(function Profile({
               <ProfileEchoes userId={userId} onNavigate={onNavigate} onOpenEcho={onOpenEcho} />
             ) : null}
             {userId ? (
-              <ProfilePlaylists userId={userId} onOpenPlaylists={onOpenPlaylists} />
+              <ProfileGatherer userId={userId} onOpenGatherer={onOpenGatherer} onNavigate={onNavigate} />
             ) : null}
             {userId ? (
-              <ProfileGatherer userId={userId} onOpenGatherer={onOpenGatherer} onNavigate={onNavigate} />
+              <ProfilePlaylists userId={userId} onOpenPlaylists={onOpenPlaylists} />
             ) : null}
             {owlSettings && (
               <ProfileOwlPost

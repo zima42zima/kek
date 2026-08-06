@@ -106,7 +106,7 @@ export default function ProfileEchoes({ userId, onNavigate, onOpenEcho }) {
         title="Your echoes"
         aria-label="Your echoes"
       >
-        <EchoIcon className="w-[1.06rem] h-[0.85rem]" />
+        <EchoIcon className="profile-hub-icon--echo" />
       </button>
 
       {open && (

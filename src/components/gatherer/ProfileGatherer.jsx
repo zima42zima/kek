@@ -24,7 +24,7 @@ export default function ProfileGatherer({ userId, onOpenGatherer, onNavigate }) 
       title="Your moodboard"
       aria-label="Your moodboard"
     >
-      <GathererIcon className="w-[1.06rem] h-[1.06rem]" />
+      <GathererIcon className="profile-hub-icon--gatherer" />
     </button>
   )
 }

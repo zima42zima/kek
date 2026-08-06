@@ -25,7 +25,7 @@ export default function ProfilePlaylists({ userId, onOpenPlaylists, onNavigate }
       title="Your playlists"
       aria-label="Your playlists"
     >
-      <PlaylistIcon className="w-[1.06rem] h-[1.06rem]" />
+      <PlaylistIcon className="profile-hub-icon--playlist" />
     </button>
   )
 }

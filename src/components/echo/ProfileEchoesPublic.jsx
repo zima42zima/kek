@@ -114,7 +114,7 @@ export default function ProfileEchoesPublic({ userId, frenName = 'this fren', on
         title={`${frenName}'s echoes`}
         aria-label={`${frenName}'s echoes`}
       >
-        <EchoIcon className="w-[1.06rem] h-[0.85rem]" />
+        <EchoIcon className="profile-hub-icon--echo" />
       </button>
 
       {open && (
