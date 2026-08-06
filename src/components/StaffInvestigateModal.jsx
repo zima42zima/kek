@@ -182,7 +182,7 @@ export default function StaffInvestigateModal({
                   <span className="text-xs frens-muted">{formatFrenHandle(dossier.frenHandle)}</span>
                 ) : null}
                 {dossier.suspended ? (
-                  <span className="text-[10px] text-red-500 border border-red-400/40 rounded-full px-2 py-0.5">suspended</span>
+                  <span className="text-[10px] frens-muted border frens-border rounded-full px-2 py-0.5">suspended</span>
                 ) : null}
                 {dossier.isFounder ? (
                   <span className="text-[10px] frens-muted border frens-border rounded-full px-2 py-0.5">founder</span>
@@ -253,7 +253,7 @@ export default function StaffInvestigateModal({
                       type="button"
                       disabled={busy}
                       onClick={handleSuspend}
-                      className="text-sm px-3 py-2 text-red-500 border border-red-400/40 rounded-full disabled:opacity-50"
+                      className="frens-btn-outline px-3 py-2 text-sm rounded-full disabled:opacity-50"
                     >
                       Suspend
                     </button>

@@ -378,12 +378,12 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
 
         {isOwner ? (
           <section className="border-t frens-border pt-5">
-            <h3 className="frens-label mb-1 text-red-600 dark:text-red-400">Delete cave</h3>
+            <h3 className="frens-label mb-1">Delete cave</h3>
             <p className="text-xs frens-muted mb-3">
               Permanently removes this cave and its messages. Everyone who was in it gets a notification.
             </p>
             {deleteError ? (
-              <p className="text-xs text-red-500 dark:text-red-400 mb-2">{deleteError}</p>
+              <p className="text-xs frens-muted mb-2">{deleteError}</p>
             ) : null}
             {confirmDelete ? (
               <div className="space-y-2">
@@ -395,7 +395,7 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
                     type="button"
                     disabled={deleteBusy}
                     onClick={handleDeleteCave}
-                    className="flex-1 text-sm py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 transition"
+                    className="flex-1 text-sm py-2.5 rounded-xl bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-40 transition"
                   >
                     {deleteBusy ? 'Deleting…' : 'Yes, delete forever'}
                   </button>
@@ -413,7 +413,7 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
               <button
                 type="button"
                 onClick={handleDeleteCave}
-                className="w-full text-sm py-2.5 rounded-xl border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10 transition"
+                className="frens-btn-outline w-full text-sm py-2.5"
               >
                 Delete this cave
               </button>
@@ -426,7 +426,7 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
               Remove this cave from your list. You can rejoin later if it is still public.
             </p>
             {leaveError ? (
-              <p className="text-xs text-red-500 dark:text-red-400 mb-2">{leaveError}</p>
+              <p className="text-xs frens-muted mb-2">{leaveError}</p>
             ) : null}
             {confirmLeave ? (
               <div className="space-y-2">
@@ -438,7 +438,7 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
                     type="button"
                     disabled={leaveBusy}
                     onClick={handleLeaveCave}
-                    className="flex-1 text-sm py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 transition"
+                    className="flex-1 text-sm py-2.5 rounded-xl bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-40 transition"
                   >
                     {leaveBusy ? 'Leaving…' : 'Yes, leave'}
                   </button>
@@ -456,7 +456,7 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
               <button
                 type="button"
                 onClick={handleLeaveCave}
-                className="w-full text-sm py-2.5 rounded-xl border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10 transition"
+                className="frens-btn-outline w-full text-sm py-2.5"
               >
                 Leave this cave
               </button>

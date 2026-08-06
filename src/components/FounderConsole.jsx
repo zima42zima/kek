@@ -241,9 +241,9 @@ export default function FounderConsole({
     return exact || byName || matches[0] || null
   }
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    setError('')
+  const refresh = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true)
+    if (!silent) setError('')
     try {
       const rows = await listPlatformReports(tab)
       setReports(rows)
@@ -256,7 +256,7 @@ export default function FounderConsole({
         setError(err.message || 'Could not load reports.')
       }
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [tab])
 
@@ -266,12 +266,20 @@ export default function FounderConsole({
   }, [open, refresh])
 
   async function dismiss(id) {
+    if (!id || busy) return
     setBusy(true)
+    setError('')
+    const previous = reports
+    // Optimistic remove so the open inbox doesn't flash the same row back.
+    if (tab === 'open') {
+      setReports((rows) => rows.filter((r) => r.id !== id))
+    }
     try {
       await resolvePlatformReport(id, 'dismissed')
-      await refresh()
+      await refresh({ silent: true })
       onStatusChange?.()
     } catch (err) {
+      setReports(previous)
       setError(err.message || 'Could not dismiss.')
     } finally {
       setBusy(false)
@@ -279,13 +287,20 @@ export default function FounderConsole({
   }
 
   async function hideTopicAndResolve(topicId, reportId) {
+    if (!reportId || busy) return
     setBusy(true)
+    setError('')
+    const previous = reports
+    if (tab === 'open') {
+      setReports((rows) => rows.filter((r) => r.id !== reportId))
+    }
     try {
       await hideTopic(topicId, true)
       await resolvePlatformReport(reportId, 'actioned', 'Topic hidden')
-      await refresh()
+      await refresh({ silent: true })
       onStatusChange?.()
     } catch (err) {
+      setReports(previous)
       setError(err.message || 'Could not hide topic.')
     } finally {
       setBusy(false)
@@ -300,11 +315,17 @@ export default function FounderConsole({
     )
     if (reason === null) return
     setBusy(true)
+    setError('')
+    const previous = reports
+    if (tab === 'open') {
+      setReports((rows) => rows.filter((r) => r.id !== report.id))
+    }
     try {
       await suspendPlatformUser(report.reportedUserId, reason)
-      await refresh()
+      await refresh({ silent: true })
       onStatusChange?.()
     } catch (err) {
+      setReports(previous)
       setError(err.message || 'Could not suspend user.')
     } finally {
       setBusy(false)
@@ -532,7 +553,7 @@ export default function FounderConsole({
                 type="button"
                 disabled={busy || !modHandle.trim()}
                 onClick={suspendByHandle}
-                className="text-sm px-3 py-2 shrink-0 text-red-500 dark:text-red-400 border border-red-400/40 rounded-full disabled:opacity-50"
+                className="frens-btn-outline px-3 py-2 text-sm shrink-0 rounded-full disabled:opacity-50"
               >
                 Suspend
               </button>

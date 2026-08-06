@@ -11,8 +11,7 @@ import {
 /** Explicit dark-safe button styles (letter-btn white boxes break in dark UI). */
 const btnGhost =
   'px-3 py-2.5 text-xs rounded-xl border border-black/20 dark:border-white/30 text-black dark:text-white bg-transparent hover:bg-black/5 dark:hover:bg-white/10 transition'
-const btnDanger =
-  'px-3 py-2.5 text-xs rounded-xl border border-red-500/50 text-red-600 dark:text-red-400 bg-transparent hover:bg-red-500/10 transition'
+const btnDanger = btnGhost
 const btnPrimary =
   'flex-1 py-2.5 text-sm rounded-xl font-medium bg-black text-white dark:bg-white dark:text-black hover:opacity-90 transition disabled:opacity-40'
 const btnSecondary =

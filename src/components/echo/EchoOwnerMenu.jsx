@@ -115,7 +115,7 @@ export default function EchoOwnerMenu({ mine, saved, onView, onShowOnMap, onEdit
           type="button"
           role="menuitem"
           onClick={() => { close(); onUnsave?.() }}
-          className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 text-red-600 dark:text-red-400 hover:bg-black/5 dark:hover:bg-white/10"
+          className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 hover:bg-black/5 dark:hover:bg-white/10"
         >
           Remove from collection
         </button>
@@ -135,7 +135,7 @@ export default function EchoOwnerMenu({ mine, saved, onView, onShowOnMap, onEdit
           type="button"
           role="menuitem"
           onClick={() => { close(); onDelete?.() }}
-          className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 text-red-600 dark:text-red-400 hover:bg-black/5 dark:hover:bg-white/10"
+          className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 hover:bg-black/5 dark:hover:bg-white/10"
         >
           Delete echo
         </button>

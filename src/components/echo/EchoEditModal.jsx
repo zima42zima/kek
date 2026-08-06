@@ -108,7 +108,7 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
         <button
           type="button"
           onClick={handleDelete}
-          className="w-full py-2.5 text-sm text-red-600 dark:text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/10 transition"
+          className="frens-btn-outline w-full py-2.5 text-sm"
         >
           Delete echo
         </button>

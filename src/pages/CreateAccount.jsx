@@ -21,7 +21,7 @@ function fieldBorderClass(ok, touched) {
   if (!touched) return ''
   return ok
     ? 'border-[#6BC06B] focus:border-[#6BC06B]'
-    : 'border-red-500 focus:border-red-500 dark:border-red-400 dark:focus:border-red-400'
+    : 'border-black/50 focus:border-black dark:border-white/50 dark:focus:border-white'
 }
 
 const CreateAccount = ({

@@ -443,9 +443,9 @@ export default forwardRef(function Profile({
   return (
     <div className="space-y-4">
       {dbSetup && !dbSetup.ok && (
-        <div className="border border-red-400 dark:border-red-500 rounded-xl p-4 bg-red-50 dark:bg-red-950/30">
-          <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-1">Database setup needed</p>
-          <p className="text-xs text-red-600 dark:text-red-400">{dbSetup.message}</p>
+        <div className="border frens-border rounded-xl p-4 bg-black/[0.03] dark:bg-white/[0.04]">
+          <p className="text-sm font-medium mb-1">Database setup needed</p>
+          <p className="text-xs frens-muted">{dbSetup.message}</p>
           {getSupabaseProjectRef() && (
             <p className="text-xs frens-hint mt-2">Your app points to project: {getSupabaseProjectRef()}</p>
           )}
@@ -860,7 +860,7 @@ export default forwardRef(function Profile({
               <button
                 type="button"
                 onClick={signOut}
-                className="frens-btn-outline w-full py-2.5 text-sm text-red-600 dark:text-red-400 border-red-300 dark:border-red-800"
+                className="frens-btn-outline w-full py-2.5 text-sm"
               >
                 Sign out
               </button>

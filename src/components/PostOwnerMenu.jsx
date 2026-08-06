@@ -70,7 +70,7 @@ export default function PostOwnerMenu({ isPinned, onPin, onUnpin, onDelete }) {
               close()
               setConfirmDelete(true)
             }}
-            className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 text-red-600 dark:text-red-400 hover:bg-black/5 dark:hover:bg-white/10"
+            className="flex w-full items-center gap-2 text-left text-xs px-3 py-2 hover:bg-black/5 dark:hover:bg-white/10"
           >
             Delete post
           </button>
