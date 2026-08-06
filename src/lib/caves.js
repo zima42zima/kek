@@ -57,6 +57,7 @@ function mapMessage(row) {
       ? {
           authorName: replyPreview.authorName ?? replyPreview.author_name ?? 'a fren',
           text: replyPreview.text ?? replyPreview.body ?? '',
+          parentId: replyPreview.parentId ?? replyPreview.parent_id ?? parentId ?? null,
         }
       : null,
     ts: row.ts ?? formatTs(row.created_at ?? row.createdAt),
@@ -99,9 +100,47 @@ export function caveToRpcPayload(cave) {
   }
 }
 
+/**
+ * Union explicit members with owner + anyone who has posted.
+ * Keeps member count honest when roster lag behind chat activity.
+ */
+export function enrichCaveRoster(cave) {
+  if (!cave?.id) return cave
+  const byId = new Map()
+  for (const m of cave.members || []) {
+    if (!m?.id) continue
+    byId.set(String(m.id), mapMember(m))
+  }
+  if (cave.ownerId && !byId.has(String(cave.ownerId))) {
+    byId.set(String(cave.ownerId), {
+      id: cave.ownerId,
+      name: 'a fren',
+      avatarType: 'frog',
+      avatarUrl: null,
+      role: 'owner',
+    })
+  }
+  for (const msg of cave.messages || []) {
+    const id = msg?.authorId
+    if (id == null || byId.has(String(id))) continue
+    byId.set(String(id), {
+      id,
+      name: msg.authorName || 'a fren',
+      avatarType: msg.avatarType || 'frog',
+      avatarUrl: msg.avatarUrl || null,
+      role: String(id) === String(cave.ownerId) ? 'owner' : 'member',
+    })
+  }
+  return { ...cave, members: [...byId.values()] }
+}
+
+export function caveMemberCount(cave) {
+  return enrichCaveRoster(cave)?.members?.length ?? 0
+}
+
 export function mapRemoteCave(row) {
   if (!row?.id) return null
-  return {
+  return enrichCaveRoster({
     id: row.id,
     name: row.name,
     emoji: row.emoji || '🕳️',
@@ -114,7 +153,7 @@ export function mapRemoteCave(row) {
     roles: Array.isArray(row.roles) ? row.roles : (row.roles ? row.roles : null),
     members: (row.members || []).map(mapMember),
     messages: (row.messages || []).map(mapMessage),
-  }
+  })
 }
 
 export async function listMyCavesRemote() {
@@ -523,15 +562,13 @@ function pickCoverUrl(...candidates) {
 
 export function mergeCaveSnapshot(local, remote) {
   if (!remote?.id) return local
-  const remoteMembers = remote.members || []
-  const localMembers = local?.members || []
-  // Server roster wins when it has more people (join seeds are 1-member).
+  // Always union rosters — never let a 1-member join seed hide the rest.
   const memberMap = new Map()
-  const memberSource = remoteMembers.length >= localMembers.length
-    ? [...localMembers, ...remoteMembers]
-    : [...remoteMembers, ...localMembers]
-  memberSource.forEach((m) => {
-    if (m?.id) memberMap.set(String(m.id), m)
+  ;[...(local?.members || []), ...(remote.members || [])].forEach((m) => {
+    if (!m?.id) return
+    const key = String(m.id)
+    const prev = memberMap.get(key)
+    memberMap.set(key, prev ? { ...prev, ...mapMember(m) } : mapMember(m))
   })
   const localMsgs = local?.messages || []
   const remoteMsgs = remote.messages || []
@@ -604,7 +641,7 @@ export function mergeCaveSnapshot(local, remote) {
     && remote.hiddenOnProfile === true
     ? false
     : (remote.hiddenOnProfile ?? local?.hiddenOnProfile ?? false)
-  return {
+  return enrichCaveRoster({
     id: remote.id,
     name: remote.name ?? local?.name,
     ownerId,
@@ -622,7 +659,7 @@ export function mergeCaveSnapshot(local, remote) {
       : (Array.isArray(local?.roles) && local.roles.length ? local.roles : remote.roles ?? local?.roles ?? null),
     members: [...memberMap.values()],
     messages,
-  }
+  })
 }
 
 /** Keeper saves the cave role catalog (max 12). */

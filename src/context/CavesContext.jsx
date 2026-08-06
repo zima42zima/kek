@@ -6,6 +6,7 @@ import {
   listMyCavesRemote,
   listCaveMemberships,
   mergeCaveSnapshot,
+  enrichCaveRoster,
   createCaveRemote,
   syncCaveRemote,
   publishOwnedCaveRemote,
@@ -53,7 +54,7 @@ function snapshotFromMembership(row, userId, profile) {
 }
 
 function joinedCavePreview(caveId, preview, userId, profile) {
-  return {
+  return enrichCaveRoster({
     id: caveId,
     name: preview?.name || 'cave',
     emoji: preview?.emoji || '🕳️',
@@ -71,7 +72,7 @@ function joinedCavePreview(caveId, preview, userId, profile) {
       role: 'member',
     }],
     messages: [],
-  }
+  })
 }
 
 function isLocalMember(cave, userId) {
@@ -107,7 +108,8 @@ function loadLocal(userId) {
   try {
     const raw = localStorage.getItem(storageKey(userId))
     const arr = raw ? JSON.parse(raw) : null
-    return Array.isArray(arr) ? arr : null
+    if (!Array.isArray(arr)) return null
+    return arr.map((c) => enrichCaveRoster(c)).filter(Boolean)
   } catch {
     return null
   }

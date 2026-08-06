@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import CaveIcon from './CaveIcon'
 import { CaveCoverThumb } from './CaveCover'
-import { searchPublicCaves, CavesNotInstalledError } from '../../lib/caves'
+import { searchPublicCaves, CavesNotInstalledError, caveMemberCount } from '../../lib/caves'
 import { useCaves } from '../../context/CavesContext'
 
 export default function CavesList({
@@ -137,6 +137,7 @@ export default function CavesList({
           <ul className="space-y-3">
             {caves.map((cave) => {
               const isOwner = cave.ownerId === currentUserId
+              const frens = caveMemberCount(cave)
               return (
                 <li key={cave.id}>
                   <button
@@ -155,7 +156,7 @@ export default function CavesList({
                         )}
                       </span>
                       <span className="block text-xs frens-muted">
-                        {(cave.members?.length ?? 0)} {(cave.members?.length ?? 0) === 1 ? 'fren' : 'frens'}
+                        {frens} {frens === 1 ? 'fren' : 'frens'}
                         {(cave.messages?.length ?? 0) > 0 && (
                           <> · {cave.messages.length} messages</>
                         )}

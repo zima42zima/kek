@@ -11,7 +11,7 @@ import PinnedLabel from '../PinnedLabel'
 import { CaveGlyph } from './CaveIcon'
 import CaveCoverEditor, { CaveCoverBanner, CaveCoverThumb } from './CaveCover'
 import AddMembersModal from './AddMembersModal'
-import { removeCaveMemberRemote, CavesNotInstalledError } from '../../lib/caves'
+import { removeCaveMemberRemote, CavesNotInstalledError, caveMemberCount } from '../../lib/caves'
 import { useCaves } from '../../context/CavesContext'
 import CaveRoleBadge from './CaveRoleBadge'
 import RichText from '../RichText'
@@ -528,21 +528,33 @@ function CaveDaySep({ label }) {
   )
 }
 
-function ReplyToPreview({ preview, mine = false }) {
+function ReplyToPreview({ preview, parentId = null, mine = false, onJump = null }) {
   if (!preview) return null
   const snippet = preview.text ? String(preview.text).slice(0, 80) : ''
-  return (
-    <div
-      className={`inline-flex items-center gap-1.5 max-w-full text-[11px] frens-muted ${
-        mine ? 'flex-row-reverse text-right' : ''
-      }`}
-    >
-      <CaveReplyIcon className={`w-3 h-3 opacity-70 ${mine ? '-scale-x-100' : ''}`} />
+  const jumpId = parentId ?? preview.parentId ?? null
+  const canJump = Boolean(jumpId && onJump)
+  const className = `inline-flex items-center gap-1.5 max-w-full text-[11px] frens-muted ${
+    mine ? 'flex-row-reverse text-right' : ''
+  } ${canJump ? 'hover:text-black/80 dark:hover:text-white/80 cursor-pointer' : ''}`
+  const body = (
+    <>
+      <CaveReplyIcon className={`w-3 h-3 opacity-70 shrink-0 ${mine ? '-scale-x-100' : ''}`} />
       <span className="min-w-0 truncate">
         <span className="font-medium text-black/70 dark:text-white/70">{preview.authorName || 'a fren'}</span>
         {snippet ? <span className="opacity-75"> · {snippet}</span> : null}
       </span>
-    </div>
+    </>
+  )
+  if (!canJump) return <div className={className}>{body}</div>
+  return (
+    <button
+      type="button"
+      onClick={() => onJump(jumpId)}
+      className={className}
+      title="Jump to message"
+    >
+      {body}
+    </button>
   )
 }
 
@@ -557,6 +569,7 @@ function ChatMessage({
   onReact,
   onHide,
   onReply,
+  onJumpToParent = null,
   highlight = false,
 }) {
   const canReact = caveId && message.id != null && !String(message.id).startsWith('tmp-')
@@ -614,7 +627,12 @@ function ChatMessage({
             </div>
           ) : null}
           {message.replyPreview ? (
-            <ReplyToPreview preview={message.replyPreview} mine={mine} />
+            <ReplyToPreview
+              preview={message.replyPreview}
+              parentId={message.parentId}
+              mine={mine}
+              onJump={onJumpToParent}
+            />
           ) : null}
           {message.sticker ? (
             <span className="text-4xl leading-none block">{message.sticker}</span>
@@ -679,6 +697,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [replyTo, setReplyTo] = useState(null)
+  const [jumpHighlightId, setJumpHighlightId] = useState(null)
   const fileInputRef = useRef(null)
   const scrollRef = useRef(null)
   const textareaRef = useRef(null)
@@ -686,8 +705,11 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
   const chromeRef = useRef(null)
   const rootRef = useRef(null)
   const sendingRef = useRef(false)
+  const jumpClearRef = useRef(null)
+  const skipAutoScrollRef = useRef(false)
 
   const isKeeper = isCaveKeeper(cave, currentUserId)
+  const memberCount = caveMemberCount(cave)
   const visibleMessages = (cave.messages || []).filter((m) => !m.hidden || isKeeper)
   const q = searchQuery.trim().toLowerCase()
   const searchHitIds = q
@@ -727,8 +749,41 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
 
   useEffect(() => {
     if (caveView !== 'chat') return
+    if (skipAutoScrollRef.current) return
     scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [cave.messages.length, caveView])
+
+  useEffect(() => () => {
+    if (jumpClearRef.current) clearTimeout(jumpClearRef.current)
+  }, [])
+
+  function jumpToParent(parentId) {
+    if (parentId == null) return
+    const id = String(parentId)
+    const needRemount = searchOpen && Boolean(searchQuery.trim())
+    if (searchOpen) {
+      setSearchOpen(false)
+      setSearchQuery('')
+    }
+    skipAutoScrollRef.current = true
+    const go = () => {
+      const el = document.getElementById(`cave-msg-${id}`)
+      if (!el) {
+        skipAutoScrollRef.current = false
+        return
+      }
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setJumpHighlightId(id)
+      if (jumpClearRef.current) clearTimeout(jumpClearRef.current)
+      jumpClearRef.current = setTimeout(() => {
+        setJumpHighlightId(null)
+        skipAutoScrollRef.current = false
+      }, 1600)
+    }
+    // Clear search remounts filtered-out parents; wait one paint.
+    if (needRemount) setTimeout(go, 50)
+    else requestAnimationFrame(go)
+  }
 
   function author() {
     return {
@@ -747,6 +802,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
       payload.replyPreview = {
         authorName: replyTo.authorName || 'a fren',
         text: (replyTo.text || '').slice(0, 120),
+        parentId: replyTo.id,
       }
     }
     if (onSendMessage) {
@@ -842,7 +898,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium truncate leading-tight">{cave.name}</p>
             <p className="text-[11px] frens-muted leading-tight flex items-center gap-1">
-              <span>{cave.members.length} {cave.members.length === 1 ? 'member' : 'members'}</span>
+              <span>{memberCount} {memberCount === 1 ? 'member' : 'members'}</span>
               <span aria-hidden>·</span>
               <CaveAccessLabel access={cave.access} />
             </p>
@@ -852,7 +908,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
             onClick={() => setShowEditor(true)}
             className="frens-action text-[11px] px-2 py-1 shrink-0"
           >
-            {isKeeper ? 'Settings' : 'Leave'}
+            Settings
           </button>
         </div>
 
@@ -970,6 +1026,8 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
                   onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
                   onHide={() => hideCaveMessage(cave.id, m.id)}
                   onReply={startReply}
+                  onJumpToParent={jumpToParent}
+                  highlight={String(m.id) === String(jumpHighlightId)}
                 />
               ))}
             </div>
@@ -1004,7 +1062,11 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
                       onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
                       onHide={() => hideCaveMessage(cave.id, m.id)}
                       onReply={startReply}
-                      highlight={Boolean(q && searchHitIds?.has(String(m.id)))}
+                      onJumpToParent={jumpToParent}
+                      highlight={
+                        String(m.id) === String(jumpHighlightId)
+                        || Boolean(q && searchHitIds?.has(String(m.id)))
+                      }
                     />
                   </div>
                 )

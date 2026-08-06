@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import Modal from '../Modal'
 import {
   listProfileCaves,
-  searchPublicCaves,
   CavesNotInstalledError,
 } from '../../lib/caves'
 import { useCaves } from '../../context/CavesContext'
@@ -103,22 +102,7 @@ export default function ProfileCavesPublic({
 
     async function load() {
       try {
-        let rows = await listProfileCaves(userId)
-        // Fallback: owned public caves from discover list (covers lagging SQL patches).
-        if (rows.length === 0) {
-          const publicRows = await searchPublicCaves('').catch(() => [])
-          rows = publicRows
-            .filter((r) => String(r.ownerId) === String(userId))
-            .map((r) => ({
-              id: r.id,
-              name: r.name,
-              emoji: r.emoji,
-              access: 'public',
-              isOwner: true,
-              ownerId: userId,
-              coverUrl: r.coverUrl ?? null,
-            }))
-        }
+        const rows = await listProfileCaves(userId)
         if (!cancelled) setCaves(rows)
       } catch (err) {
         if (!cancelled && !(err instanceof CavesNotInstalledError)) {
