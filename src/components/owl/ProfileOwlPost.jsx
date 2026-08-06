@@ -13,7 +13,7 @@ export default function ProfileOwlPost({ open, badgeCount = 0, onClick }) {
       title={title}
       aria-label={title}
     >
-      <PsHubIcon className="w-[1.06rem] h-[1.06rem] group-hover/folds:hidden" />
+      <PsHubIcon className="w-[0.95rem] h-[0.95rem] group-hover/folds:hidden" />
       <span
         aria-hidden
         className="hidden group-hover/folds:block text-[11px] font-medium tracking-tight leading-none"
