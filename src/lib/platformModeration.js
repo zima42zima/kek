@@ -141,10 +141,15 @@ export function reportKindLabel(kind) {
     case 'rabbit_topic': return 'Topic'
     case 'rabbit_reply': return 'Reply'
     case 'post': return 'Post'
+    case 'post_comment': return 'Comment'
     case 'dm': return 'Message'
     case 'cave': return 'Cave'
+    case 'cave_message': return 'Cave message'
     case 'profile': return 'Profile'
     case 'fold': return 'Fold'
+    case 'echo': return 'Aftersound'
+    case 'echo_comment': return 'Aftersound comment'
+    case 'owl_letter': return 'P.S. letter'
     default: return kind || 'Report'
   }
 }

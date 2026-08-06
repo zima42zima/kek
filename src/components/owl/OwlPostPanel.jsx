@@ -3,6 +3,7 @@ import Modal from '../Modal'
 import PrintOwlLetterModal from './PrintOwlLetterModal'
 import OwlComposeLetter from './OwlComposeLetter'
 import { EnvelopePlusIcon } from '../icons/UiIcons'
+import ReportContentButton from '../ReportContentButton'
 import {
   getMyOwlSettings,
   updateMyOwlSettings,
@@ -113,6 +114,16 @@ function EnvelopeRow({ letter, onAction, busy }) {
           The letter stays sealed on screen. You only read it when you print.
         </p>
       )}
+      <div className="pt-1">
+        <ReportContentButton
+          kind="owl_letter"
+          refId={letter.id}
+          reportedUserId={letter.anonymous ? null : letter.fromUserId}
+          preview={`Letter from ${letter.fromDisplay}`}
+          subjectLabel="this letter"
+          className="text-[10px] frens-muted hover:underline"
+        />
+      </div>
     </li>
   )
 }

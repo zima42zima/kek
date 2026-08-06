@@ -12,6 +12,7 @@ import { relativeTime } from '../../lib/notifications'
 import { applyCommentReactionToggle } from '../../lib/commentReactions'
 import { normalizeEmojiReactions } from '../../lib/emojiReactions'
 import { withLiveAuthorAvatar } from '../../lib/posts'
+import ReportContentButton from '../ReportContentButton'
 
 function commentText(c) {
   return c.text ?? c.body ?? ''
@@ -117,6 +118,15 @@ export default function EchoComments({
                       >
                         ×
                       </button>
+                    ) : !isOwn && user?.id ? (
+                      <ReportContentButton
+                        kind="echo_comment"
+                        refId={c.id}
+                        reportedUserId={uid}
+                        preview={commentText(c)}
+                        subjectLabel="this comment"
+                        className="ml-auto text-[10px] frens-action shrink-0"
+                      />
                     ) : null}
                   </div>
                   <CommentBody text={commentText(c)} />

@@ -9,6 +9,7 @@ import {
 } from '../../lib/foldsSocial'
 import FoldViewerModal from './FoldViewerModal'
 import Modal from '../Modal'
+import ReportContentButton from '../ReportContentButton'
 import { useAuth } from '../../context/AuthContext'
 
 /**
@@ -137,6 +138,20 @@ export default function ProfileFoldsPublic({
             view.formatId === 'zine'
               ? 'Print this one page, then fold into a zine.'
               : 'Print preview — A4, print or save as PDF.'
+          }
+          footer={
+            viewerId && viewerId !== userId ? (
+              <div className="pt-3 border-t frens-border flex justify-center">
+                <ReportContentButton
+                  kind="fold"
+                  refId={view.id}
+                  reportedUserId={userId}
+                  preview={foldSummary(view).title}
+                  subjectLabel="this fold"
+                  className="text-[11px] frens-muted hover:underline"
+                />
+              </div>
+            ) : null
           }
         />
       )}

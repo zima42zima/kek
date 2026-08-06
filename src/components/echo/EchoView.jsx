@@ -13,6 +13,7 @@ import { EchoMetaLine, EchoTypeIcon } from './EchoMeta'
 import { HeadphonesIcon, LocationIcon } from '../icons/UiIcons'
 import useLiveAuthorProfile from '../../hooks/useLiveAuthorProfile'
 import { withLiveAuthorAvatar } from '../../lib/posts'
+import ReportContentButton from '../ReportContentButton'
 
 const SWIPE_THRESHOLD_PX = 48
 
@@ -399,6 +400,19 @@ export default function EchoView({
             )}
           </div>
         )}
+
+        {!mine && echo.id ? (
+          <div className="mt-3 pt-3 border-t frens-border flex justify-center">
+            <ReportContentButton
+              kind="echo"
+              refId={echo.id}
+              reportedUserId={echo.anonymous ? null : echo.ownerId}
+              preview={echo.title || echo.caption || displayEcho.authorName}
+              subjectLabel="this aftersound"
+              className="text-[11px] frens-muted hover:underline"
+            />
+          </div>
+        ) : null}
 
         {mine && onDelete ? (
           <button

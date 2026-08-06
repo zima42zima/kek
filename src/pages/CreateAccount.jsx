@@ -11,6 +11,7 @@ import {
 } from '../lib/frenName'
 import ThemeControls from '../components/ThemeControls'
 import FrogLogo from '../components/FrogLogo'
+import CommunityRulesModal from '../components/CommunityRulesModal'
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
@@ -48,6 +49,8 @@ const CreateAccount = ({
   const [passwordTouched, setPasswordTouched] = useState(false)
   const [confirmTouched, setConfirmTouched] = useState(false)
   const [checkingEmail, setCheckingEmail] = useState(false)
+  const [acceptedRules, setAcceptedRules] = useState(false)
+  const [showRules, setShowRules] = useState(false)
 
   const handle = normalizeFrenHandle(frenHandle)
   const trimmedEmail = email.trim()
@@ -238,7 +241,8 @@ const CreateAccount = ({
     && !checkingHandle
     && emailValid
     && passwordValid
-    && passwordsMatch,
+    && passwordsMatch
+    && acceptedRules,
   )
 
   if (step === 'success') {
@@ -421,6 +425,26 @@ const CreateAccount = ({
 
           {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
 
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptedRules}
+              onChange={(e) => setAcceptedRules(e.target.checked)}
+              className="mt-1 shrink-0"
+            />
+            <span className="text-xs frens-body-text leading-relaxed">
+              I agree to the{' '}
+              <button
+                type="button"
+                onClick={() => setShowRules(true)}
+                className="underline hover:text-black dark:hover:text-white"
+              >
+                Community rules
+              </button>
+              {' '}— no harassment, nudity, threats, or illegal activity.
+            </span>
+          </label>
+
           <button
             type="submit"
             disabled={loading || !canSubmit}
@@ -453,6 +477,8 @@ const CreateAccount = ({
           </p>
         )}
       </div>
+
+      <CommunityRulesModal open={showRules} onClose={() => setShowRules(false)} />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { POST_ACTION_BTN, POST_ACTION_ICON, POST_ACTION_BADGE } from './icons/Ui
 import PostActionTip from './PostActionTip'
 import EmojiReactions from './EmojiReactions'
 import ConfirmDialog from './ConfirmDialog'
+import ReportContentButton from './ReportContentButton'
 import { normalizeEmojiReactions } from '../lib/emojiReactions'
 import { withLiveAuthorAvatar } from '../lib/posts'
 
@@ -135,7 +136,7 @@ export default function PostComments({
                     <div className="flex items-baseline gap-2">
                       <FrenHandle className="text-xs">{c.frenName}</FrenHandle>
                       <span className="text-[10px] frens-muted shrink-0">{c.timestamp}</span>
-                      {user?.id === c.userId && (
+                      {user?.id === c.userId ? (
                         <button
                           type="button"
                           onClick={() => setPendingDeleteId(c.id)}
@@ -143,7 +144,16 @@ export default function PostComments({
                         >
                           Delete
                         </button>
-                      )}
+                      ) : user?.id ? (
+                        <ReportContentButton
+                          kind="post_comment"
+                          refId={c.id}
+                          reportedUserId={c.userId}
+                          preview={c.text}
+                          subjectLabel="this comment"
+                          className="text-[10px] frens-action ml-auto shrink-0"
+                        />
+                      ) : null}
                     </div>
                     <CommentBody text={c.text} />
                     <EmojiReactions

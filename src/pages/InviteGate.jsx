@@ -3,6 +3,7 @@ import FrogLogo from '../components/FrogLogo'
 import ThemeControls from '../components/ThemeControls'
 import { signupGateOpen, peekInviteCode, InvitesNotInstalledError } from '../lib/invites'
 import { clearInviteFromUrl, inviteCodeFromUrl } from '../lib/inviteShare'
+import CommunityRulesModal from '../components/CommunityRulesModal'
 
 export default function InviteGate({ onContinue, onLogin }) {
   const [code, setCode] = useState('')
@@ -12,6 +13,7 @@ export default function InviteGate({ onContinue, onLogin }) {
   const [loadingGate, setLoadingGate] = useState(true)
   const [gateError, setGateError] = useState('')
   const [inviterName, setInviterName] = useState(null)
+  const [showRules, setShowRules] = useState(false)
 
   useEffect(() => {
     signupGateOpen()
@@ -174,7 +176,19 @@ export default function InviteGate({ onContinue, onLogin }) {
             </button>
           </p>
         )}
+
+        <p className="text-center text-xs frens-muted mt-4">
+          <button
+            type="button"
+            onClick={() => setShowRules(true)}
+            className="underline hover:text-black dark:hover:text-white"
+          >
+            Community rules
+          </button>
+        </p>
       </div>
+
+      <CommunityRulesModal open={showRules} onClose={() => setShowRules(false)} />
     </div>
   )
 }

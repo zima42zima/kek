@@ -38,6 +38,7 @@ import { foldInboxUnread } from '../lib/foldsSocial'
 import { markFoldsHubSeen, markPsHubSeen, foldsHubBadgeCount, psHubBadgeCount } from '../lib/profileHubBadges'
 import ProfileTrail from '../components/ProfileTrail'
 import FounderConsole from '../components/FounderConsole'
+import CommunityRulesModal from '../components/CommunityRulesModal'
 const SHOW_EMAIL_KEY = 'frens-show-email'
 
 export default forwardRef(function Profile({
@@ -78,6 +79,7 @@ export default forwardRef(function Profile({
   const [psSection, setPsSection] = useState(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showFounderConsole, setShowFounderConsole] = useState(false)
+  const [showCommunityRules, setShowCommunityRules] = useState(false)
   const [showToolsMenu, setShowToolsMenu] = useState(false)
   const [owlSettings, setOwlSettings] = useState(null)
   const [hubBadgeTick, setHubBadgeTick] = useState(0)
@@ -847,7 +849,14 @@ export default forwardRef(function Profile({
               />
             </div>
 
-            <div className="border-t frens-border pt-4">
+            <div className="border-t frens-border pt-4 space-y-3">
+              <button
+                type="button"
+                onClick={() => setShowCommunityRules(true)}
+                className="frens-btn-outline w-full py-2.5 text-sm"
+              >
+                Community rules
+              </button>
               <button
                 type="button"
                 onClick={signOut}
@@ -859,6 +868,8 @@ export default forwardRef(function Profile({
           </div>
         </Modal>
       )}
+
+      <CommunityRulesModal open={showCommunityRules} onClose={() => setShowCommunityRules(false)} />
     </div>
   )
 })

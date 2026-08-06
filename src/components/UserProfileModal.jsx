@@ -3,7 +3,8 @@ import Modal from './Modal'
 import PostCard from './PostCard'
 import { ProfileAvatar } from './FrogLogo'
 import { useAuth } from '../context/AuthContext'
-import { filePlatformReport, suspendPlatformUser, ModerationNotInstalledError } from '../lib/platformModeration'
+import { suspendPlatformUser } from '../lib/platformModeration'
+import ReportContentButton from './ReportContentButton'
 import StaffInvestigateModal from './StaffInvestigateModal'
 import { usePosts } from '../context/PostsContext'
 import { useDms } from '../context/DmsContext'
@@ -89,30 +90,6 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
     })
     onNavigate?.('messages')
     onClose?.()
-  }
-
-  async function handleReportProfile() {
-    if (!card || modBusy) return
-    const reason = window.prompt(`Report ${card.frenName}? Optional reason:`, '')
-    if (reason === null) return
-    setModBusy(true)
-    setModMsg('')
-    try {
-      await filePlatformReport({
-        kind: 'profile',
-        refId: userId,
-        reportedUserId: userId,
-        preview: card.frenName,
-        reason,
-      })
-      setModMsg('Reported ✓')
-    } catch (err) {
-      setModMsg(err instanceof ModerationNotInstalledError
-        ? 'Reports need the moderation SQL patch.'
-        : (err.message || 'Could not report.'))
-    } finally {
-      setModBusy(false)
-    }
   }
 
   async function handleStaffSuspend() {
@@ -206,14 +183,16 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
 
             {!isMe && (
               <div className="flex flex-wrap items-center gap-3 mt-3 pt-2 border-t frens-border">
-                <button
-                  type="button"
-                  disabled={modBusy}
-                  onClick={handleReportProfile}
+                <ReportContentButton
+                  kind="profile"
+                  refId={userId}
+                  reportedUserId={userId}
+                  preview={card.frenName}
+                  subjectLabel="this profile"
+                  label="Report profile"
                   className="text-[11px] frens-muted hover:underline disabled:opacity-50"
-                >
-                  Report profile
-                </button>
+                  disabled={modBusy}
+                />
                 {isPlatformStaff ? (
                   <>
                     <button

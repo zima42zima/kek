@@ -17,6 +17,8 @@ import { useCaves } from '../../context/CavesContext'
 import CaveRoleBadge from './CaveRoleBadge'
 import RichText from '../RichText'
 import ConfirmDialog from '../ConfirmDialog'
+import ReportContentButton from '../ReportContentButton'
+import { useAuth } from '../../context/AuthContext'
 import { SharedImage, textBubbleClass } from '../SharedMedia'
 import {
   MOD_ROLES,
@@ -575,6 +577,7 @@ function ChatMessage({
 }) {
   const canReact = caveId && message.id != null && !String(message.id).startsWith('tmp-')
   const canMod = canModerate && canReact
+  const { user } = useAuth()
   const liveAuthor = useLiveAuthorProfile(message.authorId, { enabled: !mine && Boolean(message.authorId) })
   const avatarProfile = mine && currentUserProfile
     ? currentUserProfile
@@ -603,11 +606,24 @@ function ChatMessage({
     <ModHideButton onHide={onHide} />
   ) : null
 
-  const sideControls = reactionControls || modHide ? (
+  const reportBtn = !mine && user?.id && canReact ? (
+    <ReportContentButton
+      kind="cave_message"
+      refId={message.id}
+      reportedUserId={message.authorId}
+      preview={message.text || message.image}
+      subjectLabel="this message"
+      className="text-[10px] frens-muted hover:underline px-1"
+      label="Report"
+    />
+  ) : null
+
+  const sideControls = reactionControls || modHide || reportBtn ? (
     <div
       className={`chat-msg-hover-controls flex items-center gap-1 shrink-0 ${mine ? 'flex-row-reverse' : ''}`}
     >
       {reactionControls}
+      {reportBtn}
       {modHide}
     </div>
   ) : null

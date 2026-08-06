@@ -14,6 +14,7 @@ import PinnedLabel from './PinnedLabel'
 import PostTimestamp from './PostTimestamp'
 import FrenHandle from './FrenHandle'
 import PostOwnerMenu from './PostOwnerMenu'
+import ReportContentButton from './ReportContentButton'
 import { useAuth } from '../context/AuthContext'
 import { useState } from 'react'
 import { POST_ACTION_BTN, POST_ACTION_ICON, POST_ACTION_BADGE, POST_ACTION_ROW } from './icons/UiIcons'
@@ -142,6 +143,15 @@ export default function PostDetailModal({ post, authorProfile, onClose, onOpenPr
                       onPin={() => pinPost(post.id)}
                       onUnpin={unpinPost}
                       onDelete={() => { removePost(post.id); onClose?.() }}
+                    />
+                  ) : user?.id ? (
+                    <ReportContentButton
+                      kind="post"
+                      refId={post.id}
+                      reportedUserId={post.userId}
+                      preview={post.text || post.image || post.frenName}
+                      subjectLabel="this post"
+                      className="text-[10px] frens-muted hover:underline px-1"
                     />
                   ) : null}
                 </div>

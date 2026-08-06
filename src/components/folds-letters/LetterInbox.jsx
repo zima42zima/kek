@@ -1,4 +1,5 @@
 import FoldsLettersIcon from '../owl/FoldsLettersIcon'
+import ReportContentButton from '../ReportContentButton'
 
 function StatusDot({ status }) {
   const styles = {
@@ -146,6 +147,17 @@ function LetterDetail({ letter, busy, onBack, onAction }) {
         {(letter.status === 'printed' || letter.status === 'declined') && (
           <p className="text-sm frens-muted text-center py-4 capitalize">{letter.status}</p>
         )}
+      </div>
+
+      <div className="pt-2 border-t frens-border flex justify-center">
+        <ReportContentButton
+          kind="owl_letter"
+          refId={letter.id}
+          reportedUserId={letter.anonymous ? null : letter.fromUserId}
+          preview={`Letter from ${isAnon ? 'anonymous' : letter.fromDisplay}`}
+          subjectLabel="this letter"
+          className="text-[11px] frens-muted hover:underline"
+        />
       </div>
     </div>
   )

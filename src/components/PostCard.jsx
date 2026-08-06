@@ -16,6 +16,7 @@ import PinnedLabel from './PinnedLabel'
 import PostTimestamp from './PostTimestamp'
 import FrenHandle from './FrenHandle'
 import PostOwnerMenu from './PostOwnerMenu'
+import ReportContentButton from './ReportContentButton'
 import PostDetailModal from './PostDetailModal'
 import PostMorseRule from './PostMorseRule'
 import { isTextOnlyThoughtPost } from '../lib/urls'
@@ -142,6 +143,15 @@ export default function PostCard({ post, authorProfile, onOpenProfile, highlight
                   onPin={() => pinPost(post.id)}
                   onUnpin={unpinPost}
                   onDelete={() => removePost(post.id)}
+                />
+              ) : user?.id ? (
+                <ReportContentButton
+                  kind="post"
+                  refId={post.id}
+                  reportedUserId={post.userId}
+                  preview={post.text || post.image || post.frenName}
+                  subjectLabel="this post"
+                  className="text-[10px] frens-muted hover:underline px-1"
                 />
               ) : null}
             </div>
