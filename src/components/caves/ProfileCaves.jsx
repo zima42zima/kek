@@ -34,7 +34,7 @@ function CavesProfileModal({ caves, ownerId, onClose, onOpenCave, onManage, onSh
               <li key={c.id}>
                 <button
                   type="button"
-                  onClick={() => onOpenCave(c.id)}
+                  onClick={() => onOpenCave(c.id, { coverUrl: c.coverUrl, name: c.name })}
                   className="w-full text-left border frens-border rounded-xl p-3 flex items-center gap-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
                 >
                   <CaveCoverThumb coverUrl={c.coverUrl} className="w-10 h-10" />
@@ -58,7 +58,7 @@ function CavesProfileModal({ caves, ownerId, onClose, onOpenCave, onManage, onSh
 
 /** Cave icon on your profile — tap to see caves you share with others. */
 export default function ProfileCaves({ onNavigate }) {
-  const { myCaves, meId, pushProfileCavesToServer } = useCaves()
+  const { myCaves, meId, pushProfileCavesToServer, rememberCaveCover } = useCaves()
   const [open, setOpen] = useState(false)
   const [manage, setManage] = useState(false)
 
@@ -69,7 +69,10 @@ export default function ProfileCaves({ onNavigate }) {
     pushProfileCavesToServer()
   }, [open, pushProfileCavesToServer])
 
-  function openCave(id) {
+  function openCave(id, preview) {
+    const cave = myCaves.find((c) => c.id === id)
+    const coverUrl = preview?.coverUrl || cave?.coverUrl
+    if (coverUrl) rememberCaveCover(id, coverUrl)
     onNavigate?.('caves', { caveId: id })
     setOpen(false)
     setManage(false)

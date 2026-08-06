@@ -87,7 +87,7 @@ export default function ProfileCavesPublic({
   onNavigate,
   onCloseProfile,
 }) {
-  const { myCaves, joinPublicCaveAndOpen } = useCaves()
+  const { myCaves, joinPublicCaveAndOpen, rememberCaveCover } = useCaves()
   const [caves, setCaves] = useState([])
   const [open, setOpen] = useState(false)
   const [joiningId, setJoiningId] = useState(null)
@@ -134,6 +134,8 @@ export default function ProfileCavesPublic({
   const myIds = new Set(myCaves.map((c) => c.id))
 
   function openCave(id) {
+    const cave = caves.find((c) => c.id === id) || myCaves.find((c) => c.id === id)
+    if (cave?.coverUrl) rememberCaveCover(id, cave.coverUrl)
     setOpen(false)
     onCloseProfile?.()
     onNavigate?.('caves', { caveId: id })

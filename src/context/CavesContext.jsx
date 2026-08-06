@@ -953,7 +953,30 @@ export function CavesProvider({ children }) {
     }
   }
 
-  function requestOpenCave(caveId) {
+  function rememberCaveCover(caveId, coverUrl) {
+    const url = typeof coverUrl === 'string' ? coverUrl.trim() : ''
+    if (!caveId || !url) return
+    const sid = String(caveId)
+    setCaves((prev) => {
+      const existing = prev.find((c) => String(c.id) === sid)
+      if (!existing) {
+        return [{
+          id: caveId,
+          name: 'cave',
+          emoji: '🕳️',
+          access: 'public',
+          coverUrl: url,
+          members: [],
+          messages: [],
+        }, ...prev]
+      }
+      if (existing.coverUrl) return prev
+      return prev.map((c) => (String(c.id) === sid ? { ...c, coverUrl: url } : c))
+    })
+  }
+
+  function requestOpenCave(caveId, preview) {
+    if (preview?.coverUrl) rememberCaveCover(caveId, preview.coverUrl)
     setPendingOpenId(caveId)
   }
 
@@ -1023,14 +1046,27 @@ export function CavesProvider({ children }) {
       } catch { /* list_cave_messages unavailable */ }
     }
     if (remoteCave) {
-      pendingJoinedRef.current.set(sid, remoteCave)
-      applyJoinedCave(remoteCave)
-      if (isHydratedCave(remoteCave, meId)) {
+      const existing = cavesRef.current.find((c) => String(c.id) === sid)
+        ?? pendingJoinedRef.current.get(sid)
+      const merged = mergeCaveSnapshot(existing, remoteCave)
+      // Keep a known cover if server row is still empty (common before owner publish).
+      pendingJoinedRef.current.set(sid, merged)
+      applyJoinedCave(merged)
+      if (isHydratedCave(merged, meId)) {
         pendingJoinedRef.current.delete(sid)
       }
+      // Owner: publish local cover so thumbs/banners work for every member.
+      if (
+        String(merged.ownerId) === String(meId)
+        && merged.coverUrl
+        && !remoteCave.coverUrl
+      ) {
+        pushOwnedCaveCovers([remoteCave]).catch(() => {})
+      }
+      return merged
     }
     return remoteCave
-  }, [applyJoinedCave, meId])
+  }, [applyJoinedCave, meId, pushOwnedCaveCovers])
 
   const ensureCaveLoaded = useCallback(async (caveId, { requireHydrated = false } = {}) => {
     const sid = String(caveId)
@@ -1120,6 +1156,7 @@ export function CavesProvider({ children }) {
     findCaveById,
     ensureCaveLoaded,
     refreshCaveFromServer,
+    rememberCaveCover,
     syncMemberships: syncRemoteCaves,
     syncRemoteCaves,
     pushProfileCavesToServer,

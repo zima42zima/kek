@@ -504,6 +504,14 @@ function messageContentKey(m) {
   ].join('|')
 }
 
+function pickCoverUrl(...candidates) {
+  for (const value of candidates) {
+    const url = typeof value === 'string' ? value.trim() : ''
+    if (url) return url
+  }
+  return null
+}
+
 export function mergeCaveSnapshot(local, remote) {
   if (!remote?.id) return local
   const remoteMembers = remote.members || []
@@ -598,7 +606,8 @@ export function mergeCaveSnapshot(local, remote) {
       ? remote.emojiPacks
       : (local?.emojiPacks || []),
     hiddenOnProfile,
-    coverUrl: remote.coverUrl || remote.cover_url || local?.coverUrl || null,
+    // Never drop a known cover when the other side is empty (join seeds / stale list_my_caves).
+    coverUrl: pickCoverUrl(remote.coverUrl || remote.cover_url, local?.coverUrl),
     roles: Array.isArray(remote.roles) && remote.roles.length
       ? remote.roles
       : (Array.isArray(local?.roles) && local.roles.length ? local.roles : remote.roles ?? local?.roles ?? null),

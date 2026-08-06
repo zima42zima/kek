@@ -53,7 +53,7 @@ export default function CavesList({
   async function handleJoin(cave) {
     if (!cave?.id || joiningId) return
     if (cave.iMember) {
-      onOpenCave?.(cave.id)
+      onOpenCave?.(cave.id, { coverUrl: cave.coverUrl, name: cave.name })
       return
     }
     setJoiningId(cave.id)
@@ -141,7 +141,7 @@ export default function CavesList({
                 <li key={cave.id}>
                   <button
                     type="button"
-                    onClick={() => onOpenCave(cave.id)}
+                    onClick={() => onOpenCave(cave.id, { coverUrl: cave.coverUrl, name: cave.name })}
                     className="w-full text-left border frens-border rounded-xl p-4 flex items-center gap-3 hover:frens-surface transition"
                   >
                     <CaveCoverThumb coverUrl={cave.coverUrl} className="w-12 h-12" />

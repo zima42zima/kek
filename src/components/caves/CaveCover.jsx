@@ -3,12 +3,13 @@ import { CameraIcon } from '../icons/UiIcons'
 import { CaveGlyph } from './CaveIcon'
 import { prepareImageAttachment, finalizeImageUrl } from '../../lib/imageAttach'
 
-/** Square thumb for cave list / preview bar. */
+/** Square thumb for cave list / preview / header — cover photo when set, else cave mark. */
 export function CaveCoverThumb({ coverUrl, className = 'w-12 h-12' }) {
-  if (coverUrl) {
+  const url = typeof coverUrl === 'string' ? coverUrl.trim() : ''
+  if (url) {
     return (
       <img
-        src={coverUrl}
+        src={url}
         alt=""
         className={`${className} rounded-xl object-cover shrink-0 border frens-border`}
       />
@@ -19,17 +20,18 @@ export function CaveCoverThumb({ coverUrl, className = 'w-12 h-12' }) {
       className={`${className} rounded-xl frens-avatar-ring flex items-center justify-center shrink-0 text-xl`}
       aria-hidden
     >
-      <CaveGlyph className="w-6 h-6" />
+      <CaveGlyph className="w-[55%] h-[55%] max-w-6 max-h-6" />
     </span>
   )
 }
 
 /** Wide banner for cave detail header when a cover is set. */
 export function CaveCoverBanner({ coverUrl, className = '' }) {
-  if (!coverUrl) return null
+  const url = typeof coverUrl === 'string' ? coverUrl.trim() : ''
+  if (!url) return null
   return (
     <div className={`w-full aspect-[3/1] max-h-28 overflow-hidden ${className}`}>
-      <img src={coverUrl} alt="" className="w-full h-full object-cover" />
+      <img src={url} alt="" className="w-full h-full object-cover" />
     </div>
   )
 }

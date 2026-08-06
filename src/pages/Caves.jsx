@@ -18,6 +18,7 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
     clearPendingOpen,
     findCaveById,
     ensureCaveLoaded,
+    rememberCaveCover,
   } = useCaves()
   const [selectedId, setSelectedId] = useState(urlCaveId)
   const [showCreate, setShowCreate] = useState(false)
@@ -28,7 +29,8 @@ export default function Caves({ caveId: urlCaveId = null, onCaveChange }) {
     setSelectedId(urlCaveId || null)
   }, [urlCaveId])
 
-  function selectCave(id) {
+  function selectCave(id, preview) {
+    if (preview?.coverUrl) rememberCaveCover(id, preview.coverUrl)
     setSelectedId(id)
     onCaveChange?.(id || null)
     if (!id) heldCaveRef.current = null

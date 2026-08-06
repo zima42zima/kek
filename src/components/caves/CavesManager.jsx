@@ -1,5 +1,5 @@
 import { useCaves } from '../../context/CavesContext'
-import { CaveGlyph } from './CaveIcon'
+import { CaveCoverThumb } from './CaveCover'
 import CaveAccessLabel from '../CaveAccessLabel'
 
 // Shared management list for a user's caves: open, show/hide on profile, and
@@ -23,11 +23,11 @@ export default function CavesManager({ onOpenCave }) {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => onOpenCave?.(c.id)}
+                onClick={() => onOpenCave?.(c.id, { coverUrl: c.coverUrl, name: c.name })}
                 className="flex items-center gap-2 min-w-0 flex-1 text-left"
                 title={`Open ${c.name}`}
               >
-                <CaveGlyph className="w-5 h-5 shrink-0" />
+                <CaveCoverThumb coverUrl={c.coverUrl} className="w-10 h-10" />
                 <span className="min-w-0">
                   <span className="text-sm truncate block">{c.name}</span>
                   <span className="text-[11px] frens-hint">{isOwner ? 'you own this' : 'joined'}</span>

@@ -10,6 +10,7 @@ import ProfileCaves from '../components/caves/ProfileCaves'
 import ProfileEchoes from '../components/echo/ProfileEchoes'
 import CavesManager from '../components/caves/CavesManager'
 import CaveIcon from '../components/caves/CaveIcon'
+import { useCaves } from '../context/CavesContext'
 import FollowListModal from '../components/FollowListModal'
 import UserProfileModal from '../components/UserProfileModal'
 import { MoreIcon, UserPlusIcon, PencilIcon, SettingsIcon } from '../components/icons/UiIcons'
@@ -50,6 +51,7 @@ export default forwardRef(function Profile({
   const { profile: contextProfile, user, refreshProfile, signOut, accountStatus, refreshAccountStatus } = useAuth()
   const { postsByUser, loadPostsForUser } = usePosts()
   const { openConversationWithUser } = useDms()
+  const { rememberCaveCover } = useCaves()
   const [profile, setProfile] = useState(contextProfile)
   const [bio, setBio] = useState('')
   const [frenName, setFrenName] = useState('')
@@ -837,7 +839,8 @@ export default forwardRef(function Profile({
                 Choose which caves show on your profile and, if you own them, who can join.
               </p>
               <CavesManager
-                onOpenCave={(id) => {
+                onOpenCave={(id, preview) => {
+                  if (preview?.coverUrl) rememberCaveCover(id, preview.coverUrl)
                   setShowSettings(false)
                   onNavigate?.('caves', { caveId: id })
                 }}
