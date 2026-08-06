@@ -407,6 +407,15 @@ export async function removeCaveMemberRemote(caveId, targetId, ban = false) {
   }
 }
 
+/** Member leaves a cave. Owners must delete instead. Needs leave_cave RPC. */
+export async function leaveCaveRemote(caveId) {
+  const { error } = await supabase.rpc('leave_cave', { p_cave_id: caveId })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+}
+
 export async function assignCaveTitleRemote(caveId, targetId, titleId, weeks = 2) {
   const { error } = await supabase.rpc('assign_cave_title', {
     p_cave_id: caveId,

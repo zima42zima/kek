@@ -15,6 +15,7 @@ import {
   listCaveMessagesRemote,
   sendCaveMessageRemote,
   deleteCaveRemote,
+  leaveCaveRemote,
   setCaveRolesRemote,
   setCaveProfileHidden,
   addCaveMember,
@@ -278,12 +279,11 @@ export function CavesProvider({ children }) {
 
       const merged = []
       const byId = new Map()
-      // Seed with current local owned caves so public/shown intent survives merge.
+      // Seed ONLY owned caves locally. Joined caves must come from the server list —
+      // seeding isLocalMember here resurrected deleted/ghost caves from localStorage.
       cavesRef.current.forEach((c) => {
         if (!c?.id) return
-        if (String(c.ownerId) === String(meId) || isLocalMember(c, meId)) {
-          byId.set(c.id, c)
-        }
+        if (String(c.ownerId) === String(meId)) byId.set(c.id, c)
       })
       pendingJoinedRef.current.forEach((c, id) => {
         byId.set(id, mergeCaveSnapshot(byId.get(id), c))
@@ -292,6 +292,15 @@ export function CavesProvider({ children }) {
         if (!r?.id) return
         byId.set(r.id, mergeCaveSnapshot(byId.get(r.id), r))
       })
+      // Drop joined caves the server no longer returns (deleted / left / wiped).
+      for (const id of [...byId.keys()]) {
+        const cave = byId.get(id)
+        if (String(cave?.ownerId) === String(meId)) continue
+        if (pendingJoinedRef.current.has(String(id))) continue
+        if (!accessibleIds.has(id) && !accessibleIds.has(String(id))) {
+          byId.delete(id)
+        }
+      }
       merged.push(...byId.values())
 
       accessibleIds.forEach((id) => {
@@ -300,7 +309,7 @@ export function CavesProvider({ children }) {
 
       if (merged.length || accessibleIds.size) {
         mergeRemoteCaves(merged, accessibleIds)
-      } else if (accessibleIds.size === 0 && memberships.length === 0 && rows.length === 0) {
+      } else {
         setCaves((prev) => prev.filter((c) =>
           String(c.ownerId) === String(meId)
           || pendingJoinedRef.current.has(String(c.id)),
@@ -517,6 +526,42 @@ export function CavesProvider({ children }) {
       }
       console.error('Could not delete cave:', err.message)
       return { ok: false, message: err.message || 'Could not delete cave.' }
+    }
+  }
+
+  async function leaveCave(caveId) {
+    const cave = cavesRef.current.find((c) => c.id === caveId)
+    if (!cave) return { ok: false, message: 'Cave not found.' }
+    if (String(cave.ownerId) === String(meId)) {
+      return { ok: false, message: 'Owners cannot leave — delete the cave instead.' }
+    }
+
+    setCaves((prev) => prev.filter((c) => c.id !== caveId))
+    setMemberCaveIds((prev) => {
+      const next = new Set(prev)
+      next.delete(caveId)
+      next.delete(String(caveId))
+      return next
+    })
+    pendingJoinedRef.current.delete(String(caveId))
+
+    if (!remote) return { ok: true }
+    try {
+      await leaveCaveRemote(caveId)
+      await syncRemoteCaves()
+      return { ok: true }
+    } catch (err) {
+      if (err instanceof CavesNotInstalledError) {
+        // Still drop locally so ghost caves disappear even without the RPC.
+        return {
+          ok: true,
+          localOnly: true,
+          message: 'Removed here. Run supabase-patch-leave-cave.sql so leave syncs for everyone.',
+        }
+      }
+      setCaves((prev) => (prev.some((c) => c.id === caveId) ? prev : [cave, ...prev]))
+      console.error('Could not leave cave:', err.message)
+      return { ok: false, message: err.message || 'Could not leave cave.' }
     }
   }
 
@@ -1139,6 +1184,7 @@ export function CavesProvider({ children }) {
     setCaveCover,
     setCaveRoles,
     deleteCave,
+    leaveCave,
     setCaveHidden,
     setCaveAccess,
     inviteToCave,

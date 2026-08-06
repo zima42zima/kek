@@ -93,7 +93,7 @@ function InviteModal({ cave, onClose }) {
 }
 
 function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
-  const { assignCaveTitle, assignCaveModRole, setCaveCover, setCaveRoles, deleteCave } = useCaves()
+  const { assignCaveTitle, assignCaveModRole, setCaveCover, setCaveRoles, deleteCave, leaveCave } = useCaves()
   const [memberError, setMemberError] = useState('')
   const [roleError, setRoleError] = useState('')
   const [roleBusy, setRoleBusy] = useState('')
@@ -101,6 +101,9 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
   const [deleteError, setDeleteError] = useState('')
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [leaveError, setLeaveError] = useState('')
+  const [leaveBusy, setLeaveBusy] = useState(false)
+  const [confirmLeave, setConfirmLeave] = useState(false)
   const [showRolesEditor, setShowRolesEditor] = useState(false)
   const isOwner = isCaveOwner(cave, currentUserId)
   const isKeeper = isCaveKeeper(cave, currentUserId)
@@ -123,6 +126,27 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
       setCoverError(result?.message || 'Could not remove cover.')
     } else if (result?.localOnly && result?.message) {
       setCoverError(result.message)
+    }
+  }
+
+  async function handleLeaveCave() {
+    if (!confirmLeave) {
+      setConfirmLeave(true)
+      return
+    }
+    setLeaveError('')
+    setLeaveBusy(true)
+    try {
+      const result = await leaveCave(cave.id)
+      if (!result?.ok) {
+        setLeaveError(result?.message || 'Could not leave cave.')
+        setLeaveBusy(false)
+        return
+      }
+      onDeleted?.(cave.id)
+    } catch (err) {
+      setLeaveError(err.message || 'Could not leave cave.')
+      setLeaveBusy(false)
     }
   }
 
@@ -207,7 +231,7 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
           <button type="button" onClick={onClose} className="frens-muted text-xl leading-none" aria-label="Close">×</button>
         </div>
         <p className="text-xs frens-muted mb-5">
-          Roles expire — keep it fresh.
+          {isKeeper ? 'Roles expire — keep it fresh.' : 'Manage your membership in this cave.'}
         </p>
 
         {isKeeper ? (
@@ -391,7 +415,50 @@ function CaveEditor({ cave, currentUserId, onUpdateCave, onClose, onDeleted }) {
               </button>
             )}
           </section>
-        ) : null}
+        ) : (
+          <section className="border-t frens-border pt-5">
+            <h3 className="frens-label mb-1">Leave cave</h3>
+            <p className="text-xs frens-muted mb-3">
+              Remove this cave from your list. You can rejoin later if it is still public.
+            </p>
+            {leaveError ? (
+              <p className="text-xs text-red-500 dark:text-red-400 mb-2">{leaveError}</p>
+            ) : null}
+            {confirmLeave ? (
+              <div className="space-y-2">
+                <p className="text-xs frens-body-text">
+                  Leave <span className="font-medium">{cave.name}</span>?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={leaveBusy}
+                    onClick={handleLeaveCave}
+                    className="flex-1 text-sm py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 transition"
+                  >
+                    {leaveBusy ? 'Leaving…' : 'Yes, leave'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={leaveBusy}
+                    onClick={() => setConfirmLeave(false)}
+                    className="frens-btn-outline flex-1 py-2.5 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleLeaveCave}
+                className="w-full text-sm py-2.5 rounded-xl border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10 transition"
+              >
+                Leave this cave
+              </button>
+            )}
+          </section>
+        )}
       </div>
     </div>
   )
@@ -861,15 +928,13 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
               <CaveAccessLabel access={cave.access} />
             </p>
           </div>
-          {isKeeper ? (
-            <button
-              type="button"
-              onClick={() => setShowEditor(true)}
-              className="frens-action text-[11px] px-2 py-1 shrink-0"
-            >
-              Settings
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => setShowEditor(true)}
+            className="frens-action text-[11px] px-2 py-1 shrink-0"
+          >
+            {isKeeper ? 'Settings' : 'Leave'}
+          </button>
         </div>
 
         <div className="px-3 pb-2 flex items-center gap-1.5">
@@ -1099,7 +1164,7 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
         />
       )}
       {showInvite && <InviteModal cave={cave} onClose={() => setShowInvite(false)} />}
-      {showEditor && isKeeper && (
+      {showEditor && (
         <CaveEditor
           cave={cave}
           currentUserId={currentUserId}
