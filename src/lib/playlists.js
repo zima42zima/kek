@@ -1,6 +1,7 @@
 import { supabase } from '../supabaseClient'
 import { getLinkEmbed, normalizeUrl } from './urls'
 import { prepareImageAttachment, finalizeImageUrl } from './imageAttach'
+import { retireMedia } from './storage'
 
 export class PlaylistsNotInstalledError extends Error {}
 
@@ -129,6 +130,13 @@ export async function deletePlaylist(id) {
 }
 
 export async function setPlaylistCover(id, coverUrl) {
+  const { data: prior } = await supabase
+    .from('profile_playlists')
+    .select('cover_url')
+    .eq('id', id)
+    .maybeSingle()
+  const previousUrl = prior?.cover_url || null
+
   const { error } = await supabase.rpc('set_playlist_cover', {
     p_id: id,
     p_cover_url: coverUrl || null,
@@ -137,6 +145,7 @@ export async function setPlaylistCover(id, coverUrl) {
     throwIfNotInstalled(error)
     throw error
   }
+  await retireMedia(previousUrl, coverUrl || null)
 }
 
 export async function uploadPlaylistCoverImage(file) {

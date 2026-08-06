@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient'
-import { uploadMedia, StorageNotInstalledError } from './storage'
+import { uploadMedia, retireMedia, StorageNotInstalledError } from './storage'
 import { validateFrenHandleFormat } from './frenName'
 
 const DB_SETUP_HINT =
@@ -18,7 +18,7 @@ function inferLegacyHandle(sillyName) {
   return validateFrenHandleFormat(candidate) ? null : candidate
 }
 
-/** Upload profile photo to storage (fresh path each time). */
+/** Upload profile photo to storage (fresh path). Caller retires previousUrl after DB save. */
 export async function persistProfileAvatar(dataUrl, { prefix = 'avatars' } = {}) {
   if (!dataUrl) return { avatarType: 'frog', avatarUrl: null }
 
@@ -31,6 +31,18 @@ export async function persistProfileAvatar(dataUrl, { prefix = 'avatars' } = {})
       console.error('Profile avatar upload failed:', err.message)
     }
     return { avatarType: 'photo', avatarUrl: dataUrl }
+  }
+}
+
+async function readMyProfileMediaUrls(userId) {
+  const { data } = await supabase
+    .from('profiles')
+    .select('avatar_url, cover_url')
+    .eq('id', userId)
+    .maybeSingle()
+  return {
+    avatarUrl: data?.avatar_url || null,
+    coverUrl: data?.cover_url || null,
   }
 }
 
@@ -206,6 +218,7 @@ export async function setMyCover(userId, coverValue) {
     throw new Error('Session mismatch. Sign out and log in again.')
   }
 
+  const { coverUrl: previousCover } = await readMyProfileMediaUrls(userId)
   let cover = coverValue ?? null
 
   // If it's an uploaded photo (data URL), push it to Storage and keep only the
@@ -237,6 +250,8 @@ export async function setMyCover(userId, coverValue) {
     }
     throw wrapProfileError(error)
   }
+
+  await retireMedia(previousCover, cover)
 }
 
 export function readFileAsDataUrl(file) {

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { upsertProfileFields, claimFrenHandle, persistProfileAvatar } from './lib/profile'
+import { retireMedia } from './lib/storage'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -47,10 +48,24 @@ export async function saveFounderProfile(userId, profile, { isFounder = false } 
 }
 
 export async function setPhotoAvatar(userId, sanitizedDataUrl) {
+  const { data } = await supabase
+    .from('profiles')
+    .select('avatar_url')
+    .eq('id', userId)
+    .maybeSingle()
+  const previousUrl = data?.avatar_url || null
   const { avatarType, avatarUrl } = await persistProfileAvatar(sanitizedDataUrl)
   await upsertProfileFields(userId, { avatar_type: avatarType, avatar_url: avatarUrl })
+  await retireMedia(previousUrl, avatarUrl)
 }
 
 export async function setFrogAvatar(userId) {
+  const { data } = await supabase
+    .from('profiles')
+    .select('avatar_url')
+    .eq('id', userId)
+    .maybeSingle()
+  const previousUrl = data?.avatar_url || null
   await upsertProfileFields(userId, { avatar_type: 'frog', avatar_url: null })
+  await retireMedia(previousUrl, null)
 }

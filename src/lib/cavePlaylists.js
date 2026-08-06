@@ -4,6 +4,7 @@ import {
   trackToEmbed,
   PlaylistsNotInstalledError,
 } from './playlists'
+import { retireMedia } from './storage'
 
 export class CavePlaylistsNotInstalledError extends Error {}
 
@@ -77,6 +78,13 @@ export async function deleteCavePlaylist(id) {
 }
 
 export async function setCavePlaylistCover(id, coverUrl) {
+  const { data: prior } = await supabase
+    .from('cave_playlists')
+    .select('cover_url')
+    .eq('id', id)
+    .maybeSingle()
+  const previousUrl = prior?.cover_url || null
+
   const { error } = await supabase.rpc('set_cave_playlist_cover', {
     p_id: id,
     p_cover_url: coverUrl || null,
@@ -85,6 +93,7 @@ export async function setCavePlaylistCover(id, coverUrl) {
     throwIfNotInstalled(error)
     throw error
   }
+  await retireMedia(previousUrl, coverUrl || null)
 }
 
 export async function addCavePlaylistTrack(playlistId, url, title = null) {

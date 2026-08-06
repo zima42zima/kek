@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient'
 import { applyEmojiReactionToggle } from './emojiReactions'
-import { uploadMedia, StorageNotInstalledError } from './storage'
+import { uploadMedia, retireMedia, StorageNotInstalledError } from './storage'
 import { isDataImageUrl } from './urls'
 
 export { applyEmojiReactionToggle as applyReactionToggle }
@@ -268,8 +268,17 @@ export async function setCaveCoverRemote(caveId, coverUrl) {
  */
 export async function publishCaveCoverRemote(caveId, coverUrl) {
   if (!caveId) return null
+
+  const { data: prior } = await supabase
+    .from('caves')
+    .select('cover_url')
+    .eq('id', caveId)
+    .maybeSingle()
+  const previousUrl = prior?.cover_url || null
+
   if (!coverUrl) {
     await setCaveCoverRemote(caveId, null)
+    await retireMedia(previousUrl, null)
     return null
   }
 
@@ -290,6 +299,7 @@ export async function publishCaveCoverRemote(caveId, coverUrl) {
   }
 
   await setCaveCoverRemote(caveId, url)
+  await retireMedia(previousUrl, url)
   return url
 }
 

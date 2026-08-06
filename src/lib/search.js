@@ -6,6 +6,28 @@ import { supabase } from '../supabaseClient'
 import { searchProfiles } from './social'
 import { listPosts } from './posts'
 import { searchEchoPlaces } from './echoes'
+import {
+  hydrateItemAvatars,
+  liveProfilesRecord,
+  prefetchLiveProfiles,
+} from './liveAvatars'
+
+function embedProfile(row) {
+  const pr = row?.profiles
+  if (!pr) return null
+  return Array.isArray(pr) ? (pr[0] || null) : pr
+}
+
+async function withLiveAvatars(items) {
+  if (!items?.length) return items || []
+  const ids = items.map((p) => p.userId || p.ownerId).filter(Boolean)
+  try {
+    await prefetchLiveProfiles(ids)
+  } catch {
+    /* keep mapped avatars */
+  }
+  return hydrateItemAvatars(items, liveProfilesRecord())
+}
 
 function escapeLike(value) {
   return String(value).replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
@@ -82,19 +104,20 @@ export async function searchPublicPosts(query, { limit = 8, feedPosts = [] } = {
     .limit(limit)
 
   if (!error && data) {
-    return data.map((row) => {
-      const pr = row.profiles
+    return withLiveAvatars(data.map((row) => {
+      const pr = embedProfile(row)
       return {
         id: row.id,
         userId: row.user_id,
         text: row.body || '',
         image: row.image || null,
         frenName: pr?.silly_name || row.author_name || 'fren',
+        // Prefer live profile; never keep a stale post snapshot when profile has a photo.
         avatarType: pr?.avatar_type || row.avatar_type || 'frog',
-        avatarUrl: pr?.avatar_url ?? row.avatar_url ?? null,
+        avatarUrl: pr?.avatar_url ?? null,
         createdAt: row.created_at,
       }
-    })
+    }))
   }
 
   // Schema may omit author_name / profile join — retry minimal select.
@@ -108,16 +131,16 @@ export async function searchPublicPosts(query, { limit = 8, feedPosts = [] } = {
       .limit(limit)
 
     if (!retry.error && retry.data) {
-      return retry.data.map((row) => ({
+      return withLiveAvatars(retry.data.map((row) => ({
         id: row.id,
         userId: row.user_id,
         text: row.body || '',
         image: row.image || null,
         frenName: row.author_name || 'fren',
         avatarType: row.avatar_type || 'frog',
-        avatarUrl: row.avatar_url || null,
+        avatarUrl: null,
         createdAt: row.created_at,
-      }))
+      })))
     }
   }
 
@@ -131,24 +154,26 @@ export async function searchPublicPosts(query, { limit = 8, feedPosts = [] } = {
     }
   }
 
-  return pool
-    .filter((p) => {
-      const aud = p.audience || 'everyone'
-      if (aud !== 'everyone' && aud !== 'cave') return false
-      return includesNeedle(p.text, q)
-        || (Array.isArray(p.tags) && p.tags.some((t) => includesNeedle(t, q)))
-    })
-    .slice(0, limit)
-    .map((p) => ({
-      id: p.id,
-      userId: p.userId,
-      text: p.text || '',
-      image: p.image || null,
-      frenName: p.frenName || 'fren',
-      avatarType: p.avatarType || 'frog',
-      avatarUrl: p.avatarUrl || null,
-      createdAt: p.createdAt,
-    }))
+  return withLiveAvatars(
+    pool
+      .filter((p) => {
+        const aud = p.audience || 'everyone'
+        if (aud !== 'everyone' && aud !== 'cave') return false
+        return includesNeedle(p.text, q)
+          || (Array.isArray(p.tags) && p.tags.some((t) => includesNeedle(t, q)))
+      })
+      .slice(0, limit)
+      .map((p) => ({
+        id: p.id,
+        userId: p.userId,
+        text: p.text || '',
+        image: p.image || null,
+        frenName: p.frenName || 'fren',
+        avatarType: p.avatarType || 'frog',
+        avatarUrl: p.avatarUrl || null,
+        createdAt: p.createdAt,
+      })),
+  )
 }
 
 /**
@@ -192,14 +217,14 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
 
   if (!error && data) {
     for (const row of data) {
-      const pr = row.profiles
+      const pr = embedProfile(row)
       push({
         id: row.id,
         kind: row.kind,
         ownerId: row.owner_id,
         authorName: pr?.silly_name || row.author_name || 'a fren',
         avatarType: pr?.avatar_type || row.avatar_type || 'frog',
-        avatarUrl: pr?.avatar_url ?? row.avatar_url ?? null,
+        avatarUrl: pr?.avatar_url ?? null,
         label: row.label || '',
         cityLabel: row.city_label || null,
         placeLabel: row.place_label || null,
@@ -227,7 +252,7 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
           ownerId: row.owner_id,
           authorName: row.author_name || 'a fren',
           avatarType: row.avatar_type || 'frog',
-          avatarUrl: row.avatar_url || null,
+          avatarUrl: null,
           label: row.label || '',
           cityLabel: row.city_label || null,
           placeLabel: row.place_label || null,
@@ -241,5 +266,5 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
     }
   }
 
-  return [...byId.values()].slice(0, limit)
+  return withLiveAvatars([...byId.values()].slice(0, limit))
 }
