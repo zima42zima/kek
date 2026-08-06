@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { fetchProfileForUser, getSupabaseProjectRef } from '../lib/profile'
 import { linkLabel } from '../lib/urls'
 import GathererIcon from '../components/gatherer/GathererIcon'
-import ProfileShareToggle from '../components/ProfileShareToggle'
+import { ensureShowcaseOn } from '../lib/profileShowcase'
 import {
   addMoodboardItemFromFile,
   addMoodboardItemFromUrl,
@@ -65,24 +65,40 @@ function MoodboardCoverThumb({ coverUrl, name }) {
   )
 }
 
-function MoodboardRow({ board, onOpen }) {
+function MoodboardRow({ board, editable, busy, onOpen, onTogglePublic }) {
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(board)}
-      className="w-full text-left border frens-border rounded-xl p-3.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition"
-    >
-      <div className="flex items-center gap-3">
-        <MoodboardCoverThumb coverUrl={board.coverUrl} name={board.name} />
-        <div className="min-w-0 flex-1">
-          <h3 className="frens-title-sm truncate">{board.name}</h3>
-          <p className="text-xs frens-muted mt-0.5">
-            {board.itemCount === 1 ? '1 image' : `${board.itemCount} images`}
-          </p>
+    <div className="border frens-border rounded-xl p-3.5">
+      <button
+        type="button"
+        onClick={() => onOpen(board)}
+        className="w-full text-left hover:opacity-90 transition"
+      >
+        <div className="flex items-center gap-3">
+          <MoodboardCoverThumb coverUrl={board.coverUrl} name={board.name} />
+          <div className="min-w-0 flex-1">
+            <h3 className="frens-title-sm truncate">{board.name}</h3>
+            <p className="text-xs frens-muted mt-0.5">
+              {board.itemCount === 1 ? '1 image' : `${board.itemCount} images`}
+            </p>
+          </div>
+          <span className="text-xs frens-muted">→</span>
         </div>
-        <span className="text-xs frens-muted">→</span>
-      </div>
-    </button>
+      </button>
+      {editable && !board.legacy ? (
+        <label className="mt-2.5 flex items-center gap-2 text-xs cursor-pointer border-t frens-border pt-2.5">
+          <input
+            type="checkbox"
+            className="ps-checkbox"
+            checked={Boolean(board.isPublic)}
+            disabled={busy}
+            onChange={(e) => onTogglePublic?.(board, e.target.checked)}
+          />
+          <span className={board.isPublic ? 'text-black dark:text-white' : 'frens-muted'}>
+            {board.isPublic ? 'Public on profile' : 'Private — only you see this'}
+          </span>
+        </label>
+      ) : null}
+    </div>
   )
 }
 
@@ -230,7 +246,6 @@ export default function Gatherer({
   const [newBoardName, setNewBoardName] = useState('')
   const [editName, setEditName] = useState('')
   const [editPublic, setEditPublic] = useState(true)
-  const [listEditing, setListEditing] = useState(false)
   const [editing, setEditing] = useState(false)
   const [layoutEditing, setLayoutEditing] = useState(false)
   const fileRef = useRef(null)
@@ -297,7 +312,6 @@ export default function Gatherer({
     setItems([])
     setEditing(false)
     setLayoutEditing(false)
-    setListEditing(false)
     loadBoards()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
@@ -350,11 +364,39 @@ export default function Gatherer({
     setError('')
     try {
       await updateMoodboard(selected.id, { name, isPublic })
+      if (isPublic && userId) {
+        await ensureShowcaseOn(userId, 'moodboards')
+      }
       const next = { ...selected, name, isPublic }
       setSelected(next)
       setBoards((prev) => prev.map((b) => (b.id === selected.id ? { ...b, name, isPublic } : b)))
     } catch (err) {
       setError(err.message || 'Could not update moodboard.')
+      setEditPublic(selected.isPublic)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function toggleBoardPublic(board, nextPublic) {
+    if (!editable || busy || board.legacy) return
+    setBusy(true)
+    setError('')
+    setBoards((prev) => prev.map((b) => (b.id === board.id ? { ...b, isPublic: nextPublic } : b)))
+    if (selected?.id === board.id) {
+      setSelected((s) => (s ? { ...s, isPublic: nextPublic } : s))
+      setEditPublic(nextPublic)
+    }
+    try {
+      await updateMoodboard(board.id, { name: board.name, isPublic: nextPublic })
+      if (nextPublic && userId) await ensureShowcaseOn(userId, 'moodboards')
+    } catch (err) {
+      setBoards((prev) => prev.map((b) => (b.id === board.id ? { ...b, isPublic: board.isPublic } : b)))
+      if (selected?.id === board.id) {
+        setSelected(board)
+        setEditPublic(board.isPublic)
+      }
+      setError(err.message || 'Could not update visibility.')
     } finally {
       setBusy(false)
     }
@@ -367,6 +409,7 @@ export default function Gatherer({
     setError('')
     try {
       const id = await createMoodboard(newBoardName, true)
+      if (userId) await ensureShowcaseOn(userId, 'moodboards')
       setNewBoardName('')
       await loadBoards()
       const created = (await listUserMoodboards(userId)).find((b) => b.id === id)
@@ -571,7 +614,7 @@ export default function Gatherer({
                 }}
                 className="ps-checkbox"
               />
-              <span>Public</span>
+              <span>Public — others can see this board on your profile</span>
             </label>
             <div className="flex flex-wrap items-center gap-2">
               {items.length > 0 ? (
@@ -684,24 +727,7 @@ export default function Gatherer({
             <p className="text-xs frens-muted mt-0.5">{ownerName}</p>
           ) : null}
         </div>
-        {editable ? (
-          <button
-            type="button"
-            onClick={() => setListEditing((v) => !v)}
-            className={`frens-btn-outline px-3 py-1.5 text-xs shrink-0 ${listEditing ? 'ring-2 ring-black/20 dark:ring-white/20' : ''}`}
-          >
-            {listEditing ? 'Done' : 'Edit'}
-          </button>
-        ) : null}
       </div>
-
-      {editable && listEditing ? (
-        <ProfileShareToggle
-          showcaseKey="moodboards"
-          label="Show on profile"
-          hint=""
-        />
-      ) : null}
 
       {editable && moodboardsInstalled ? (
         <form onSubmit={handleCreateBoard} className="flex gap-2">
@@ -737,7 +763,10 @@ export default function Gatherer({
             <MoodboardRow
               key={board.id}
               board={board}
+              editable={editable}
+              busy={busy}
               onOpen={openBoard}
+              onTogglePublic={toggleBoardPublic}
             />
           ))}
         </div>

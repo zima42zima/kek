@@ -241,15 +241,13 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
                   onOpenPlaylists={onOpenPlaylists}
                   onCloseProfile={onClose}
                 />
-                {showcase && isShowcaseOn(showcase, 'moodboards') ? (
-                  <ProfileGathererPublic
-                    userId={userId}
-                    frenName={card.frenName}
-                    onOpenGatherer={onOpenGatherer}
-                    onNavigate={onNavigate}
-                    onCloseProfile={onClose}
-                  />
-                ) : null}
+                <ProfileGathererPublic
+                  userId={userId}
+                  frenName={card.frenName}
+                  onOpenGatherer={onOpenGatherer}
+                  onNavigate={onNavigate}
+                  onCloseProfile={onClose}
+                />
               </div>
             )}
           </div>

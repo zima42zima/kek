@@ -11,17 +11,28 @@ export default function ProfileGathererPublic({
   onCloseProfile,
 }) {
   const [count, setCount] = useState(0)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     if (!userId) return
     let cancelled = false
+    setReady(false)
     listUserMoodboards(userId)
-      .then((rows) => { if (!cancelled) setCount(rows.length) })
-      .catch(() => { if (!cancelled) setCount(0) })
+      .then((rows) => {
+        if (cancelled) return
+        // Only boards marked public are returned for other frens.
+        setCount(rows.filter((b) => b.isPublic !== false).length)
+      })
+      .catch(() => {
+        if (!cancelled) setCount(0)
+      })
+      .finally(() => {
+        if (!cancelled) setReady(true)
+      })
     return () => { cancelled = true }
   }, [userId])
 
-  if (count === 0) return null
+  if (!ready || count === 0) return null
 
   function open() {
     if (onOpenGatherer) {
