@@ -30,6 +30,7 @@ import {
 
 import CaveRolesEditor from './CaveRolesEditor'
 import CavePlaylists from './CavePlaylists'
+import CaveReplyIcon from './CaveReplyIcon'
 import { MusicNoteIcon } from '../icons/UiIcons'
 import FrensSelect from '../FrensSelect'
 import { appOrigin } from '../../lib/brand'
@@ -527,6 +528,24 @@ function CaveDaySep({ label }) {
   )
 }
 
+function ReplyToPreview({ preview, mine = false }) {
+  if (!preview) return null
+  const snippet = preview.text ? String(preview.text).slice(0, 80) : ''
+  return (
+    <div
+      className={`inline-flex items-center gap-1.5 max-w-full text-[11px] frens-muted ${
+        mine ? 'flex-row-reverse text-right' : ''
+      }`}
+    >
+      <CaveReplyIcon className={`w-3 h-3 opacity-70 ${mine ? '-scale-x-100' : ''}`} />
+      <span className="min-w-0 truncate">
+        <span className="font-medium text-black/70 dark:text-white/70">{preview.authorName || 'a fren'}</span>
+        {snippet ? <span className="opacity-75"> · {snippet}</span> : null}
+      </span>
+    </div>
+  )
+}
+
 function ChatMessage({
   message,
   member,
@@ -538,13 +557,10 @@ function ChatMessage({
   onReact,
   onHide,
   onReply,
-  replies = [],
   highlight = false,
-  nested = false,
 }) {
   const canReact = caveId && message.id != null && !String(message.id).startsWith('tmp-')
   const canMod = canModerate && canReact
-  const replyCount = replies.length
   const avatarProfile =
     mine && currentUserProfile ? currentUserProfile : member || message
   const hasText = Boolean(message.text?.trim())
@@ -586,28 +602,19 @@ function ChatMessage({
       >
         <ProfileAvatar
           profile={avatarProfile}
-          className={`${nested ? 'w-7 h-7' : 'w-8 h-8'} shrink-0 mt-0.5`}
-          logoClassName={nested ? 'w-4 h-auto' : 'w-5 h-auto'}
+          className="w-8 h-8 shrink-0 mt-0.5"
+          logoClassName="w-5 h-auto"
         />
         <div className={`flex-1 min-w-0 max-w-[85%] flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
-          {(message.pinned || message.hidden || (member && !nested)) ? (
+          {(message.pinned || message.hidden || member) ? (
             <div className={`flex items-center gap-1.5 ${mine ? 'flex-row-reverse' : ''}`}>
-              {member && !nested ? <CaveRoleBadge member={member} cave={cave} compact /> : null}
+              {member ? <CaveRoleBadge member={member} cave={cave} compact /> : null}
               {message.pinned ? <PinIcon className="w-3 h-3 shrink-0" /> : null}
               {message.hidden ? <span className="text-[10px] frens-muted">(hidden)</span> : null}
             </div>
           ) : null}
           {message.replyPreview ? (
-            <div
-              className={`text-[10px] frens-muted border-l-2 frens-border pl-2 py-0.5 max-w-full ${
-                mine ? 'border-l-0 border-r-2 pr-2 pl-0' : ''
-              }`}
-            >
-              <span className="font-medium">{message.replyPreview.authorName}</span>
-              {message.replyPreview.text ? (
-                <span className="opacity-80"> — {String(message.replyPreview.text).slice(0, 80)}</span>
-              ) : null}
-            </div>
+            <ReplyToPreview preview={message.replyPreview} mine={mine} />
           ) : null}
           {message.sticker ? (
             <span className="text-4xl leading-none block">{message.sticker}</span>
@@ -655,35 +662,6 @@ function ChatMessage({
           />
         </div>
       </div>
-
-      {!nested && replyCount > 0 ? (
-        <div
-          className={`mt-1.5 ${
-            mine ? 'mr-4 sm:mr-6 pr-3 border-r-2' : 'ml-4 sm:ml-6 pl-3 border-l-2'
-          } frens-border space-y-2`}
-        >
-          <p className="text-[10px] frens-muted tracking-wide">
-            {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
-          </p>
-          {replies.map((r) => (
-            <ChatMessage
-              key={r.id}
-              message={r}
-              member={r._member}
-              mine={r._mine}
-              caveId={caveId}
-              cave={cave}
-              currentUserProfile={currentUserProfile}
-              canModerate={canModerate}
-              onReact={r._onReact}
-              onHide={r._onHide}
-              onReply={onReply}
-              nested
-              highlight={r._highlight}
-            />
-          ))}
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -701,7 +679,6 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [replyTo, setReplyTo] = useState(null)
-  const [expandedThreads, setExpandedThreads] = useState(() => new Set())
   const fileInputRef = useRef(null)
   const scrollRef = useRef(null)
   const textareaRef = useRef(null)
@@ -717,25 +694,11 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
     ? new Set(visibleMessages.filter((m) => messageSearchText(m).includes(q)).map((m) => String(m.id)))
     : null
 
-  // Threads: roots + replies under parent
-  const repliesByParent = new Map()
-  visibleMessages.forEach((m) => {
-    if (m.parentId == null || m.parentId === '') return
-    const key = String(m.parentId)
-    if (!repliesByParent.has(key)) repliesByParent.set(key, [])
-    repliesByParent.get(key).push(m)
-  })
-  const rootMessages = visibleMessages.filter((m) => m.parentId == null || m.parentId === '')
-  const pinned = rootMessages.filter((m) => m.pinned)
-  let chatMessages = rootMessages.filter((m) => !m.pinned)
+  // Flat group timeline: every message (including replies) sits in order at the bottom.
+  const pinned = visibleMessages.filter((m) => m.pinned)
+  let chatMessages = visibleMessages.filter((m) => !m.pinned)
   if (searchHitIds) {
-    // Keep roots that match or have a matching reply; auto-expand those threads
-    chatMessages = chatMessages.filter((m) => {
-      const id = String(m.id)
-      if (searchHitIds.has(id)) return true
-      const kids = repliesByParent.get(id) || []
-      return kids.some((r) => searchHitIds.has(String(r.id)))
-    })
+    chatMessages = chatMessages.filter((m) => searchHitIds.has(String(m.id)))
   }
 
   useEffect(() => {
@@ -804,17 +767,9 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
     const text = draft.trim()
     if (!text || sendingRef.current) return
     sendingRef.current = true
-    const parent = replyTo
     pushMessage({ text })
     setDraft('')
     setReplyTo(null)
-    if (parent?.id != null) {
-      setExpandedThreads((prev) => {
-        const next = new Set(prev)
-        next.add(String(parent.id))
-        return next
-      })
-    }
     // Allow next send after React applies draft clear (avoids double Enter/submit).
     requestAnimationFrame(() => {
       sendingRef.current = false
@@ -822,54 +777,18 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
   }
 
   function startReply(message) {
-    // Reply to a reply still threads under the original root
-    if (message.parentId != null) {
-      setReplyTo({
-        id: message.parentId,
-        authorName: message.replyPreview?.authorName || message.authorName,
-        text: message.replyPreview?.text || message.text || '',
-      })
-      setExpandedThreads((prev) => new Set(prev).add(String(message.parentId)))
-    } else {
-      setReplyTo({
-        id: message.id,
-        authorName: message.authorName,
-        text: message.text || (message.image ? '[image]' : '') || (message.sticker ? message.sticker : ''),
-      })
-      setExpandedThreads((prev) => new Set(prev).add(String(message.id)))
-    }
+    // Reply to this exact message; the new bubble lands at the bottom of the chat.
+    setReplyTo({
+      id: message.id,
+      authorName: message.authorName || 'a fren',
+      text: message.text || (message.image ? '[image]' : '') || (message.sticker ? message.sticker : ''),
+    })
     requestAnimationFrame(() => textareaRef.current?.focus())
-  }
-
-  function decorateReplies(parentId) {
-    const kids = repliesByParent.get(String(parentId)) || []
-    return kids.map((r) => ({
-      ...r,
-      _member: memberById(cave, r.authorId),
-      _mine: r.authorId === currentUserId,
-      _onReact: (emoji) => reactToCaveMessage(cave.id, r.id, emoji),
-      _onHide: () => hideCaveMessage(cave.id, r.id),
-      _highlight: Boolean(q && searchHitIds?.has(String(r.id))),
-    }))
   }
 
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus()
   }, [searchOpen])
-
-  // Auto-expand threads that match search
-  useEffect(() => {
-    if (!searchHitIds || searchHitIds.size === 0) return
-    setExpandedThreads((prev) => {
-      const next = new Set(prev)
-      repliesByParent.forEach((kids, parentId) => {
-        if (kids.some((r) => searchHitIds.has(String(r.id))) || searchHitIds.has(String(parentId))) {
-          next.add(String(parentId))
-        }
-      })
-      return next
-    })
-  }, [searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleImage(e) {
     const file = e.target.files?.[0]
@@ -1051,7 +970,6 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
                   onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
                   onHide={() => hideCaveMessage(cave.id, m.id)}
                   onReply={startReply}
-                  replies={decorateReplies(m.id)}
                 />
               ))}
             </div>
@@ -1086,7 +1004,6 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
                       onReact={(emoji) => reactToCaveMessage(cave.id, m.id, emoji)}
                       onHide={() => hideCaveMessage(cave.id, m.id)}
                       onReply={startReply}
-                      replies={decorateReplies(m.id)}
                       highlight={Boolean(q && searchHitIds?.has(String(m.id)))}
                     />
                   </div>
@@ -1101,14 +1018,13 @@ export default function CaveDetail({ cave, currentUserId, currentUserProfile, on
         {/* Composer — post-style row, docked above bottom nav */}
         <div className="shrink-0 z-20 frens-surface px-3 pt-1.5 pb-2">
           {replyTo ? (
-            <div className="mb-1.5 flex items-start gap-2 rounded-xl px-1 py-1.5 text-xs">
+            <div className="mb-1.5 flex items-center gap-2 rounded-xl border frens-border px-2.5 py-1.5 text-xs">
+              <CaveReplyIcon className="w-3.5 h-3.5 frens-muted shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="frens-muted">
-                  Replying to <span className="font-medium text-black dark:text-white">{replyTo.authorName}</span>
+                <p className="frens-muted truncate">
+                  Reply to <span className="font-medium text-black dark:text-white">{replyTo.authorName}</span>
+                  {replyTo.text ? <span className="opacity-75"> · {replyTo.text}</span> : null}
                 </p>
-                {replyTo.text ? (
-                  <p className="truncate frens-muted opacity-80 mt-0.5">{replyTo.text}</p>
-                ) : null}
               </div>
               <button
                 type="button"
