@@ -45,7 +45,7 @@ function DmDaySep({ label }) {
   )
 }
 
-function DmBubble({ message, avatarProfile, mine, canReact, onReact, showReport }) {
+function DmBubble({ message, avatarProfile, mine, canReact, onReact, canReport = false }) {
   const hasText = Boolean(message.text?.trim())
   const hasImage = Boolean(message.image && !message.video)
   const hasVideo = Boolean(message.video)
@@ -77,9 +77,8 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact, showReport 
               <div className={`max-w-full ${hasText ? 'mb-1' : ''}`}>
                 {hasVideo && <SharedVideo src={message.video} variant="chat" />}
                 {hasImage && <SharedImage src={message.image} variant="chat" />}
-                {!hasText && (reactionControls || showReport) ? (
-                  <div className={`flex items-center gap-1 mt-0.5 ${mine ? 'justify-end flex-row-reverse' : 'justify-start'}`}>
-                    {showReport}
+                {!hasText && (reactionControls || canReport) ? (
+                  <div className={`flex items-center gap-2 mt-0.5 ${mine ? 'justify-end flex-row-reverse' : 'justify-start'}`}>
                     {reactionControls}
                   </div>
                 ) : null}
@@ -92,14 +91,10 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact, showReport 
                     <RichText text={message.text} className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words" />
                   </div>
                 </div>
-                <div className={`flex items-center gap-1 shrink-0 ${mine ? 'flex-row-reverse' : ''}`}>
-                  {showReport}
-                  {reactionControls}
-                </div>
+                {reactionControls}
               </div>
-            ) : !hasMedia && (reactionControls || showReport) ? (
-              <div className={`flex items-center gap-1 ${mine ? 'justify-end flex-row-reverse' : 'justify-start'}`}>
-                {showReport}
+            ) : !hasMedia && reactionControls ? (
+              <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                 {reactionControls}
               </div>
             ) : null}
@@ -112,6 +107,7 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact, showReport 
           onReact={onReact}
           chipsOnly
         />
+        {canReport}
       </div>
     </div>
   )
@@ -313,7 +309,7 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
                     mine={m.senderId === currentUserId}
                     canReact={m.id != null && !String(m.id).startsWith('tmp-')}
                     onReact={(emoji) => reactToDmMessage(thread.id, m.id, emoji)}
-                    showReport={
+                    canReport={
                       m.senderId !== currentUserId && currentUserId && m.id && !String(m.id).startsWith('tmp-') ? (
                         <ReportContentButton
                           kind="dm"
@@ -321,7 +317,7 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
                           reportedUserId={m.senderId}
                           preview={m.text || m.image || m.video}
                           subjectLabel="this message"
-                          className="text-[10px] frens-muted hover:underline px-0.5 opacity-0 group-hover:opacity-100 focus:opacity-100 transition"
+                          className="text-[10px] frens-muted hover:underline"
                         />
                       ) : null
                     }

@@ -57,11 +57,11 @@ function InboxRow({ letter, onOpen }) {
   const label = isAnon ? 'Anonymous' : letter.fromDisplay
 
   return (
-    <li>
+    <li className="flex items-center gap-2 px-1 py-2.5">
       <button
         type="button"
         onClick={() => onOpen(letter)}
-        className="w-full flex items-center gap-3 px-1 py-2.5 text-left hover:opacity-80 transition"
+        className="min-w-0 flex-1 flex items-center gap-3 text-left hover:opacity-80 transition"
       >
         <span className="min-w-0 flex-1 flex items-center gap-2">
           {isAnon && (
@@ -75,6 +75,14 @@ function InboxRow({ letter, onOpen }) {
         <StatusDot status={letter.status} />
         <span className="text-[10px] frens-muted shrink-0 tabular-nums">{letter.timestamp}</span>
       </button>
+      <ReportContentButton
+        kind="owl_letter"
+        refId={letter.id}
+        reportedUserId={letter.anonymous ? null : letter.fromUserId}
+        preview={`Letter from ${label}`}
+        subjectLabel="this letter"
+        className="text-[10px] frens-muted hover:underline shrink-0"
+      />
     </li>
   )
 }

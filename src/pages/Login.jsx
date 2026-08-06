@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import ThemeControls from '../components/ThemeControls'
+import CommunityRulesModal from '../components/CommunityRulesModal'
 import { friendlyLoginError } from '../lib/onboarding'
 
 export default function Login({ onSuccess, onBack, onForgotPassword }) {
@@ -8,6 +9,7 @@ export default function Login({ onSuccess, onBack, onForgotPassword }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showRules, setShowRules] = useState(false)
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -105,7 +107,19 @@ export default function Login({ onSuccess, onBack, onForgotPassword }) {
             </button>
           </p>
         )}
+
+        <p className="text-center text-xs frens-muted mt-4">
+          <button
+            type="button"
+            onClick={() => setShowRules(true)}
+            className="underline hover:text-black dark:hover:text-white"
+          >
+            Community rules
+          </button>
+        </p>
       </div>
+
+      <CommunityRulesModal open={showRules} onClose={() => setShowRules(false)} />
     </div>
   )
 }

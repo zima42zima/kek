@@ -6,19 +6,20 @@ import ReportContentModal from './ReportContentModal'
  * Hide for own content at the call site.
  */
 export default function ReportContentButton({
-  kind,
-  refId,
+  kind = null,
+  refId = null,
   reportedUserId = null,
   preview = '',
   subjectLabel = 'this content',
   label = 'Report',
   className = 'text-[10px] frens-action shrink-0',
   disabled = false,
+  reportFn = null,
   onReported,
 }) {
   const [open, setOpen] = useState(false)
 
-  if (!refId || !kind) return null
+  if (!reportFn && (!refId || !kind)) return null
 
   return (
     <>
@@ -37,6 +38,7 @@ export default function ReportContentButton({
         reportedUserId={reportedUserId}
         preview={preview}
         subjectLabel={subjectLabel}
+        reportFn={reportFn}
         onClose={() => setOpen(false)}
         onReported={onReported}
       />

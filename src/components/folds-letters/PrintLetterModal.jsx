@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Modal from '../Modal'
 import FoldsLettersIcon from '../owl/FoldsLettersIcon'
+import ReportContentButton from '../ReportContentButton'
 import { printOwlLetter, canUseBrowserPrint } from '../../lib/owlPrint'
 
 export default function PrintLetterModal({ letter, onClose, onPrinted }) {
@@ -99,6 +100,17 @@ export default function PrintLetterModal({ letter, onClose, onPrinted }) {
               </button>
             </>
           )}
+        </div>
+
+        <div className="pt-4 mt-4 border-t frens-border flex justify-center">
+          <ReportContentButton
+            kind="owl_letter"
+            refId={letter.id}
+            reportedUserId={letter.anonymous ? null : letter.fromUserId}
+            preview={`Letter from ${letter.fromDisplay}`}
+            subjectLabel="this letter"
+            className="text-[11px] frens-muted hover:underline"
+          />
         </div>
       </div>
     </Modal>

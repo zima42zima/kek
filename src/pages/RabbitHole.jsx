@@ -31,6 +31,7 @@ import {
   amIMod,
   RabbitHoleNotInstalledError,
 } from '../lib/rabbitHole'
+import ReportContentButton from '../components/ReportContentButton'
 
 /** Photo when set; otherwise the same solid mark used in front of feed text posts (not monad). */
 function RhAvatar({ profile, className = 'w-8 h-8' }) {
@@ -259,16 +260,6 @@ function TopicDetail({ topicId, userId, isMod, onBack, onDeleted }) {
     }
   }
 
-  async function handleReportTopic() {
-    try {
-      await reportTopic(topicId)
-      setMsg('Reported — thank you')
-      setTimeout(() => setMsg(''), 2500)
-    } catch (err) {
-      setError(err.message || 'Could not report.')
-    }
-  }
-
   async function handleModHide() {
     if (!topic || !isMod) return
     setBusy(true)
@@ -338,7 +329,19 @@ function TopicDetail({ topicId, userId, isMod, onBack, onDeleted }) {
               <button type="button" onClick={handleFollow} disabled={busy} className={`text-xs px-3 py-1.5 rounded-full border frens-border ${topic.iFollow ? 'bg-black/10 dark:bg-white/10' : ''}`}>
                 {topic.iFollow ? 'Following' : 'Follow thread'}
               </button>
-              <button type="button" onClick={handleReportTopic} className="text-xs frens-action px-2 py-1.5">Report</button>
+              <ReportContentButton
+                kind="rabbit_topic"
+                refId={topic.id}
+                preview={topic.body}
+                subjectLabel="this topic"
+                label="Report"
+                className="text-xs frens-action px-2 py-1.5"
+                reportFn={async ({ reason }) => { await reportTopic(topic.id, reason) }}
+                onReported={() => {
+                  setMsg('Reported — thank you')
+                  setTimeout(() => setMsg(''), 2500)
+                }}
+              />
               {canDeleteTopic ? (
                 <button type="button" onClick={async () => { await deleteTopic(topic.id); onDeleted() }} disabled={busy} className="text-xs frens-action px-2 py-1.5">Delete</button>
               ) : null}
@@ -372,7 +375,21 @@ function TopicDetail({ topicId, userId, isMod, onBack, onDeleted }) {
                 <div className="flex items-baseline gap-2 mb-1 flex-wrap">
                   <FrenHandle className="text-xs">{replyAuthor.frenName}</FrenHandle>
                   <span className="text-[10px] frens-muted">{reply.timestamp}</span>
-                  <button type="button" onClick={() => reportReply(reply.id).then(() => setMsg('Reported reply ✓'))} className="text-[10px] frens-action ml-auto">Report</button>
+                  {reply.userId !== userId ? (
+                    <ReportContentButton
+                      kind="rabbit_reply"
+                      refId={reply.id}
+                      reportedUserId={reply.userId}
+                      preview={reply.body}
+                      subjectLabel="this reply"
+                      className="text-[10px] frens-action ml-auto"
+                      reportFn={async ({ reason }) => { await reportReply(reply.id, reason) }}
+                      onReported={() => {
+                        setMsg('Reported reply ✓')
+                        setTimeout(() => setMsg(''), 2500)
+                      }}
+                    />
+                  ) : null}
                   {reply.userId === userId ? (
                     <button type="button" onClick={() => deleteReply(reply.id).then(load)} disabled={busy} className="text-[10px] frens-action">Delete</button>
                   ) : null}

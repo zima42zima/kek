@@ -10,11 +10,12 @@ function truncatePreview(text, max = 200) {
 /** In-app report — goes to platform moderation inbox. */
 export default function ReportContentModal({
   open,
-  kind,
-  refId,
+  kind = null,
+  refId = null,
   reportedUserId = null,
   preview = '',
   subjectLabel = 'this content',
+  reportFn = null,
   onClose,
   onReported,
 }) {
@@ -40,17 +41,22 @@ export default function ReportContentModal({
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (busy || !kind || !refId) return
+    if (busy) return
+    if (!reportFn && (!kind || !refId)) return
     setBusy(true)
     setError('')
     try {
-      await filePlatformReport({
-        kind,
-        refId,
-        reportedUserId,
-        preview: truncatePreview(preview),
-        reason: reason.trim(),
-      })
+      if (reportFn) {
+        await reportFn({ reason: reason.trim() })
+      } else {
+        await filePlatformReport({
+          kind,
+          refId,
+          reportedUserId,
+          preview: truncatePreview(preview),
+          reason: reason.trim(),
+        })
+      }
       setDone(true)
       onReported?.()
     } catch (err) {
