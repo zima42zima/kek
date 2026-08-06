@@ -74,13 +74,14 @@ function FeedRefreshIndicator({ offset = 0, refreshing = false }) {
   )
 }
 
+// Optical balance in a shared 24×24 box — solid/wide marks read bigger than outline/padded ones.
 const NAV_ITEMS = [
-  { id: 'home', label: 'Home', icon: homeIcon },
-  { id: 'echoes', label: 'Echo', icon: echoesIcon },
-  { id: 'rabbit', label: 'Rabbit Hole', icon: rabbitholeIcon, iconScale: 0.9 },
-  { id: 'messages', label: 'Messages', icon: messagesIcon },
-  { id: 'caves', label: 'Caves', icon: cavesIcon },
-  { id: 'profile', label: 'Profile', icon: profileIcon },
+  { id: 'home', label: 'Home', icon: homeIcon, iconScale: 1 },
+  { id: 'echoes', label: 'Echo', icon: echoesIcon, iconScale: 0.92 },
+  { id: 'rabbit', label: 'Rabbit Hole', icon: rabbitholeIcon, iconScale: 0.76 },
+  { id: 'messages', label: 'Messages', icon: messagesIcon, iconScale: 1.18 },
+  { id: 'caves', label: 'Caves', icon: cavesIcon, iconScale: 1.22 },
+  { id: 'profile', label: 'Profile', icon: profileIcon, iconScale: 0.96 },
 ]
 
 /**
