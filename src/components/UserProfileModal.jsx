@@ -235,17 +235,17 @@ export default function UserProfileModal({ userId, onClose, onOpenList, onNaviga
                     onCloseProfile={onClose}
                   />
                 ) : null}
-                <ProfilePlaylistsPublic
-                  userId={userId}
-                  frenName={card.frenName}
-                  onOpenPlaylists={onOpenPlaylists}
-                  onCloseProfile={onClose}
-                />
                 <ProfileGathererPublic
                   userId={userId}
                   frenName={card.frenName}
                   onOpenGatherer={onOpenGatherer}
                   onNavigate={onNavigate}
+                  onCloseProfile={onClose}
+                />
+                <ProfilePlaylistsPublic
+                  userId={userId}
+                  frenName={card.frenName}
+                  onOpenPlaylists={onOpenPlaylists}
                   onCloseProfile={onClose}
                 />
               </div>
