@@ -1943,7 +1943,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
               )}
               {mapMode === 'explore' && explorePlace ? (
                 <p className="text-xs frens-muted px-1">
-                  {explorePlace.label} · 🌍 = open from anywhere
+                  {explorePlace.label}
                 </p>
               ) : null}
               <EchoMapView
