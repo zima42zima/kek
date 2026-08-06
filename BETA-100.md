@@ -46,7 +46,7 @@ If a patch says “safe to re-run”, you can run it again.
 | **Playlists** | `supabase-patch-playlists.sql` + social/saves/covers as needed |
 | **Gatherer** | `supabase-patch-moodboards.sql` |
 | **DM calls** | `supabase-patch-dm-calls.sql` |
-| **Caves (full)** | `supabase-patch-cave-members.sql`, roles, reactions, playlists |
+| **Caves (full)** | **`CAVES.md`** + run **`supabase-caves.sql` last** (canonical). Feature packs: roles, members*, reactions, playlists, covers (*members only if kick/invite RPCs missing, then re-run caves.sql) |
 
 Verify: `npm run db:check`
 

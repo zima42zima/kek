@@ -1,3 +1,6 @@
+-- ⚠️ SUPERSEDED — do not re-run. Redefines sync_cave / list_my_caves.
+-- Use supabase-caves.sql + supabase-patch-cave-cover-publish.sql instead. See CAVES.md.
+--
 -- Cave cover photos: persist on sync + reload in list_my_caves.
 -- Safe to re-run. Run in Supabase → SQL Editor after cave base patches.
 -- Also run supabase-patch-cave-covers.sql if you have not yet (column + set_cave_cover).

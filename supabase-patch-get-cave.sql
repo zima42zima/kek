@@ -1,3 +1,6 @@
+-- ⚠️ SUPERSEDED — merged into supabase-caves.sql. Do not re-run; use the foundation file.
+-- See CAVES.md.
+--
 -- get_cave: any member can load one full cave (members, messages, cover).
 -- Also keeps sync_cave from deleting joiners. Safe to re-run.
 -- Does NOT create tables. Variables use v_ prefixes (avoid Supabase RLS false positives).

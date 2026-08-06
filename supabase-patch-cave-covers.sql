@@ -1,3 +1,6 @@
+-- ⚠️ SUPERSEDED — prefer supabase-patch-cave-cover-publish.sql + supabase-caves.sql.
+-- See CAVES.md.
+--
 -- Cave cover photos for list/detail preview.
 -- Safe to re-run. Run in Supabase → SQL Editor.
 

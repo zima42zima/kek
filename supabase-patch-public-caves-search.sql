@@ -1,3 +1,5 @@
+-- ⚠️ SUPERSEDED — search_public_caves lives in supabase-caves.sql. See CAVES.md.
+--
 -- Public cave discover/search + self-join.
 -- Safe to re-run. Run in Supabase → SQL Editor after cave patches.
 

@@ -1,3 +1,6 @@
+-- ⚠️ SUPERSEDED — merged into supabase-caves.sql (with message caps). Prefer foundation.
+-- See CAVES.md.
+--
 -- Cave chat avatars: prefer live profile photo, fall back to snapshot on the message.
 -- Fixes joiners losing the other fren's photo after refresh when profiles.avatar_url
 -- is empty but cave_messages.avatar_url still has the URL from send time.

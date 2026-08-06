@@ -1,3 +1,5 @@
+-- ⚠️ SUPERSEDED — merged into supabase-caves.sql. See CAVES.md.
+--
 -- Delete a cave (owner only) and notify all other members.
 -- Safe to re-run.
 

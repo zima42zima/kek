@@ -1,3 +1,6 @@
+-- ⚠️ SUPERSEDED — merged into supabase-caves.sql. Prefer the foundation file.
+-- See CAVES.md.
+--
 -- Fix public cave joins: keep joiners through owner sync, return full cave, notify owner.
 -- Safe to re-run. Run in Supabase → SQL Editor after supabase-patch-public-caves-search.sql.
 --

@@ -1,5 +1,10 @@
+-- ⚠️ SUPERSEDED CORE — DO NOT re-run this whole file on production for “latest caves”.
+-- Its sync_cave DELETES members missing from the client roster (wipes joiners).
+-- If you need add/remove member RPCs once, run this then IMMEDIATELY re-run supabase-caves.sql.
+-- See CAVES.md.
+--
 -- Run this in Supabase → SQL Editor to fix cave invites, kicks, and re-adds.
--- Safe to re-run.
+-- Safe to re-run ONLY if followed by supabase-caves.sql.
 
 -- 1. sync_cave: reconcile member roster when owner syncs (fixes kick/re-add dead ends)
 create or replace function public.sync_cave(p_cave jsonb)

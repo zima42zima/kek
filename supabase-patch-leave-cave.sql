@@ -1,3 +1,5 @@
+-- ⚠️ SUPERSEDED — merged into supabase-caves.sql. See CAVES.md.
+--
 -- Allow a member to leave a cave (not the owner).
 -- Safe to re-run. No tables created.
 

@@ -1,3 +1,6 @@
+-- ⚠️ Contains an older sync_cave — after running, IMMEDIATELY re-run supabase-caves.sql.
+-- Prefer: run set_cave_roles portion only, or run this then supabase-caves.sql. See CAVES.md.
+--
 -- Per-cave custom role catalog (max 12). Safe to re-run.
 
 alter table public.caves add column if not exists roles jsonb;
