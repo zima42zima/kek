@@ -100,6 +100,35 @@ export function caveToRpcPayload(cave) {
   }
 }
 
+function pickFilled(...candidates) {
+  for (const value of candidates) {
+    if (value == null) continue
+    if (typeof value === 'string' && !value.trim()) continue
+    return value
+  }
+  return null
+}
+
+/** Merge member rows without letting null/empty avatars erase a known photo. */
+function mergeMemberRows(prev, next) {
+  const a = prev ? mapMember(prev) : null
+  const b = next ? mapMember(next) : null
+  if (!a) return b
+  if (!b) return a
+  return {
+    ...a,
+    ...b,
+    name: pickFilled(b.name, a.name) || 'a fren',
+    avatarType: pickFilled(b.avatarType, a.avatarType) || 'frog',
+    avatarUrl: pickFilled(b.avatarUrl, a.avatarUrl),
+    role: pickFilled(b.role, a.role) || 'member',
+    funTitle: pickFilled(b.funTitle, a.funTitle),
+    titleExpiresAt: b.titleExpiresAt ?? a.titleExpiresAt ?? null,
+    modRole: pickFilled(b.modRole, a.modRole),
+    modExpiresAt: b.modExpiresAt ?? a.modExpiresAt ?? null,
+  }
+}
+
 /**
  * Union explicit members with owner + anyone who has posted.
  * Keeps member count honest when roster lag behind chat activity.
@@ -109,7 +138,8 @@ export function enrichCaveRoster(cave) {
   const byId = new Map()
   for (const m of cave.members || []) {
     if (!m?.id) continue
-    byId.set(String(m.id), mapMember(m))
+    const key = String(m.id)
+    byId.set(key, mergeMemberRows(byId.get(key), m))
   }
   if (cave.ownerId && !byId.has(String(cave.ownerId))) {
     byId.set(String(cave.ownerId), {
@@ -122,14 +152,17 @@ export function enrichCaveRoster(cave) {
   }
   for (const msg of cave.messages || []) {
     const id = msg?.authorId
-    if (id == null || byId.has(String(id))) continue
-    byId.set(String(id), {
+    if (id == null) continue
+    const key = String(id)
+    const fromMsg = {
       id,
       name: msg.authorName || 'a fren',
       avatarType: msg.avatarType || 'frog',
       avatarUrl: msg.avatarUrl || null,
       role: String(id) === String(cave.ownerId) ? 'owner' : 'member',
-    })
+    }
+    // Fill gaps from messages — never leave a null owner stub over a real photo.
+    byId.set(key, mergeMemberRows(byId.get(key), fromMsg))
   }
   return { ...cave, members: [...byId.values()] }
 }
@@ -567,8 +600,7 @@ export function mergeCaveSnapshot(local, remote) {
   ;[...(local?.members || []), ...(remote.members || [])].forEach((m) => {
     if (!m?.id) return
     const key = String(m.id)
-    const prev = memberMap.get(key)
-    memberMap.set(key, prev ? { ...prev, ...mapMember(m) } : mapMember(m))
+    memberMap.set(key, mergeMemberRows(memberMap.get(key), m))
   })
   const localMsgs = local?.messages || []
   const remoteMsgs = remote.messages || []
@@ -587,6 +619,7 @@ export function mergeCaveSnapshot(local, remote) {
 
   // Server messages are source of truth (stable ids), but keep local thread fields
   // when the server payload does not yet include parent_id (SQL patch not applied).
+  // Also keep a known avatarUrl when live-profile join returns null.
   remoteMsgs.forEach((m) => {
     if (m?.id == null) return
     const key = String(m.id)
@@ -599,6 +632,9 @@ export function mergeCaveSnapshot(local, remote) {
       ...base,
       parentId,
       replyPreview,
+      authorName: pickFilled(m.authorName, prev?.authorName, local?.authorName) || 'a fren',
+      avatarType: pickFilled(m.avatarType, prev?.avatarType, local?.avatarType) || 'frog',
+      avatarUrl: pickFilled(m.avatarUrl, prev?.avatarUrl, local?.avatarUrl),
       reactions: (m.reactions?.length ? m.reactions : (prev?.reactions || local?.reactions)) || [],
     })
   })

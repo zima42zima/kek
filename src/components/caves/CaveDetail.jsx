@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ProfileAvatar } from '../FrogLogo'
+import useLiveAuthorProfile from '../../hooks/useLiveAuthorProfile'
 import { prepareImageAttachment, finalizeImageUrl, finalizeGifUrl } from '../../lib/imageAttach'
 import { hasRichEmbeds } from '../../lib/urls'
 import { insertAtCaret } from '../../lib/insertText'
@@ -574,8 +575,16 @@ function ChatMessage({
 }) {
   const canReact = caveId && message.id != null && !String(message.id).startsWith('tmp-')
   const canMod = canModerate && canReact
-  const avatarProfile =
-    mine && currentUserProfile ? currentUserProfile : member || message
+  const liveAuthor = useLiveAuthorProfile(message.authorId, { enabled: !mine && Boolean(message.authorId) })
+  const avatarProfile = mine && currentUserProfile
+    ? currentUserProfile
+    : {
+        ...(member || {}),
+        frenName: liveAuthor?.frenName || member?.name || message.authorName || 'a fren',
+        avatarType: liveAuthor?.avatarType || member?.avatarType || message.avatarType || 'frog',
+        // Prefer live profile, then message snapshot, then roster (roster often lags with null).
+        avatarUrl: liveAuthor?.avatarUrl || message.avatarUrl || member?.avatarUrl || null,
+      }
   const hasText = Boolean(message.text?.trim())
   const hasImage = Boolean(message.image)
 
