@@ -208,6 +208,19 @@ export async function joinPublicCave(caveId) {
   return mapRemoteCave(row)
 }
 
+/** Full cave for a member. Needs get_cave RPC (supabase-patch-get-cave.sql). */
+export async function getCaveRemote(caveId) {
+  if (!caveId) return null
+  const { data, error } = await supabase.rpc('get_cave', { p_cave_id: caveId })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+  if (!data) return null
+  const row = typeof data === 'string' ? JSON.parse(data) : data
+  return mapRemoteCave(row)
+}
+
 /** Public caves this fren owns and chose to show on profile (not joined caves). */
 export function cavesVisibleOnProfile(caves, ownerId) {
   return (caves ?? []).filter((c) => {
@@ -275,6 +288,16 @@ export async function publishOwnedCaveRemote(cave, ownerId) {
   } catch (err) {
     if (!(err instanceof CavesNotInstalledError)) throw err
     await syncCaveRemote({ ...cave, access, ownerId }, { forceOwnerId: ownerId })
+  }
+  // Push cover so joiners see the same banner the owner set locally.
+  if (cave.coverUrl) {
+    try {
+      await setCaveCoverRemote(cave.id, cave.coverUrl)
+    } catch (err) {
+      if (!(err instanceof CavesNotInstalledError)) {
+        console.error('Could not push cave cover:', err.message)
+      }
+    }
   }
   if (access === 'public' && !cave.hiddenOnProfile) {
     await setCaveProfileHidden(cave.id, false)
@@ -447,9 +470,15 @@ function messageContentKey(m) {
 
 export function mergeCaveSnapshot(local, remote) {
   if (!remote?.id) return local
+  const remoteMembers = remote.members || []
+  const localMembers = local?.members || []
+  // Server roster wins when it has more people (join seeds are 1-member).
   const memberMap = new Map()
-  ;[...(remote.members || []), ...(local?.members || [])].forEach((m) => {
-    if (m?.id) memberMap.set(m.id, m)
+  const memberSource = remoteMembers.length >= localMembers.length
+    ? [...localMembers, ...remoteMembers]
+    : [...remoteMembers, ...localMembers]
+  memberSource.forEach((m) => {
+    if (m?.id) memberMap.set(String(m.id), m)
   })
   const localMsgs = local?.messages || []
   const remoteMsgs = remote.messages || []
@@ -523,15 +552,15 @@ export function mergeCaveSnapshot(local, remote) {
     ? false
     : (remote.hiddenOnProfile ?? local?.hiddenOnProfile ?? false)
   return {
-    ...remote,
-    ...(local || {}),
     id: remote.id,
     name: remote.name ?? local?.name,
     ownerId,
     access,
-    emoji: remote.emoji ?? local?.emoji,
+    emoji: remote.emoji ?? local?.emoji ?? '🕳️',
     banned: remote.banned?.length ? remote.banned : (local?.banned ?? []),
-    emojiPacks: local?.emojiPacks?.length ? local.emojiPacks : (remote.emojiPacks || []),
+    emojiPacks: (Array.isArray(remote.emojiPacks) && remote.emojiPacks.length)
+      ? remote.emojiPacks
+      : (local?.emojiPacks || []),
     hiddenOnProfile,
     coverUrl: remote.coverUrl || remote.cover_url || local?.coverUrl || null,
     roles: Array.isArray(remote.roles) && remote.roles.length

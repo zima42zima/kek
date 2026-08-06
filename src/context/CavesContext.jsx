@@ -10,6 +10,8 @@ import {
   syncCaveRemote,
   publishOwnedCaveRemote,
   joinPublicCave,
+  getCaveRemote,
+  listCaveMessagesRemote,
   sendCaveMessageRemote,
   setCaveCoverRemote,
   deleteCaveRemote,
@@ -82,18 +84,17 @@ function keepLocalCave(cave, meId, accessibleIds, pendingJoined) {
   return Boolean(pendingJoined?.has(String(cave.id)))
 }
 
-/** True once we have server-shaped cave data (not a one-member join seed). */
+/**
+ * True once we have server-shaped cave data (not a one-member join seed).
+ * Own messages alone do NOT count — join seeds become "hydrated" that way and stick forever.
+ */
 function isHydratedCave(cave, meId) {
   if (!cave?.id) return false
+  // Owner viewing their own cave is always authoritative locally.
+  if (meId != null && String(cave.ownerId) === String(meId)) return true
   const members = cave.members || []
-  if (members.length >= 2) return true
-  if ((cave.messages || []).length > 0) return true
-  if (cave.coverUrl) return true
-  // Owner-only cave with no messages yet is still "real" if owner is present.
-  if (members.some((m) => String(m.id) === String(cave.ownerId) && String(m.id) !== String(meId))) {
-    return true
-  }
-  return false
+  // Joiner: must see someone else (usually the owner).
+  return members.some((m) => String(m.id) !== String(meId))
 }
 
 function storageKey(userId) {
@@ -936,6 +937,50 @@ export function CavesProvider({ children }) {
     })
   }, [])
 
+  /** Force-load one cave from server and replace thin local/join seeds. */
+  const refreshCaveFromServer = useCallback(async (caveId) => {
+    if (!caveId) return null
+    const sid = String(caveId)
+    let remoteCave = null
+    try {
+      remoteCave = await getCaveRemote(caveId)
+    } catch (err) {
+      if (err instanceof CavesNotInstalledError) {
+        // Fall through to list_my_caves sync path in ensureCaveLoaded.
+      } else {
+        // Membership may have been wiped by old sync_cave — re-join public caves.
+        const local = cavesRef.current.find((c) => String(c.id) === sid)
+          ?? pendingJoinedRef.current.get(sid)
+        if (local?.access === 'public' || pendingJoinedRef.current.has(sid)) {
+          try {
+            remoteCave = await joinPublicCave(caveId)
+          } catch (joinErr) {
+            console.error('Could not re-join cave:', joinErr.message)
+          }
+        } else if (import.meta.env.DEV) {
+          console.warn('get_cave failed:', err.message)
+        }
+      }
+    }
+    if (!remoteCave) {
+      try {
+        const messages = await listCaveMessagesRemote(caveId)
+        const existing = cavesRef.current.find((c) => String(c.id) === sid)
+        if (existing && messages?.length) {
+          remoteCave = mergeCaveSnapshot(existing, { ...existing, messages })
+        }
+      } catch { /* list_cave_messages unavailable */ }
+    }
+    if (remoteCave) {
+      pendingJoinedRef.current.set(sid, remoteCave)
+      applyJoinedCave(remoteCave)
+      if (isHydratedCave(remoteCave, meId)) {
+        pendingJoinedRef.current.delete(sid)
+      }
+    }
+    return remoteCave
+  }, [applyJoinedCave, meId])
+
   const ensureCaveLoaded = useCallback(async (caveId, { requireHydrated = false } = {}) => {
     const sid = String(caveId)
     const ready = () => {
@@ -945,14 +990,19 @@ export function CavesProvider({ children }) {
       if (!requireHydrated) return true
       return isHydratedCave(cave, meId)
     }
+
+    // Always pull server truth when hydrating — local "hi" must not block this.
+    await refreshCaveFromServer(caveId)
     if (ready()) return true
-    for (let attempt = 0; attempt < 6; attempt += 1) {
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       await syncRemoteCaves()
+      await refreshCaveFromServer(caveId)
       if (ready()) return true
       await new Promise((resolve) => { setTimeout(resolve, 350) })
     }
     return ready()
-  }, [syncRemoteCaves, meId])
+  }, [syncRemoteCaves, meId, refreshCaveFromServer])
 
   async function joinPublicCaveAndOpen(caveId, preview) {
     if (!user?.id || !caveId) return
@@ -969,7 +1019,7 @@ export function CavesProvider({ children }) {
       throw err
     }
 
-    if (remoteCave) {
+    if (remoteCave && isHydratedCave(remoteCave, meId)) {
       pendingJoinedRef.current.set(sid, remoteCave)
       applyJoinedCave(remoteCave)
     }
@@ -1018,6 +1068,7 @@ export function CavesProvider({ children }) {
     joinPublicCaveAndOpen,
     findCaveById,
     ensureCaveLoaded,
+    refreshCaveFromServer,
     syncMemberships: syncRemoteCaves,
     syncRemoteCaves,
     pushProfileCavesToServer,
