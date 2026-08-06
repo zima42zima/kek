@@ -379,7 +379,7 @@ export default function EchoView({
         )}
 
         {!mine && (
-          <div className="flex gap-2 mt-4">
+          <div className="flex items-center gap-2 mt-4">
             {echo.saved ? (
               <button
                 type="button"
@@ -398,21 +398,19 @@ export default function EchoView({
                 {reviewed ? 'Save to my collection' : 'Watch first to save'}
               </button>
             )}
+            {echo.id ? (
+              <ReportContentButton
+                kind="echo"
+                refId={echo.id}
+                reportedUserId={echo.anonymous ? null : echo.ownerId}
+                preview={echo.title || echo.caption || displayEcho.authorName}
+                subjectLabel="this aftersound"
+                variant="flag"
+                className="w-8 h-8 opacity-45 hover:opacity-100"
+              />
+            ) : null}
           </div>
         )}
-
-        {!mine && echo.id ? (
-          <div className="mt-3 pt-3 border-t frens-border flex justify-center">
-            <ReportContentButton
-              kind="echo"
-              refId={echo.id}
-              reportedUserId={echo.anonymous ? null : echo.ownerId}
-              preview={echo.title || echo.caption || displayEcho.authorName}
-              subjectLabel="this aftersound"
-              className="text-[11px] frens-muted hover:underline"
-            />
-          </div>
-        ) : null}
 
         {mine && onDelete ? (
           <button
