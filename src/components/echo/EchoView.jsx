@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import Modal from '../Modal'
 import { ProfileAvatar } from '../FrogLogo'
+import { BatAvatar } from './EchoIcon'
 import EchoAuraButton, { EchoAuraCount } from './EchoAuraButton'
 import EchoComments from './EchoComments'
 import PostReactionButton from '../PostReactionButton'
@@ -63,9 +64,18 @@ export default function EchoView({
   const hasNext = canRangeSwipe && rangeIndex < rangeEchoes.length - 1
   const canReact = Boolean(onToggleReaction)
 
-  const liveAuthor = useLiveAuthorProfile(!mine ? echo.ownerId : null)
+  const isAnon = Boolean(echo.anonymous) && !mine
+  const liveAuthor = useLiveAuthorProfile(!mine && !isAnon ? echo.ownerId : null)
 
   const displayEcho = useMemo(() => {
+    if (isAnon) {
+      return {
+        ...echo,
+        authorName: 'a fren',
+        avatarUrl: null,
+        ownerId: null,
+      }
+    }
     if (mine && (profile?.id || profile?.userId)) {
       return withLiveAuthorAvatar(echo, {
         id: profile.id || profile.userId,
@@ -80,7 +90,7 @@ export default function EchoView({
       }
     }
     return echo
-  }, [echo, mine, profile, liveAuthor])
+  }, [echo, mine, profile, liveAuthor, isAnon])
 
   const lookStyle = echo.kind === 'video' && echo.lookFilter
     ? { filter: lookFilterCss(echo.lookFilter) }
@@ -164,11 +174,15 @@ export default function EchoView({
         blurBackdrop={false}
       >
         <div className="flex items-center gap-3 mb-4">
-          <ProfileAvatar
-            profile={displayEcho}
-            className="w-11 h-11"
-            logoClassName="w-7 h-auto"
-          />
+          {isAnon ? (
+            <BatAvatar className="w-11 h-11" />
+          ) : (
+            <ProfileAvatar
+              profile={displayEcho}
+              className="w-11 h-11"
+              logoClassName="w-7 h-auto"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <FrenHandle>{displayEcho.authorName}</FrenHandle>
             <p className="text-xs frens-muted">
@@ -185,7 +199,7 @@ export default function EchoView({
               />
             </p>
           </div>
-          {!mine && echo.ownerId && onOpenProfile && (
+          {!mine && !isAnon && echo.ownerId && onOpenProfile && (
             <button
               type="button"
               onClick={() => onOpenProfile(echo.ownerId)}
@@ -370,7 +384,7 @@ export default function EchoView({
                 <ReportContentButton
                   kind="echo"
                   refId={echo.id}
-                  reportedUserId={echo.ownerId}
+                  reportedUserId={isAnon ? null : echo.ownerId}
                   preview={echo.title || echo.caption || displayEcho.authorName}
                   subjectLabel="this echo"
                   variant="flag"

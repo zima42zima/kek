@@ -1,3 +1,4 @@
+-- LEGACY — do not run. Superseded by supabase-patch-echo-anon-v2.sql.
 -- Drop echo anonymity: everyone shows as themselves.
 -- Safe to re-run. Clears flags + stops list RPC redaction.
 

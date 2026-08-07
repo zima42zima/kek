@@ -27,7 +27,9 @@ function extForBlob(blob) {
 }
 
 function mapTableRow(row, userId) {
-  const mine = row.owner_id === userId
+  const anonymous = Boolean(row.anonymous)
+  const mine = Boolean(userId) && row.owner_id === userId
+  const redact = anonymous && !mine
   return {
     id: row.id,
     kind: row.kind,
@@ -35,15 +37,15 @@ function mapTableRow(row, userId) {
     mediaUrl: null,
     coverPath: row.cover_path || null,
     coverUrl: null,
-    ownerId: row.owner_id,
-    authorName: row.author_name || 'a fren',
-    avatarType: row.avatar_type || 'frog',
-    avatarUrl: row.avatar_url || null,
-    anonymous: false,
+    ownerId: redact ? null : (row.owner_id ?? null),
+    authorName: redact ? 'a fren' : (row.author_name || 'a fren'),
+    avatarType: redact ? 'frog' : (row.avatar_type || 'frog'),
+    avatarUrl: redact ? null : (row.avatar_url || null),
+    anonymous,
     lat: row.lat,
     lon: row.lon,
     visibility: row.visibility,
-    shareOnProfile: row.share_on_profile !== false,
+    shareOnProfile: anonymous ? false : row.share_on_profile !== false,
     allowComments: Boolean(row.allow_comments),
     voiceFilter: row.voice_filter,
     senseFilter: row.sense_filter,
@@ -93,7 +95,7 @@ function mapNearRow(row, userId) {
     distance_m: row.distance_m,
     aura_count: row.aura_count,
     i_gave_aura: row.i_gave_aura,
-    anonymous: false,
+    anonymous: row.anonymous,
   }, userId)
 }
 
@@ -188,7 +190,7 @@ export async function publishEcho({
     p_discover_radius_m: clampDiscoverRadius(discoverRadiusM ?? ECHO_DEFAULT_DISCOVER_RADIUS_M),
     p_place_label: placeLabel || null,
     p_browse_globally: Boolean(browseGlobally),
-    p_anonymous: false,
+    p_anonymous: Boolean(anonymous),
   })
   if (error) {
     throwIfNotInstalled(error)
@@ -271,6 +273,7 @@ export async function listUserProfileEchoes(ownerId, viewerId) {
     .eq('owner_id', ownerId)
     .eq('visibility', 'world')
     .eq('share_on_profile', true)
+    .eq('anonymous', false)
     .eq('hidden', false)
     .order('created_at', { ascending: false })
     .limit(50)

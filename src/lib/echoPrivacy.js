@@ -1,7 +1,7 @@
 import { ECHO_PUBLIC_VISIBILITIES } from './echoConstants'
 
 export function isFrenOf(echo, { followingIds, followerIds } = {}) {
-  if (!echo?.ownerId) return false
+  if (!echo?.ownerId || echo.anonymous) return false
   return Boolean(followingIds?.has(echo.ownerId) || followerIds?.has(echo.ownerId))
 }
 

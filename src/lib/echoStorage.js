@@ -184,6 +184,7 @@ export function addToEchoCollection(userId, echo) {
   const inlinePreview = echo.mediaUrl?.startsWith('data:') || echo.mediaUrl?.startsWith('blob:')
     ? echo.mediaUrl
     : null
+  const anon = Boolean(echo.anonymous)
   const entry = {
     ...echo,
     mine: false,
@@ -194,6 +195,15 @@ export function addToEchoCollection(userId, echo) {
     // Signed URLs expire — refresh from mediaPath on Collection tab; keep inline data URLs only.
     collectionPreviewUrl: inlinePreview,
     mediaUrl: inlinePreview || null,
+    ...(anon
+      ? {
+        anonymous: true,
+        ownerId: null,
+        authorName: 'a fren',
+        avatarUrl: null,
+        shareOnProfile: false,
+      }
+      : {}),
   }
   const next = [entry, ...loadEchoCollection(userId).filter((e) => e.id !== echo.id)]
   saveEchoCollection(userId, next)
@@ -210,10 +220,10 @@ export function removeFromEchoCollection(userId, echoId) {
 export function listProfileEchoes(ownerId) {
   if (!ownerId) return []
   const mine = loadEchoes(ownerId).filter(
-    (e) => e.visibility === 'world' && e.shareOnProfile !== false,
+    (e) => e.visibility === 'world' && e.shareOnProfile !== false && !e.anonymous,
   )
   const world = loadWorldEchoes().filter(
-    (e) => e.ownerId === ownerId && e.visibility === 'world' && e.shareOnProfile !== false,
+    (e) => e.ownerId === ownerId && e.visibility === 'world' && e.shareOnProfile !== false && !e.anonymous,
   )
   const byId = new Map()
   ;[...mine, ...world].forEach((e) => byId.set(e.id, e))

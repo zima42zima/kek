@@ -1,4 +1,5 @@
 import { ProfileAvatar } from '../FrogLogo'
+import { BatAvatar } from './EchoIcon'
 import FrenHandle from '../FrenHandle'
 import EchoPreviewMedia from './EchoPreviewMedia'
 import EchoAuraButton, { EchoAuraCount } from './EchoAuraButton'
@@ -62,8 +63,14 @@ export default function EchoCollectionCard({
         className="min-w-0 flex-1 p-3 text-left"
       >
         <div className="flex items-center gap-2 mb-1">
-          <ProfileAvatar profile={echo} className="w-7 h-7 shrink-0" logoClassName="w-4 h-auto" />
-          <FrenHandle className="text-sm truncate">{echo.authorName}</FrenHandle>
+          {echo.anonymous && !echo.mine ? (
+            <BatAvatar className="w-7 h-7 shrink-0" />
+          ) : (
+            <ProfileAvatar profile={echo} className="w-7 h-7 shrink-0" logoClassName="w-4 h-auto" />
+          )}
+          <FrenHandle className="text-sm truncate">
+            {echo.anonymous && !echo.mine ? 'a fren' : echo.authorName}
+          </FrenHandle>
           {badge ? (
             <span className="text-[10px] frens-muted border frens-border rounded-full px-2 py-0.5 shrink-0">
               {badge}

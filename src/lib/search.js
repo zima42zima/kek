@@ -196,13 +196,16 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
   }
 
   for (const e of localEchoes || []) {
+    const matchAuthor = !e.anonymous || e.mine
     if (
       includesNeedle(e.label, q)
       || includesNeedle(e.placeLabel, q)
       || includesNeedle(e.cityLabel, q)
-      || includesNeedle(e.authorName, q)
+      || (matchAuthor && includesNeedle(e.authorName, q))
     ) {
-      push(e)
+      push(e.anonymous && !e.mine
+        ? { ...e, ownerId: null, authorName: 'a fren', avatarUrl: null }
+        : e)
     }
   }
 
@@ -211,20 +214,31 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
     .select('*, profiles!echoes_owner_id_fkey(avatar_type, avatar_url, silly_name)')
     .eq('visibility', 'world')
     .eq('hidden', false)
-    .or(`label.ilike.${quoted},place_label.ilike.${quoted},city_label.ilike.${quoted},author_name.ilike.${quoted}`)
+    .or(`label.ilike.${quoted},place_label.ilike.${quoted},city_label.ilike.${quoted},title.ilike.${quoted}`)
     .order('created_at', { ascending: false })
     .limit(limit)
 
   if (!error && data) {
     for (const row of data) {
       const pr = embedProfile(row)
+      const mine = row.owner_id === userId
+      const anon = Boolean(row.anonymous) && !mine
+      // Don't surface anon echoes via real name — skip when only profile name matched.
+      if (anon && includesNeedle(pr?.silly_name, q)
+        && !includesNeedle(row.label, q)
+        && !includesNeedle(row.place_label, q)
+        && !includesNeedle(row.city_label, q)
+        && !includesNeedle(row.title, q)) {
+        continue
+      }
       push({
         id: row.id,
         kind: row.kind,
-        ownerId: row.owner_id,
-        authorName: pr?.silly_name || row.author_name || 'a fren',
-        avatarType: pr?.avatar_type || row.avatar_type || 'frog',
-        avatarUrl: pr?.avatar_url ?? null,
+        ownerId: anon ? null : row.owner_id,
+        authorName: anon ? 'a fren' : (pr?.silly_name || row.author_name || 'a fren'),
+        avatarType: anon ? 'frog' : (pr?.avatar_type || row.avatar_type || 'frog'),
+        avatarUrl: anon ? null : (pr?.avatar_url ?? null),
+        anonymous: Boolean(row.anonymous),
         label: row.label || '',
         cityLabel: row.city_label || null,
         placeLabel: row.place_label || null,
@@ -232,7 +246,7 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
         lat: row.lat,
         lon: row.lon,
         createdAt: row.created_at,
-        mine: row.owner_id === userId,
+        mine,
       })
     }
   } else if (error) {
@@ -241,18 +255,21 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
       .select('*')
       .eq('visibility', 'world')
       .eq('hidden', false)
-      .or(`label.ilike.${quoted},place_label.ilike.${quoted},city_label.ilike.${quoted},author_name.ilike.${quoted}`)
+      .or(`label.ilike.${quoted},place_label.ilike.${quoted},city_label.ilike.${quoted},title.ilike.${quoted}`)
       .order('created_at', { ascending: false })
       .limit(limit)
     if (!retry.error && retry.data) {
       for (const row of retry.data) {
+        const mine = row.owner_id === userId
+        const anon = Boolean(row.anonymous) && !mine
         push({
           id: row.id,
           kind: row.kind,
-          ownerId: row.owner_id,
-          authorName: row.author_name || 'a fren',
-          avatarType: row.avatar_type || 'frog',
+          ownerId: anon ? null : row.owner_id,
+          authorName: anon ? 'a fren' : (row.author_name || 'a fren'),
+          avatarType: anon ? 'frog' : (row.avatar_type || 'frog'),
           avatarUrl: null,
+          anonymous: Boolean(row.anonymous),
           label: row.label || '',
           cityLabel: row.city_label || null,
           placeLabel: row.place_label || null,
@@ -260,7 +277,7 @@ export async function searchPublicEchoes(query, { limit = 8, userId = null, loca
           lat: row.lat,
           lon: row.lon,
           createdAt: row.created_at,
-          mine: row.owner_id === userId,
+          mine,
         })
       }
     }

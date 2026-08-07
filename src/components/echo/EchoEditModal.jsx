@@ -8,8 +8,9 @@ import { OPTION_ACTIVE, GlobeIcon } from '../icons/UiIcons'
 const EDIT_VISIBILITY = ECHO_VISIBILITY.filter((v) => v.id !== 'private')
 
 export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
+  const isAnon = Boolean(echo.anonymous)
   const [label, setLabel] = useState(echo.label || '')
-  const [visibility, setVisibility] = useState(echo.visibility || 'world')
+  const [visibility, setVisibility] = useState(isAnon ? 'world' : (echo.visibility || 'world'))
   const [discoverRadiusM, setDiscoverRadiusM] = useState(echo.discoverRadiusM ?? 420)
   const [allowComments, setAllowComments] = useState(Boolean(echo.allowComments))
   const [browseGlobally, setBrowseGlobally] = useState(Boolean(echo.browseGlobally))
@@ -17,13 +18,15 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
   const showRange = ECHO_PUBLIC_VISIBILITIES.has(visibility)
 
   function handleSave() {
+    const vis = isAnon ? 'world' : visibility
     onSave?.({
       label: label.trim(),
-      visibility,
+      visibility: vis,
       discoverRadiusM: showRange ? discoverRadiusM : null,
-      shareOnProfile: ECHO_PUBLIC_VISIBILITIES.has(visibility),
+      shareOnProfile: isAnon ? false : ECHO_PUBLIC_VISIBILITIES.has(vis),
       allowComments,
-      browseGlobally: showRange && visibility === 'world' ? browseGlobally : false,
+      browseGlobally: showRange && vis === 'world' ? browseGlobally : false,
+      anonymous: isAnon,
     })
     onClose?.()
   }
@@ -45,18 +48,26 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
           />
         </label>
 
+        {isAnon ? (
+          <p className="text-[11px] frens-muted text-center leading-snug px-1">
+            Anonymous · bat for everyone · World only · can’t undo
+          </p>
+        ) : null}
+
         <div className="flex gap-1.5 justify-center">
           {EDIT_VISIBILITY.map((v) => {
+            const locked = isAnon && v.id === 'friends'
             const active = visibility === v.id
             return (
               <button
                 key={v.id}
                 type="button"
-                onClick={() => setVisibility(v.id)}
+                onClick={() => !locked && setVisibility(v.id)}
+                disabled={locked}
                 aria-pressed={active}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-sm font-medium transition touch-manipulation ${
                   active ? OPTION_ACTIVE : 'frens-border frens-muted'
-                }`}
+                } ${locked ? 'opacity-35 cursor-not-allowed' : ''}`}
               >
                 <EchoVisibilityIcon visibility={v.id} className="w-4 h-4" />
                 {v.label}

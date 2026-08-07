@@ -372,11 +372,15 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         if (e.ownerId === userId) return
         if (!canDiscoverEcho(e, frenGraph)) return
         const savedEntry = savedById.get(e.id)
+        const anon = Boolean(e.anonymous)
         byId.set(e.id, {
           ...e,
           mine: false,
           saved: Boolean(savedEntry),
           savedAt: savedEntry?.savedAt,
+          ...(anon
+            ? { ownerId: null, authorName: 'a fren', avatarUrl: null, shareOnProfile: false }
+            : {}),
         })
       })
       // Same-browser dev fallback — local world pool from other accounts.
@@ -384,11 +388,15 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         if (e.ownerId === userId || byId.has(e.id)) return
         if (!canDiscoverEcho(e, frenGraph)) return
         const savedEntry = savedById.get(e.id)
+        const anon = Boolean(e.anonymous)
         byId.set(e.id, {
           ...e,
           mine: false,
           saved: Boolean(savedEntry),
           savedAt: savedEntry?.savedAt,
+          ...(anon
+            ? { ownerId: null, authorName: 'a fren', avatarUrl: null, shareOnProfile: false }
+            : {}),
         })
       })
       const merged = [...byId.values()]
@@ -491,7 +499,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
     const ownerIds = [...new Set(
       [...echoes, ...browseEchoes, ...exploreCityEchoes]
-        .filter((e) => e.ownerId && !e.mine)
+        .filter((e) => e.ownerId && !e.mine && !e.anonymous)
         .map((e) => e.ownerId),
     )]
     if (ownerIds.length === 0) return undefined
@@ -690,6 +698,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   }, [tab, status, backendReady, refreshServerEchoes, refreshPosition])
 
   const resolveActorName = useCallback(async (echo) => {
+    if (echo.anonymous) return 'a fren'
     if (echo.ownerId && echo.ownerId !== userId) {
       const cached = peekLiveProfile(echo.ownerId)
       if (cached?.frenName) return cached.frenName
@@ -707,7 +716,9 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
     const newlyHinted = echoes.filter(
       (e) =>
+        !e.anonymous &&
         canHintEcho(e, frenGraph) &&
+        e.ownerId &&
         (followingIds.has(e.ownerId) || followerIds.has(e.ownerId)) &&
         !hinted.has(e.id) &&
         distanceMeters(userPos, { lat: e.lat, lon: e.lon }) <= ECHO_CITY_RADIUS_M,
@@ -1053,11 +1064,13 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   function touchEchoHistory(echo, { interaction } = {}) {
     if (!userId || !echo?.id) return
     const previewUrl = echoWatchedPreviewUrl(echo) || echo.collectionPreviewUrl || echo.mediaUrl || echo.coverUrl || null
+    const anon = Boolean(echo.anonymous)
     const next = recordEchoHistory(userId, {
       echoId: echo.id,
       kind: echo.kind,
-      authorName: echo.authorName,
-      ownerId: echo.ownerId,
+      authorName: anon ? 'a fren' : echo.authorName,
+      ownerId: anon ? null : echo.ownerId,
+      anonymous: anon,
       label: echo.label || '',
       visibility: echo.visibility || 'world',
       discoverRadiusM: echo.discoverRadiusM,
@@ -1065,8 +1078,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       mediaPath: echo.mediaPath || null,
       coverPath: echo.coverPath || null,
       collectionPreviewUrl: previewUrl,
-      avatarType: echo.avatarType,
-      avatarUrl: echo.avatarUrl,
+      avatarType: anon ? 'frog' : echo.avatarType,
+      avatarUrl: anon ? null : echo.avatarUrl,
       interaction: interaction || 'viewed',
     })
     setHistory(next)
@@ -1164,19 +1177,21 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   async function publishEcho({
     kind, mediaUrl, mediaBlob, coverUrl, coverBlob,
     visibility, allowComments, voiceFilter, senseFilter, spatial, pinPosition,
-    discoverRadiusM, placeLabel, browseGlobally, expiresAt, title,
+    discoverRadiusM, placeLabel, browseGlobally, expiresAt, title, anonymous,
   }) {
     const handle = profile?.frenName?.trim() || 'you'
+    const isAnon = Boolean(anonymous)
     const spot = pinPosition
       || (spatial?.position
         ? { lat: spatial.position.lat, lon: spatial.position.lon }
         : userPos
           ? randomOffsetInRadius(userPos, ECHO_PIN_OFFSET_MAX_M)
           : { lat: 0, lon: 0 })
-    const vis = visibility ?? 'world'
+    const vis = isAnon ? 'world' : (visibility ?? 'world')
     const discoverR = ECHO_PUBLIC_VISIBILITIES.has(vis)
       ? (discoverRadiusM ?? ECHO_DEFAULT_DISCOVER_RADIUS_M)
       : null
+    const shareOnProfile = !isAnon && ECHO_PUBLIC_VISIBILITIES.has(vis)
 
     if (backendReady && mediaBlob && userId) {
       try {
@@ -1192,7 +1207,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           voiceFilter: kind === 'audio' ? (voiceFilter ?? 'normal') : null,
           senseFilter: kind === 'video' ? (senseFilter ?? 'clear') : null,
           allowComments,
-          shareOnProfile: ECHO_PUBLIC_VISIBILITIES.has(vis),
+          shareOnProfile,
           label: '',
           title: title || '',
           cityLabel,
@@ -1200,7 +1215,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           browseGlobally: Boolean(browseGlobally),
           expiresAt: expiresAt || null,
           discoverRadiusM: discoverR,
-          anonymous: false,
+          anonymous: isAnon,
         })
         const resolvedUrl = await getEchoMediaUrl(mediaPath)
         const resolvedCover = coverPath ? await getEchoMediaUrl(coverPath) : null
@@ -1215,11 +1230,11 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           authorName: handle,
           avatarType: profile?.avatarType || 'frog',
           avatarUrl: profile?.avatarUrl || null,
-          anonymous: false,
+          anonymous: isAnon,
           lat: spot.lat,
           lon: spot.lon,
           visibility: vis,
-          shareOnProfile: ECHO_PUBLIC_VISIBILITIES.has(vis),
+          shareOnProfile,
           allowComments: Boolean(allowComments),
           voiceFilter: kind === 'audio' ? (voiceFilter ?? 'normal') : null,
           senseFilter: kind === 'video' ? (senseFilter ?? 'clear') : null,
@@ -1261,11 +1276,11 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       authorName: handle,
       avatarType: profile?.avatarType || 'frog',
       avatarUrl: profile?.avatarUrl || null,
-      anonymous: false,
+      anonymous: isAnon,
       lat: spot.lat,
       lon: spot.lon,
       visibility: vis,
-      shareOnProfile: ECHO_PUBLIC_VISIBILITIES.has(vis),
+      shareOnProfile,
       allowComments: Boolean(allowComments),
       voiceFilter: kind === 'audio' ? (voiceFilter ?? 'normal') : null,
       senseFilter: kind === 'video' ? (senseFilter ?? 'clear') : null,
@@ -1529,7 +1544,18 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   function updateEchoSettings(id, patch) {
     setEchoes((prev) => prev.map((e) => {
       if (e.id !== id) return e
-      const updated = { ...e, ...patch }
+      const lockedAnon = Boolean(e.anonymous)
+      const updated = {
+        ...e,
+        ...patch,
+        anonymous: lockedAnon,
+        ...(lockedAnon
+          ? {
+            visibility: 'world',
+            shareOnProfile: false,
+          }
+          : {}),
+      }
       if (!backendReady) {
         if (ECHO_PUBLIC_VISIBILITIES.has(updated.visibility)) publishToWorldPool(updated)
         else removeFromWorldPool(id)

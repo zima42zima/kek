@@ -95,6 +95,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
   const [step, setStep] = useState('type')
   const [echoType, setEchoType] = useState('image')
   const [visibility, setVisibility] = useState('world')
+  const [anonymous, setAnonymous] = useState(false)
   const [proximityId, setProximityId] = useState(ECHO_DEFAULT_PROXIMITY_ID)
   const [voiceFilter, setVoiceFilter] = useState('normal')
   const [senseFilter, setSenseFilter] = useState('clear')
@@ -149,18 +150,23 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
       mediaBlob: extra.mediaBlob,
       coverUrl: extra.coverUrl,
       coverBlob: extra.coverBlob,
-      visibility,
+      visibility: anonymous ? 'world' : visibility,
       allowComments,
-      anonymous: false,
+      anonymous,
       voiceFilter: extra.voiceFilter,
       senseFilter: extra.senseFilter,
       spatial: null,
       pinPosition: resolvePin(),
       discoverRadiusM: needsPin ? proximity.meters : null,
       placeLabel: '',
-      browseGlobally: needsPin && visibility === 'world' ? browseGlobally : false,
+      browseGlobally: needsPin && (anonymous || visibility === 'world') ? browseGlobally : false,
       expiresAt: null,
     })
+  }
+
+  function toggleAnonymous(next) {
+    setAnonymous(next)
+    if (next) setVisibility('world')
   }
 
   async function publish() {
@@ -350,16 +356,19 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
         <div className="space-y-3">
           <div className="flex gap-1.5 justify-center">
             {PUBLISH_VISIBILITY.map((v) => {
-              const active = visibility === v.id
+              const locked = anonymous && v.id === 'friends'
+              const active = (anonymous ? 'world' : visibility) === v.id
               return (
                 <button
                   key={v.id}
                   type="button"
-                  onClick={() => setVisibility(v.id)}
+                  onClick={() => !locked && setVisibility(v.id)}
+                  disabled={locked}
                   aria-pressed={active}
+                  title={locked ? 'Anonymous echoes are World only' : undefined}
                   className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-sm font-medium transition touch-manipulation ${
                     active ? OPTION_ACTIVE : 'frens-border frens-muted'
-                  }`}
+                  } ${locked ? 'opacity-35 cursor-not-allowed' : ''}`}
                 >
                   <EchoVisibilityIcon visibility={v.id} className="w-4 h-4" />
                   {v.label}
@@ -374,10 +383,25 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             onChange={setProximityId}
           />
 
-          <SafetyNoticeOnce visibility={visibility} />
+          <label className="flex items-start gap-2.5 rounded-xl border frens-border px-3 py-2.5 cursor-pointer text-left">
+            <input
+              type="checkbox"
+              checked={anonymous}
+              onChange={(e) => toggleAnonymous(e.target.checked)}
+              className="rounded mt-0.5"
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium">Anonymous</span>
+              <span className="block text-[11px] frens-muted mt-0.5 leading-snug">
+                Bat pin for everyone — even frens. World only. No alerts. Exact still leaves your real spot. Can’t undo after publish.
+              </span>
+            </span>
+          </label>
+
+          <SafetyNoticeOnce visibility={anonymous ? 'world' : visibility} />
 
           <div className="flex items-center justify-between gap-3 px-1 text-sm">
-            {visibility === 'world' ? (
+            {(anonymous || visibility === 'world') ? (
               <label className="inline-flex items-center gap-1.5 cursor-pointer min-w-0">
                 <input
                   type="checkbox"

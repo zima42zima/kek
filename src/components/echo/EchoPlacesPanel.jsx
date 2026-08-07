@@ -29,7 +29,9 @@ function PlaceEchoChip({ echo, onOpen, remote = false }) {
         ) : null}
       </div>
       <div className="p-2">
-        <p className="text-[10px] font-medium truncate">{echo.authorName || 'a fren'}</p>
+        <p className="text-[10px] font-medium truncate">
+          {echo.anonymous && !echo.mine ? 'a fren' : (echo.authorName || 'a fren')}
+        </p>
         <p className="text-[10px] frens-muted truncate">
           {remote ? 'tap to view' : echo.distanceM != null ? formatRangeM(echo.distanceM) : 'nearby'}
         </p>

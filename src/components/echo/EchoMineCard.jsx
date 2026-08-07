@@ -1,4 +1,5 @@
 import { ProfileAvatar } from '../FrogLogo'
+import { BatAvatar } from './EchoIcon'
 import FrenHandle from '../FrenHandle'
 import EchoPreviewMedia from './EchoPreviewMedia'
 import EchoMetaIcons from './EchoMetaIcons'
@@ -62,10 +63,17 @@ function MineCardFooter({ echo, showAuthor }) {
 }
 
 function SavedCardFooter({ echo, savedAt }) {
+  const anon = Boolean(echo.anonymous)
   return (
     <div className="px-2.5 py-2 flex items-center gap-2 min-w-0 border-t frens-border">
-      <ProfileAvatar profile={echo} className="w-5 h-5 shrink-0" logoClassName="w-3 h-auto" />
-      <FrenHandle className="text-[11px] truncate min-w-0 flex-1">{echo.authorName || 'a fren'}</FrenHandle>
+      {anon ? (
+        <BatAvatar className="w-5 h-5 shrink-0" />
+      ) : (
+        <ProfileAvatar profile={echo} className="w-5 h-5 shrink-0" logoClassName="w-3 h-auto" />
+      )}
+      <FrenHandle className="text-[11px] truncate min-w-0 flex-1">
+        {anon ? 'a fren' : (echo.authorName || 'a fren')}
+      </FrenHandle>
       {savedAt ? (
         <span className="text-[10px] frens-muted shrink-0 tabular-nums">
           saved · {new Date(savedAt).toLocaleDateString()}
@@ -139,8 +147,14 @@ export default function EchoMineCard({
         >
           {isSaved ? (
             <div className="flex items-center gap-1.5 min-w-0 mb-0.5">
-              <ProfileAvatar profile={echo} className="w-5 h-5 shrink-0" logoClassName="w-3 h-auto" />
-              <FrenHandle className="text-xs truncate">{echo.authorName || 'a fren'}</FrenHandle>
+              {echo.anonymous ? (
+                <BatAvatar className="w-5 h-5 shrink-0" />
+              ) : (
+                <ProfileAvatar profile={echo} className="w-5 h-5 shrink-0" logoClassName="w-3 h-auto" />
+              )}
+              <FrenHandle className="text-xs truncate">
+                {echo.anonymous ? 'a fren' : (echo.authorName || 'a fren')}
+              </FrenHandle>
             </div>
           ) : (echo.title || echo.label) ? (
             <p className="text-sm frens-body-text truncate">{(echo.title || echo.label).trim()}</p>
