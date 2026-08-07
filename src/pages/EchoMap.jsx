@@ -9,7 +9,6 @@ import EchoView from '../components/echo/EchoView'
 import EchoIcon from '../components/echo/EchoIcon'
 import { LocationIcon, MapIcon } from '../components/icons/UiIcons'
 import EchoRangeGallery from '../components/echo/EchoRangeGallery'
-import EchoCollectionCard from '../components/echo/EchoCollectionCard'
 import { echoWatchedPreviewUrl } from '../components/echo/EchoPreviewMedia'
 import EchoMineCard from '../components/echo/EchoMineCard'
 import EchoMineToolbar from '../components/echo/EchoMineToolbar'
@@ -121,7 +120,20 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   const [tab, setTab] = useState('map')
   /** Under _log: mine | collection | history */
   const [logSection, setLogSection] = useState('mine')
+  const [mineKindMenuOpen, setMineKindMenuOpen] = useState(false)
+  const mineKindMenuRef = useRef(null)
   const [echoes, setEchoes] = useState([])
+
+  useEffect(() => {
+    if (!mineKindMenuOpen) return undefined
+    function onDoc(e) {
+      if (mineKindMenuRef.current && !mineKindMenuRef.current.contains(e.target)) {
+        setMineKindMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [mineKindMenuOpen])
   const [backendReady, setBackendReady] = useState(false)
   const [echoesLoading, setEchoesLoading] = useState(true)
   const [discovered, setDiscovered] = useState(() => loadDiscovered(userId))
@@ -979,16 +991,6 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     return sorted
   }, [liveEchoes, sortBy])
 
-  const mineKindCounts = useMemo(() => {
-    const counts = { all: myEchoes.length, image: 0, video: 0, audio: 0 }
-    myEchoes.forEach((e) => {
-      if (e.kind === 'image') counts.image += 1
-      else if (e.kind === 'video') counts.video += 1
-      else if (e.kind === 'audio') counts.audio += 1
-    })
-    return counts
-  }, [myEchoes])
-
   const filteredMyEchoes = useMemo(() => {
     if (mineKindFilter === 'all') return myEchoes
     return myEchoes.filter((e) => e.kind === mineKindFilter)
@@ -1015,16 +1017,6 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       .filter((e) => !e.mine)
       .sort((a, b) => (b.savedAt ?? b.createdAt ?? 0) - (a.savedAt ?? a.createdAt ?? 0))
   }, [savedCollection, liveEchoes, browseEchoes])
-
-  const collectionKindCounts = useMemo(() => {
-    const counts = { all: displayCollection.length, image: 0, video: 0, audio: 0 }
-    displayCollection.forEach((e) => {
-      if (e.kind === 'image') counts.image += 1
-      else if (e.kind === 'video') counts.video += 1
-      else if (e.kind === 'audio') counts.audio += 1
-    })
-    return counts
-  }, [displayCollection])
 
   const filteredCollection = useMemo(() => {
     const list = collectionKindFilter === 'all'
@@ -2056,42 +2048,95 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
       {tab === 'log' && (
         <div className="space-y-3">
-          <div className="flex gap-1.5 flex-wrap">
-            {[
-              { id: 'mine', label: 'My Echoes' },
-              { id: 'collection', label: 'Collection' },
-              { id: 'history', label: 'Opened' },
-            ].map((section) => (
+          <div className="flex items-center justify-between gap-2 px-1 min-h-[2.25rem]">
+            <div className="relative" ref={mineKindMenuRef}>
               <button
-                key={section.id}
                 type="button"
-                onClick={() => setLogSection(section.id)}
-                className={`text-xs px-3 py-1.5 rounded-full transition ${
-                  logSection === section.id ? 'frens-btn-primary' : 'frens-btn-outline'
+                onClick={() => {
+                  if (logSection === 'mine') {
+                    setMineKindMenuOpen((open) => !open)
+                  } else {
+                    setLogSection('mine')
+                    setMineKindMenuOpen(true)
+                  }
+                }}
+                aria-pressed={logSection === 'mine'}
+                aria-haspopup="listbox"
+                aria-expanded={mineKindMenuOpen}
+                className={`text-sm px-3 py-1.5 rounded-full transition shrink-0 ${
+                  logSection === 'mine'
+                    ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                    : 'frens-muted hover:text-black dark:hover:text-white'
                 }`}
               >
-                {section.label}
+                My Echoes
               </button>
-            ))}
+              {mineKindMenuOpen && logSection === 'mine' ? (
+                <ul
+                  role="listbox"
+                  aria-label="Filter my echoes"
+                  className="absolute left-0 top-full mt-1 z-[30] min-w-[7.5rem] rounded-xl border frens-border frens-surface shadow-lg py-1"
+                >
+                  {[
+                    { id: 'all', label: 'all' },
+                    { id: 'image', label: 'memes' },
+                    { id: 'video', label: 'videos' },
+                    { id: 'audio', label: 'audio' },
+                  ].map((opt) => (
+                    <li key={opt.id}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={mineKindFilter === opt.id}
+                        onClick={() => {
+                          setMineKindFilter(opt.id)
+                          setMineKindMenuOpen(false)
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm transition ${
+                          mineKindFilter === opt.id
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : 'frens-body-text hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setLogSection('collection')
+                setMineKindMenuOpen(false)
+              }}
+              aria-pressed={logSection === 'collection'}
+              className={`text-sm px-3 py-1.5 rounded-full transition shrink-0 ${
+                logSection === 'collection'
+                  ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                  : 'frens-muted hover:text-black dark:hover:text-white'
+              }`}
+            >
+              Collection
+            </button>
           </div>
 
           {logSection === 'mine' && (
             <div className="space-y-3">
               <EchoMineToolbar
-                kindFilter={mineKindFilter}
-                onKindFilterChange={setMineKindFilter}
                 view={mineView}
                 onViewChange={handleMineViewChange}
                 sortBy={sortBy}
                 onSortChange={setSortBy}
-                counts={mineKindCounts}
-                hint="Private labels · tap to open"
+                hint={mineKindFilter === 'all' ? 'Your echoes · tap to open' : `${mineKindFilter === 'image' ? 'memes' : mineKindFilter} · tap to open`}
               />
 
               {myEchoes.length === 0 ? (
                 <div className="border frens-border rounded-xl p-8 text-center">
                   <p className="text-sm frens-muted inline-flex items-center gap-1 justify-center">
-                    No echoes yet — tap <EchoIcon className="w-4 h-3" /> Meme to leave audio or a short video.
+                    No echoes yet — tap <EchoIcon className="w-4 h-3" /> above to leave one.
                   </p>
                 </div>
               ) : filteredMyEchoes.length === 0 ? (
@@ -2124,25 +2169,18 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           {logSection === 'collection' && (
             <div className="space-y-3">
               <EchoMineToolbar
-                kindFilter={collectionKindFilter}
-                onKindFilterChange={setCollectionKindFilter}
                 view={mineView}
                 onViewChange={handleMineViewChange}
                 sortBy={sortBy}
                 onSortChange={setSortBy}
-                counts={collectionKindCounts}
                 hint="Saved from frens · tap to open"
               />
 
               {displayCollection.length === 0 ? (
                 <div className="border frens-border rounded-xl p-8 text-center">
                   <p className="text-sm frens-muted">
-                    Echoes you save from frens and discoveries show up here — open one on the map and tap Save to my collection.
+                    Echoes you save from frens show up here.
                   </p>
-                </div>
-              ) : filteredCollection.length === 0 ? (
-                <div className="border frens-border rounded-xl p-8 text-center">
-                  <p className="text-sm frens-muted">No echoes match this filter.</p>
                 </div>
               ) : (
                 <div className={
@@ -2167,30 +2205,6 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
                     />
                   ))}
                 </div>
-              )}
-            </div>
-          )}
-
-          {logSection === 'history' && (
-            <div className="space-y-2">
-              {heardCollection.length === 0 ? (
-                <div className="border frens-border rounded-xl p-8 text-center">
-                  <p className="text-sm frens-muted">Echoes you open — meme, video, or audio — show up here.</p>
-                </div>
-              ) : (
-                heardCollection.map(({ echo, heardAt, interaction }) => (
-                  <EchoCollectionCard
-                    key={`${echo.id}-${heardAt}`}
-                    echo={echo}
-                    variant="log"
-                    heardAt={heardAt}
-                    logInteraction={interaction}
-                    auraMap={auraMap}
-                    backendReady={backendReady}
-                    onView={(e) => setOpenId(e.id)}
-                    onAuraChange={applyAuraChange}
-                  />
-                ))
               )}
             </div>
           )}
