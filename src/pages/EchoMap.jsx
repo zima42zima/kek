@@ -349,9 +349,9 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         byId.set(e.id, {
           ...e,
           mine: true,
-          authorName: e.anonymous ? (e.authorName || 'a fren') : (profile?.frenName?.trim() || e.authorName),
-          avatarType: e.anonymous ? 'frog' : (profile?.avatarType || e.avatarType),
-          avatarUrl: e.anonymous ? null : (profile?.avatarUrl ?? e.avatarUrl),
+          authorName: profile?.frenName?.trim() || e.authorName,
+          avatarType: profile?.avatarType || e.avatarType,
+          avatarUrl: profile?.avatarUrl ?? e.avatarUrl,
         })
       })
       const localCollection = loadEchoCollection(userId)
@@ -479,7 +479,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
     const ownerIds = [...new Set(
       [...echoes, ...browseEchoes, ...exploreCityEchoes]
-        .filter((e) => e.ownerId && !e.mine && !e.anonymous)
+        .filter((e) => e.ownerId && !e.mine)
         .map((e) => e.ownerId),
     )]
     if (ownerIds.length === 0) return undefined
@@ -709,16 +709,14 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     })
 
     newlyHinted.forEach(async (e) => {
-      const anon = Boolean(e.anonymous)
-      const name = anon ? 'a fren' : await resolveActorName(e)
+      const name = await resolveActorName(e)
       pushLocal({
         type: 'echo_follow',
         echoId: e.id,
-        actorId: anon ? null : e.ownerId,
+        actorId: e.ownerId,
         actorName: name,
-        actorAvatarType: anon ? 'frog' : e.avatarType,
-        actorAvatarUrl: anon ? null : e.avatarUrl,
-        echoAnonymous: anon,
+        actorAvatarType: e.avatarType,
+        actorAvatarUrl: e.avatarUrl,
         cityLabel,
         dedupeKey: `echo-follow:${e.id}`,
       })
@@ -1173,11 +1171,10 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   async function publishEcho({
     kind, mediaUrl, mediaBlob, coverUrl, coverBlob,
-    visibility, allowComments, anonymous, voiceFilter, senseFilter, spatial, pinPosition,
+    visibility, allowComments, voiceFilter, senseFilter, spatial, pinPosition,
     discoverRadiusM, placeLabel, browseGlobally, expiresAt, title,
   }) {
     const handle = profile?.frenName?.trim() || 'you'
-    const stayAnon = Boolean(anonymous)
     const spot = pinPosition
       || (spatial?.position
         ? { lat: spatial.position.lat, lon: spatial.position.lon }
@@ -1211,7 +1208,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           browseGlobally: Boolean(browseGlobally),
           expiresAt: expiresAt || null,
           discoverRadiusM: discoverR,
-          anonymous: stayAnon,
+          anonymous: false,
         })
         const resolvedUrl = await getEchoMediaUrl(mediaPath)
         const resolvedCover = coverPath ? await getEchoMediaUrl(coverPath) : null
@@ -1225,8 +1222,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           ownerId: userId,
           authorName: handle,
           avatarType: profile?.avatarType || 'frog',
-          avatarUrl: stayAnon ? null : (profile?.avatarUrl || null),
-          anonymous: stayAnon,
+          avatarUrl: profile?.avatarUrl || null,
+          anonymous: false,
           lat: spot.lat,
           lon: spot.lon,
           visibility: vis,
@@ -1271,8 +1268,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       ownerId: userId ?? 'me',
       authorName: handle,
       avatarType: profile?.avatarType || 'frog',
-      avatarUrl: stayAnon ? null : (profile?.avatarUrl || null),
-      anonymous: stayAnon,
+      avatarUrl: profile?.avatarUrl || null,
+      anonymous: false,
       lat: spot.lat,
       lon: spot.lon,
       visibility: vis,

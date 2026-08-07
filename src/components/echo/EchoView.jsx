@@ -63,14 +63,9 @@ export default function EchoView({
   const hasNext = canRangeSwipe && rangeIndex < rangeEchoes.length - 1
   const canReact = Boolean(onToggleReaction)
 
-  const liveAuthor = useLiveAuthorProfile(
-    !mine && !echo.anonymous ? echo.ownerId : null,
-  )
+  const liveAuthor = useLiveAuthorProfile(!mine ? echo.ownerId : null)
 
   const displayEcho = useMemo(() => {
-    if (echo.anonymous && !mine) {
-      return { ...echo, avatarType: 'frog', avatarUrl: null }
-    }
     if (mine && (profile?.id || profile?.userId)) {
       return withLiveAuthorAvatar(echo, {
         id: profile.id || profile.userId,
@@ -175,7 +170,7 @@ export default function EchoView({
             logoClassName="w-7 h-auto"
           />
           <div className="min-w-0 flex-1">
-            <FrenHandle>{echo.anonymous && !mine ? 'a fren' : displayEcho.authorName}</FrenHandle>
+            <FrenHandle>{displayEcho.authorName}</FrenHandle>
             <p className="text-xs frens-muted">
               <EchoMetaLine
                 kind={echo.kind}
@@ -190,7 +185,7 @@ export default function EchoView({
               />
             </p>
           </div>
-          {!mine && !echo.anonymous && echo.ownerId && onOpenProfile && (
+          {!mine && echo.ownerId && onOpenProfile && (
             <button
               type="button"
               onClick={() => onOpenProfile(echo.ownerId)}
@@ -375,7 +370,7 @@ export default function EchoView({
                 <ReportContentButton
                   kind="echo"
                   refId={echo.id}
-                  reportedUserId={echo.anonymous ? null : echo.ownerId}
+                  reportedUserId={echo.ownerId}
                   preview={echo.title || echo.caption || displayEcho.authorName}
                   subjectLabel="this echo"
                   variant="flag"

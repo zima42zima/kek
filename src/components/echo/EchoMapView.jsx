@@ -44,7 +44,7 @@ function avatarGlyphHtml(url, size = 28) {
 function markerHtml(echo, frenGraph) {
   const useAvatar = (
     echo.mine
-    || (isFrenOf(echo, frenGraph) && !echo.anonymous && Boolean(echo.avatarUrl))
+    || (isFrenOf(echo, frenGraph) && Boolean(echo.avatarUrl))
   )
   const size = echo.mine ? 16 : 14
   const inner = useAvatar
@@ -82,7 +82,7 @@ function clusterHtml(count) {
 function clusterExploreHtml(echoes, frenGraph) {
   const count = echoes.length
   const rep = echoes.find(
-    (e) => e.mine || (isFrenOf(e, frenGraph) && !e.anonymous && e.avatarUrl),
+    (e) => e.mine || (isFrenOf(e, frenGraph) && e.avatarUrl),
   )
   if (rep) {
     return `

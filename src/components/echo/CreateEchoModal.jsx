@@ -99,7 +99,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
   const [voiceFilter, setVoiceFilter] = useState('normal')
   const [senseFilter, setSenseFilter] = useState('clear')
   const [allowComments, setAllowComments] = useState(false)
-  const [anonymous, setAnonymous] = useState(false)
   const [recording, setRecording] = useState(null)
   const [imagePick, setImagePick] = useState(null)
   const [audioCover, setAudioCover] = useState(null)
@@ -154,7 +153,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
       coverBlob: extra.coverBlob,
       visibility,
       allowComments,
-      anonymous,
+      anonymous: false,
       voiceFilter: extra.voiceFilter,
       senseFilter: extra.senseFilter,
       spatial: null,
@@ -418,22 +417,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
                 className="rounded"
               />
             </label>
-            {needsPin ? (
-              <label className="flex items-start justify-between gap-3 text-sm px-1 cursor-pointer">
-                <span className="min-w-0">
-                  <span className="block">Anonymous</span>
-                  <span className="block text-[11px] frens-muted mt-0.5">
-                    Hide your name from everyone — map, echo, and alerts
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={anonymous}
-                  onChange={(e) => setAnonymous(e.target.checked)}
-                  className="rounded mt-0.5 shrink-0"
-                />
-              </label>
-            ) : null}
           </div>
 
           {publishError ? (

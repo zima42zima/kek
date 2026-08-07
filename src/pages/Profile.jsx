@@ -858,7 +858,7 @@ export default forwardRef(function Profile({
 
             <SettingToggle
               title="Echo alerts from frens"
-              hint="Off by default. When on, get a ping when a fren publishes an echo. Anonymous echoes stay nameless."
+              hint="Off by default. When on, get a ping when a fren publishes an echo."
               checked={notifyEchoPublishes}
               onToggle={handleToggleEchoAlerts}
             />
