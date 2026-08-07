@@ -248,7 +248,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   const userPosRef = useRef(userPos)
   userPosRef.current = userPos
 
-  const refreshPosition = useCallback(({ highAccuracy = false } = {}) => new Promise((resolve, reject) => {
+  const refreshPosition = useCallback(({ highAccuracy = false, forceFresh = false } = {}) => new Promise((resolve, reject) => {
     if (!('geolocation' in navigator)) {
       reject(new Error('no geolocation'))
       return
@@ -262,11 +262,21 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       reject,
       {
         enableHighAccuracy: highAccuracy,
-        timeout: highAccuracy ? 12000 : 10000,
-        maximumAge: highAccuracy ? 0 : 45000,
+        timeout: highAccuracy ? 15000 : 12000,
+        maximumAge: forceFresh || highAccuracy ? 0 : 45000,
       },
     )
   }), [])
+
+  const queryGeoPermission = useCallback(async () => {
+    try {
+      if (!navigator.permissions?.query) return 'unknown'
+      const result = await navigator.permissions.query({ name: 'geolocation' })
+      return result.state
+    } catch {
+      return 'unknown'
+    }
+  }, [])
 
   const profileForComments = useMemo(() => ({
     userId,
@@ -565,7 +575,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     }
   }
 
-  async function locate() {
+  const locate = useCallback(async ({ userInitiated = false } = {}) => {
     if (!window.isSecureContext) {
       if (import.meta.env.DEV) {
         setStatus('locating')
@@ -584,19 +594,39 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       setStatus('denied')
       return
     }
+
+    // Browsers only show the Allow popup from a user gesture. Auto-calling
+    // getCurrentPosition on mount often fails silently and sticks us on "blocked".
+    if (!userInitiated) {
+      const perm = await queryGeoPermission()
+      if (perm === 'denied') {
+        setStatus('denied')
+        return
+      }
+      if (perm !== 'granted') return
+    }
+
     setStatus('locating')
     try {
-      await refreshPosition({ highAccuracy: false })
-    } catch {
+      await refreshPosition({ highAccuracy: userInitiated, forceFresh: userInitiated })
+    } catch (err) {
+      // Timeout: one low-accuracy retry (common on desktop / first grant).
+      if (err?.code === 3) {
+        try {
+          await refreshPosition({ highAccuracy: false, forceFresh: true })
+          return
+        } catch { /* fall through */ }
+      }
       setStatus('denied')
     }
-  }
+  }, [queryGeoPermission, refreshPosition])
 
-  // Request location when opening the map so nearby echoes can load.
+  // If location was already allowed, seed the map. Otherwise wait for the button
+  // so the browser permission popup can appear from a real tap/click.
   useEffect(() => {
     if (tab !== 'map' || status !== 'idle') return
-    locate().catch(() => {})
-  }, [tab, status])
+    locate({ userInitiated: false }).catch(() => {})
+  }, [tab, status, locate])
 
   // Low-accuracy refresh while the map tab is open — not continuous high-accuracy tracking.
   useEffect(() => {
@@ -1122,12 +1152,12 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   function openCreateFlow() {
     if (!window.isSecureContext && !import.meta.env.DEV) {
-      locate()
+      void locate({ userInitiated: true })
       return
     }
     setShowCreate(true)
-    if (!userPos) locate().catch(() => {})
-    refreshPosition({ highAccuracy: true }).catch(() => {})
+    if (!userPos) locate({ userInitiated: true }).catch(() => {})
+    else refreshPosition({ highAccuracy: true, forceFresh: true }).catch(() => {})
   }
 
   function dismissIntro(startCreate = false) {
@@ -1917,13 +1947,18 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
               <p className="text-xs frens-muted mb-4">
                 Bats fly where frens left echoes — walk close to discover them. Or search a city above to explore.
               </p>
-              <button type="button" onClick={locate} className="frens-btn-outline px-4 py-2 text-sm inline-flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => { void locate({ userInitiated: true }) }}
+                disabled={status === 'locating'}
+                className="frens-btn-outline px-4 py-2 text-sm inline-flex items-center gap-1.5 disabled:opacity-60"
+              >
                 <LocationIcon className="w-4 h-4" />
                 {status === 'locating' ? 'Finding your region…' : 'Enable location'}
               </button>
               {status === 'denied' && (
                 <p className="text-xs frens-hint mt-3">
-                  Location was blocked. Allow it for this site in your browser, then tap again — or use Explore to search places.
+                  Location is blocked for this site. In your browser settings, set Location to Allow for misao.app (or localhost), then tap Enable location again — or use Explore to search places.
                 </p>
               )}
               {status === 'insecure' && (
