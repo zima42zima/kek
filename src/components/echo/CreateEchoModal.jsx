@@ -15,15 +15,15 @@ import {
   ECHO_PROXIMITY_PRESETS,
   ECHO_DEFAULT_PROXIMITY_ID,
   ECHO_SAFETY_KEY,
-  DURATIONS,
 } from '../../lib/echoConstants'
 import {
   EchoTypeIcon,
   EchoVisibilityIcon,
 } from './EchoMeta'
 import { bakeMemeCaption } from '../../lib/memeText'
-import { durationToExpiresAt } from './EchoDurationPicker'
-import { OPTION_ACTIVE, OPTION_IDLE, GlobeIcon } from '../icons/UiIcons'
+import { OPTION_ACTIVE, GlobeIcon } from '../icons/UiIcons'
+
+const PUBLISH_VISIBILITY = ECHO_VISIBILITY.filter((v) => v.id !== 'private')
 
 function readSafetySeen() {
   try {
@@ -103,7 +103,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
   const [imagePick, setImagePick] = useState(null)
   const [audioCover, setAudioCover] = useState(null)
   const [browseGlobally, setBrowseGlobally] = useState(false)
-  const [durationId, setDurationId] = useState('days')
   const [publishing, setPublishing] = useState(false)
   const [publishError, setPublishError] = useState('')
   const [memeCaption, setMemeCaption] = useState({ text: '', style: 'outline' })
@@ -136,7 +135,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
   }, [echoType])
 
   const readyToPublish = isImage ? Boolean(imagePick?.blob) : Boolean(recording)
-  const expiresAt = durationToExpiresAt(durationId)
 
   function resolvePin() {
     if (!needsPin || !userPos) return null
@@ -161,7 +159,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
       discoverRadiusM: needsPin ? proximity.meters : null,
       placeLabel: '',
       browseGlobally: needsPin && visibility === 'world' ? browseGlobally : false,
-      expiresAt,
+      expiresAt: null,
     })
   }
 
@@ -349,66 +347,51 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
       )}
 
       {step === 'settings' && (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-xs frens-muted text-center">Who can see it?</p>
-            <div className="grid grid-cols-3 gap-2">
-              {ECHO_VISIBILITY.map((v) => {
-                const active = visibility === v.id
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setVisibility(v.id)}
-                    aria-pressed={active}
-                    className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 transition touch-manipulation ${
-                      active ? OPTION_ACTIVE : OPTION_IDLE
-                    }`}
-                  >
-                    <EchoVisibilityIcon visibility={v.id} className="w-5 h-5" />
-                    <span className="text-xs font-medium">{v.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-            <SafetyNoticeOnce visibility={visibility} />
+        <div className="space-y-3">
+          <div className="flex gap-1.5 justify-center">
+            {PUBLISH_VISIBILITY.map((v) => {
+              const active = visibility === v.id
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setVisibility(v.id)}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-sm font-medium transition touch-manipulation ${
+                    active ? OPTION_ACTIVE : 'frens-border frens-muted'
+                  }`}
+                >
+                  <EchoVisibilityIcon visibility={v.id} className="w-4 h-4" />
+                  {v.label}
+                </button>
+              )
+            })}
           </div>
 
-          {needsPin ? (
-            <div className="space-y-2">
-              <p className="text-xs frens-muted text-center">Proximity</p>
-              <ChipRow
-                options={ECHO_PROXIMITY_PRESETS}
-                value={proximityId}
-                onChange={setProximityId}
-              />
-              {visibility === 'world' ? (
-                <label className="flex items-center justify-between gap-3 rounded-xl border frens-border px-3 py-2 cursor-pointer">
-                  <span className="text-sm inline-flex items-center gap-1.5">
-                    <GlobeIcon className="w-4 h-4" /> Browse anywhere
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={browseGlobally}
-                    onChange={(e) => setBrowseGlobally(e.target.checked)}
-                    className="rounded"
-                  />
-                </label>
-              ) : null}
-            </div>
-          ) : null}
+          <ChipRow
+            options={ECHO_PROXIMITY_PRESETS}
+            value={proximityId}
+            onChange={setProximityId}
+          />
 
-          <div className="space-y-2">
-            <p className="text-xs frens-muted text-center">How long?</p>
-            <ChipRow
-              options={DURATIONS}
-              value={durationId}
-              onChange={setDurationId}
-            />
-          </div>
+          <SafetyNoticeOnce visibility={visibility} />
 
-          <div className="space-y-2 border-t frens-border pt-3">
-            <label className="flex items-center justify-between gap-3 text-sm px-1 cursor-pointer">
+          <div className="flex items-center justify-between gap-3 px-1 text-sm">
+            {visibility === 'world' ? (
+              <label className="inline-flex items-center gap-1.5 cursor-pointer min-w-0">
+                <input
+                  type="checkbox"
+                  checked={browseGlobally}
+                  onChange={(e) => setBrowseGlobally(e.target.checked)}
+                  className="rounded"
+                />
+                <GlobeIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Browse anywhere</span>
+              </label>
+            ) : (
+              <span />
+            )}
+            <label className="inline-flex items-center gap-1.5 cursor-pointer shrink-0">
               <span>Comments</span>
               <input
                 type="checkbox"
@@ -423,12 +406,12 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             <p className="text-xs text-red-500 dark:text-red-400 text-center">{publishError}</p>
           ) : null}
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 pt-1">
             <button type="button" onClick={back} className="frens-btn-outline flex-1 py-2.5 text-sm">Back</button>
             <button
               type="button"
               onClick={publish}
-              disabled={!readyToPublish || publishing || (needsPin && !userPos)}
+              disabled={!readyToPublish || publishing || !userPos}
               className="frens-btn-primary flex-1 py-2.5 text-sm disabled:opacity-40"
             >
               {publishing ? 'Publishing…' : 'Publish'}

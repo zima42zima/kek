@@ -3,7 +3,9 @@ import Modal from '../Modal'
 import { ECHO_PUBLIC_VISIBILITIES, ECHO_VISIBILITY } from '../../lib/echoConstants'
 import { EchoVisibilityIcon } from './EchoMeta'
 import { EchoDiscoverRadiusPicker } from './EchoRangeSelect'
-import { OPTION_ACTIVE, OPTION_IDLE, GlobeIcon } from '../icons/UiIcons'
+import { OPTION_ACTIVE, GlobeIcon } from '../icons/UiIcons'
+
+const EDIT_VISIBILITY = ECHO_VISIBILITY.filter((v) => v.id !== 'private')
 
 export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
   const [label, setLabel] = useState(echo.label || '')
@@ -43,27 +45,24 @@ export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
           />
         </label>
 
-        <div className="space-y-2">
-          <p className="text-xs frens-muted text-center">Who can find this?</p>
-          <div className="grid grid-cols-3 gap-2">
-            {ECHO_VISIBILITY.map((v) => {
-              const active = visibility === v.id
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setVisibility(v.id)}
-                  aria-pressed={active}
-                  className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 transition touch-manipulation ${
-                    active ? OPTION_ACTIVE : OPTION_IDLE
-                  }`}
-                >
-                  <EchoVisibilityIcon visibility={v.id} className="w-5 h-5" />
-                  <span className="text-xs font-medium">{v.label}</span>
-                </button>
-              )
-            })}
-          </div>
+        <div className="flex gap-1.5 justify-center">
+          {EDIT_VISIBILITY.map((v) => {
+            const active = visibility === v.id
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => setVisibility(v.id)}
+                aria-pressed={active}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-sm font-medium transition touch-manipulation ${
+                  active ? OPTION_ACTIVE : 'frens-border frens-muted'
+                }`}
+              >
+                <EchoVisibilityIcon visibility={v.id} className="w-4 h-4" />
+                {v.label}
+              </button>
+            )
+          })}
         </div>
 
         {showRange ? (
