@@ -158,7 +158,7 @@ export default function EchoView({
   return (
     <>
       <Modal
-        title={mine ? 'Your echo' : null}
+        title={null}
         onClose={onClose}
         maxWidth="max-w-sm"
         blurBackdrop={false}
