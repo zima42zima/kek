@@ -977,8 +977,20 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         byId.set(echo.id, echo)
       }
     }
+    // Own echoes always show on World map (bbox RPC only returns browse-anywhere).
+    for (const echo of liveEchoes) {
+      if (
+        echo?.mine
+        && echo?.id
+        && Number.isFinite(echo.lat)
+        && Number.isFinite(echo.lon)
+        && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)
+      ) {
+        byId.set(echo.id, echo)
+      }
+    }
     return [...byId.values()]
-  }, [mapMode, liveExploreCityEchoes, liveBrowseEchoes])
+  }, [mapMode, liveExploreCityEchoes, liveBrowseEchoes, liveEchoes])
 
   const swipeGalleryTitle = useMemo(() => {
     if (mapMode === 'near') {

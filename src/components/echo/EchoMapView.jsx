@@ -42,10 +42,13 @@ function avatarGlyphHtml(url, size = 28) {
 }
 
 function markerHtml(echo, frenGraph) {
-  // Owner always sees their pin; everyone else gets bat when anonymous.
+  // Anonymous → always bat (including owner), so the map matches what others see.
   const useAvatar = (
-    echo.mine
-    || (!echo.anonymous && isFrenOf(echo, frenGraph) && Boolean(echo.avatarUrl))
+    !echo.anonymous
+    && (
+      echo.mine
+      || (isFrenOf(echo, frenGraph) && Boolean(echo.avatarUrl))
+    )
   )
   const size = echo.mine ? 16 : 14
   const inner = useAvatar
@@ -83,7 +86,7 @@ function clusterHtml(count) {
 function clusterExploreHtml(echoes, frenGraph) {
   const count = echoes.length
   const rep = echoes.find(
-    (e) => e.mine || (!e.anonymous && isFrenOf(e, frenGraph) && e.avatarUrl),
+    (e) => !e.anonymous && (e.mine || (isFrenOf(e, frenGraph) && e.avatarUrl)),
   )
   if (rep) {
     return `
