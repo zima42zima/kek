@@ -179,7 +179,10 @@ function NotificationRow({ n, onClick }) {
         <div className="relative shrink-0">
           <NotifAvatar n={n} />
           {!n.read && (
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-black dark:bg-white" aria-hidden />
+            <span
+              className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-black dark:bg-white ring-2 ring-white dark:ring-black"
+              aria-hidden
+            />
           )}
         </div>
         <div className="min-w-0 flex-1">
