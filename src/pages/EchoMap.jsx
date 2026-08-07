@@ -1913,11 +1913,11 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
             className={`text-xs px-3 py-1.5 rounded-full capitalize ${tab === t ? 'frens-btn-primary' : 'frens-btn-outline'}`}
           >
             {t === 'mine'
-              ? `My Echoes (${myEchoes.length})`
+              ? 'My Echoes'
               : t === 'collection'
-                ? `Collection (${displayCollection.length})`
+                ? 'Collection'
                 : t === 'history'
-                  ? `Log (${history.length})`
+                  ? 'Log'
                   : 'Map'}
           </button>
         ))}

@@ -32,7 +32,7 @@ export default function EchoMapSearch({
   onClearPlace,
   backendReady = false,
   cityLabel = null,
-  placeholder = 'Search a city, café, landmark…',
+  placeholder = 'Search world',
 }) {
   const [editing, setEditing] = useState(!selectedPlace)
   const [query, setQuery] = useState('')
