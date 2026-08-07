@@ -6,7 +6,7 @@ import EchoMapView from '../components/echo/EchoMapView'
 import CreateEchoModal from '../components/echo/CreateEchoModal'
 import EchoIntroModal from '../components/echo/EchoIntroModal'
 import EchoView from '../components/echo/EchoView'
-import EchoIcon from '../components/echo/EchoIcon'
+import EchoIcon, { batIcon } from '../components/echo/EchoIcon'
 import { LocationIcon, MapIcon } from '../components/icons/UiIcons'
 import EchoRangeGallery from '../components/echo/EchoRangeGallery'
 import { echoWatchedPreviewUrl } from '../components/echo/EchoPreviewMedia'
@@ -1018,6 +1018,11 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     if (mineKindFilter === 'all') return myEchoes
     return myEchoes.filter((e) => e.kind === mineKindFilter)
   }, [myEchoes, mineKindFilter])
+
+  const myAnonEchoes = useMemo(
+    () => myEchoes.filter((e) => e.anonymous),
+    [myEchoes],
+  )
 
   const displayCollection = useMemo(() => {
     return savedCollection
@@ -2144,21 +2149,40 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
               ) : null}
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setLogSection('collection')
-                setMineKindMenuOpen(false)
-              }}
-              aria-pressed={logSection === 'collection'}
-              className={`text-sm px-3 py-1.5 rounded-full transition shrink-0 ${
-                logSection === 'collection'
-                  ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
-                  : 'frens-muted hover:text-black dark:hover:text-white'
-              }`}
-            >
-              Collection
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setLogSection('bat')
+                  setMineKindMenuOpen(false)
+                }}
+                aria-pressed={logSection === 'bat'}
+                title="Anonymous echoes"
+                className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full transition ${
+                  logSection === 'bat'
+                    ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                    : 'frens-muted hover:text-black dark:hover:text-white'
+                }`}
+              >
+                <img src={batIcon} alt="" className="w-3.5 h-3.5 object-contain opacity-90" draggable={false} />
+                Bat
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLogSection('collection')
+                  setMineKindMenuOpen(false)
+                }}
+                aria-pressed={logSection === 'collection'}
+                className={`text-sm px-3 py-1.5 rounded-full transition ${
+                  logSection === 'collection'
+                    ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                    : 'frens-muted hover:text-black dark:hover:text-white'
+                }`}
+              >
+                Collection
+              </button>
+            </div>
           </div>
 
           {logSection === 'mine' && (
@@ -2188,6 +2212,45 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
                     : 'flex flex-col gap-2'
                 }>
                   {filteredMyEchoes.map((echo) => (
+                    <EchoMineCard
+                      key={echo.id}
+                      echo={echo}
+                      layout={mineView}
+                      onShowOnMap={showEchoOnMap}
+                      onNavigateWorld={showEchoOnMap}
+                      onView={(e) => setOpenId(e.id)}
+                      onEdit={(e) => setEditEcho(e)}
+                      onDelete={(id) => setPendingDeleteEchoId(id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {logSection === 'bat' && (
+            <div className="space-y-3">
+              <EchoMineToolbar
+                view={mineView}
+                onViewChange={handleMineViewChange}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                hint="Your anonymous echoes · bat for everyone else"
+              />
+
+              {myAnonEchoes.length === 0 ? (
+                <div className="border frens-border rounded-xl p-8 text-center">
+                  <p className="text-sm frens-muted">
+                    Anonymous echoes you publish show up here.
+                  </p>
+                </div>
+              ) : (
+                <div className={
+                  mineView === 'board'
+                    ? 'grid grid-cols-2 gap-3'
+                    : 'flex flex-col gap-2'
+                }>
+                  {myAnonEchoes.map((echo) => (
                     <EchoMineCard
                       key={echo.id}
                       echo={echo}

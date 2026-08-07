@@ -64,16 +64,24 @@ export default function EchoView({
   const hasNext = canRangeSwipe && rangeIndex < rangeEchoes.length - 1
   const canReact = Boolean(onToggleReaction)
 
-  const isAnon = Boolean(echo.anonymous) && !mine
-  const liveAuthor = useLiveAuthorProfile(!mine && !isAnon ? echo.ownerId : null)
+  const isAnonPublic = Boolean(echo.anonymous) && !mine
+  const isAnonMine = Boolean(echo.anonymous) && mine
+  const liveAuthor = useLiveAuthorProfile(!mine && !isAnonPublic ? echo.ownerId : null)
 
   const displayEcho = useMemo(() => {
-    if (isAnon) {
+    if (isAnonPublic) {
       return {
         ...echo,
         authorName: 'a fren',
         avatarUrl: null,
         ownerId: null,
+      }
+    }
+    if (isAnonMine) {
+      return {
+        ...echo,
+        authorName: 'anonymous',
+        avatarUrl: null,
       }
     }
     if (mine && (profile?.id || profile?.userId)) {
@@ -90,7 +98,7 @@ export default function EchoView({
       }
     }
     return echo
-  }, [echo, mine, profile, liveAuthor, isAnon])
+  }, [echo, mine, profile, liveAuthor, isAnonPublic, isAnonMine])
 
   const lookStyle = echo.kind === 'video' && echo.lookFilter
     ? { filter: lookFilterCss(echo.lookFilter) }
@@ -174,7 +182,7 @@ export default function EchoView({
         blurBackdrop={false}
       >
         <div className="flex items-center gap-3 mb-4">
-          {isAnon ? (
+          {isAnonPublic || isAnonMine ? (
             <BatAvatar className="w-11 h-11" />
           ) : (
             <ProfileAvatar
@@ -197,9 +205,10 @@ export default function EchoView({
                     : null
                 }
               />
+              {isAnonMine ? <span className="block mt-0.5">others see a bat</span> : null}
             </p>
           </div>
-          {!mine && !isAnon && echo.ownerId && onOpenProfile && (
+          {!mine && !isAnonPublic && echo.ownerId && onOpenProfile && (
             <button
               type="button"
               onClick={() => onOpenProfile(echo.ownerId)}
@@ -384,7 +393,7 @@ export default function EchoView({
                 <ReportContentButton
                   kind="echo"
                   refId={echo.id}
-                  reportedUserId={isAnon ? null : echo.ownerId}
+                  reportedUserId={isAnonPublic ? null : echo.ownerId}
                   preview={echo.title || echo.caption || displayEcho.authorName}
                   subjectLabel="this echo"
                   variant="flag"

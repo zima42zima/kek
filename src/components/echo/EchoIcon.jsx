@@ -41,3 +41,16 @@ export function BatAvatar({ className = 'w-11 h-11' }) {
     </div>
   )
 }
+
+/** Small bat chip for owner log / cards. */
+export function BatBadge({ className = '', title = 'Anonymous' }) {
+  return (
+    <span
+      className={`inline-flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm ${className}`}
+      title={title}
+      aria-label={title}
+    >
+      <img src={batIcon} alt="" className="w-[65%] h-[65%] object-contain" draggable={false} />
+    </span>
+  )
+}
