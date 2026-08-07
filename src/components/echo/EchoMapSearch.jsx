@@ -268,8 +268,8 @@ export default function EchoMapSearch({
 
 export function EchoMapModeTabs({ mode, onChange, hasLocation, explorePlace }) {
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className="flex gap-1.5 justify-center">
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => onChange('near')}
@@ -291,9 +291,9 @@ export function EchoMapModeTabs({ mode, onChange, hasLocation, explorePlace }) {
         </button>
       </div>
       {explorePlace && mode === 'explore' ? (
-        <span className="text-[11px] frens-muted truncate max-w-full px-2 text-center">
+        <p className="text-[11px] frens-muted truncate text-center px-1">
           {explorePlace.label}
-        </span>
+        </p>
       ) : null}
     </div>
   )
