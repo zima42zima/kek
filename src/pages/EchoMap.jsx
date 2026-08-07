@@ -15,13 +15,13 @@ import EchoMineCard from '../components/echo/EchoMineCard'
 import EchoMineToolbar from '../components/echo/EchoMineToolbar'
 import EchoEditModal from '../components/echo/EchoEditModal'
 import ConfirmDialog from '../components/ConfirmDialog'
-import EchoSearchRadiusSelect from '../components/echo/EchoRangeSelect'
 import EchoMapSearch, { EchoMapModeTabs } from '../components/echo/EchoMapSearch'
 import EchoPlacesPanel, { groupEchoesByPlace } from '../components/echo/EchoPlacesPanel'
 import {
   ECHO_INTRO_KEY,
   ECHO_VIDEO_MAX_SEC,
   ECHO_CITY_RADIUS_M,
+  ECHO_DISCOVER_RADIUS_MIN_M,
   ECHO_PIN_OFFSET_MAX_M,
   ECHO_HINT_FUZZ_RADIUS_M,
   ECHO_CITY_HINT_FUZZ_RADIUS_M,
@@ -52,8 +52,6 @@ import {
   loadWorldEchoes,
   publishToWorldPool,
   removeFromWorldPool,
-  loadSearchRadius,
-  saveSearchRadius,
 } from '../lib/echoStorage'
 import {
   isInDiscoverRange,
@@ -161,7 +159,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   })
   const [mineKindFilter, setMineKindFilter] = useState('all')
   const [collectionKindFilter, setCollectionKindFilter] = useState('all')
-  const [searchRadiusM, setSearchRadiusM] = useState(() => loadSearchRadius())
+  /** Area mode always scans at the minimum proximity (420m). */
+  const searchRadiusM = ECHO_DISCOVER_RADIUS_MIN_M
   const [mapMode, setMapMode] = useState('near')
   const [browseEchoes, setBrowseEchoes] = useState([])
   const [exploreCityEchoes, setExploreCityEchoes] = useState([])
@@ -670,11 +669,6 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     const id = setInterval(tick, ECHO_POSITION_REFRESH_MS)
     return () => clearInterval(id)
   }, [tab, status, backendReady, refreshServerEchoes, refreshPosition])
-
-  function handleSearchRadiusChange(meters) {
-    setSearchRadiusM(meters)
-    saveSearchRadius(meters)
-  }
 
   const resolveActorName = useCallback(async (echo) => {
     if (echo.ownerId && echo.ownerId !== userId) {
@@ -1925,14 +1919,6 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
       {tab === 'map' && (
         <>
-          <EchoMapSearch
-            selectedPlace={explorePlace}
-            onSelectPlace={handleSearchPlace}
-            onClearPlace={handleClearExplorePlace}
-            backendReady={backendReady}
-            cityLabel={cityLabel}
-          />
-
           <EchoMapModeTabs
             mode={mapMode}
             onChange={handleMapModeChange}
@@ -1940,12 +1926,22 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
             explorePlace={explorePlace}
           />
 
+          {mapMode === 'explore' ? (
+            <EchoMapSearch
+              selectedPlace={explorePlace}
+              onSelectPlace={handleSearchPlace}
+              onClearPlace={handleClearExplorePlace}
+              backendReady={backendReady}
+              cityLabel={cityLabel}
+            />
+          ) : null}
+
           {mapMode === 'near' && status !== 'located' && !explorePlace ? (
             <div className="border frens-border rounded-xl p-8 text-center">
               <MapIcon className="w-10 h-10 mx-auto mb-2 opacity-70" />
               <p className="text-sm frens-body-text mb-1">See echoes around you</p>
               <p className="text-xs frens-muted mb-4">
-                Bats fly where frens left echoes — walk close to discover them. Or search a city above to explore.
+                Bats fly where frens left echoes — walk close to discover them. Or tap World to search places.
               </p>
               <button
                 type="button"
@@ -1958,7 +1954,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
               </button>
               {status === 'denied' && (
                 <p className="text-xs frens-hint mt-3">
-                  Location is blocked for this site. In your browser settings, set Location to Allow for misao.app (or localhost), then tap Enable location again — or use Explore to search places.
+                  Location is blocked for this site. In your browser settings, set Location to Allow for misao.app (or localhost), then tap Enable location again — or use World to search places.
                 </p>
               )}
               {status === 'insecure' && (
@@ -1969,13 +1965,6 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
             </div>
           ) : (
             <>
-              {mapMode === 'near' && (
-                <EchoSearchRadiusSelect
-                  value={searchRadiusM}
-                  onChange={handleSearchRadiusChange}
-                  cityLabel={cityLabel}
-                />
-              )}
               {mapMode === 'explore' && explorePlace ? (
                 <p className="text-xs frens-muted px-1">
                   {explorePlace.label}
@@ -2039,7 +2028,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
               )}
               {!mapHidden && mapMode === 'explore' && !explorePlace && browseEchoes.length === 0 && (
                 <p className="text-xs frens-muted text-center py-2">
-                  Search a place above to fly the map there.
+                  Search the world above to fly the map there.
                 </p>
               )}
             </>

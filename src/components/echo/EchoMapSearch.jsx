@@ -278,7 +278,7 @@ export function EchoMapModeTabs({ mode, onChange, hasLocation, explorePlace }) {
             mode === 'near' ? 'frens-btn-primary' : 'frens-btn-outline disabled:opacity-40'
           }`}
         >
-          <NearMeIcon className="w-3.5 h-3.5" /> Near me
+          <NearMeIcon className="w-3.5 h-3.5" /> Area
         </button>
         <button
           type="button"
@@ -287,11 +287,11 @@ export function EchoMapModeTabs({ mode, onChange, hasLocation, explorePlace }) {
             mode === 'explore' ? 'frens-btn-primary' : 'frens-btn-outline'
           }`}
         >
-          <GlobeIcon className="w-3.5 h-3.5" /> Explore
+          <GlobeIcon className="w-3.5 h-3.5" /> World
         </button>
       </div>
       {explorePlace && mode === 'explore' ? (
-        <span className="text-[11px] frens-muted truncate">Exploring · {explorePlace.label}</span>
+        <span className="text-[11px] frens-muted truncate">World · {explorePlace.label}</span>
       ) : null}
     </div>
   )

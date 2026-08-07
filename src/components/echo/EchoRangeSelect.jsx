@@ -1,34 +1,5 @@
 import { ECHO_RANGE_PRESETS } from '../../lib/echoConstants'
-import { formatRangeM } from '../../lib/echoRange'
 import { OPTION_ACTIVE } from '../icons/UiIcons'
-
-export default function EchoSearchRadiusSelect({ value, onChange, cityLabel, className = '' }) {
-  return (
-    <div className={`space-y-1.5 ${className}`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs frens-muted">
-          Search range
-        </p>
-        <span className="text-[10px] frens-hint shrink-0">{formatRangeM(value)}</span>
-      </div>
-      <div className="flex gap-1.5 flex-wrap">
-        {ECHO_RANGE_PRESETS.map((preset) => (
-          <button
-            key={preset.id}
-            type="button"
-            onClick={() => onChange(preset.meters)}
-            title={preset.hint}
-            className={`text-xs px-3 py-1.5 rounded-full border transition ${
-              value === preset.meters ? OPTION_ACTIVE : 'frens-border frens-muted hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
-            }`}
-          >
-            {preset.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export function EchoDiscoverRadiusPicker({ value, onChange, className = '' }) {
   return (

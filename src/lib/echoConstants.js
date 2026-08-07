@@ -22,7 +22,7 @@ export const ECHO_RANGE_PRESETS = [
 
 export const ECHO_SEARCH_RADIUS_KEY = 'frens-echo-search-radius-v1'
 export const ECHO_MINE_VIEW_KEY = 'frens-echo-mine-view-v1'
-export const ECHO_DEFAULT_SEARCH_RADIUS_M = 2500
+export const ECHO_DEFAULT_SEARCH_RADIUS_M = ECHO_DISCOVER_RADIUS_MIN_M
 export const ECHO_DEFAULT_DISCOVER_RADIUS_M = 800
 export const ECHO_POSITION_REFRESH_MS = 10000
 export const ECHO_MOVE_THRESHOLD_M = 20
