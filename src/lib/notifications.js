@@ -39,14 +39,20 @@ function mapRow(row, anonymousOwlLetterIds = new Set()) {
     || (row.type === 'owl_letter'
       && row.owl_letter_id
       && anonymousOwlLetterIds.has(row.owl_letter_id))
-  const scrubActor = owlAnon && row.type === 'owl_letter'
+  const echoAnon = Boolean(row.echo_anonymous)
+    || (
+      ['echo', 'echo_follow', 'echo_published', 'echo_friends'].includes(row.type)
+      && !row.actor_id
+      && row.echo_id
+    )
+  const scrubActor = (owlAnon && row.type === 'owl_letter') || echoAnon
   return {
     id: `remote:${row.id}`,
     source: 'remote',
     type: row.type,
     actorId: scrubActor ? null : (row.actor_id || null),
-    actorName: scrubActor ? null : (row.actor_name || 'a fren'),
-    actorAvatarType: scrubActor ? null : (row.actor_avatar_type || 'frog'),
+    actorName: scrubActor ? 'a fren' : (row.actor_name || 'a fren'),
+    actorAvatarType: scrubActor ? 'frog' : (row.actor_avatar_type || 'frog'),
     actorAvatarUrl: scrubActor ? null : (row.actor_avatar_url || null),
     postId: row.post_id || null,
     postPreview: row.post_preview || '',
@@ -61,6 +67,7 @@ function mapRow(row, anonymousOwlLetterIds = new Set()) {
     platformReportId: row.platform_report_id || null,
     echoId: row.echo_id || null,
     cityLabel: row.echo_city_label || null,
+    echoAnonymous: echoAnon,
     read: row.read ?? false,
     createdAt: row.created_at,
   }

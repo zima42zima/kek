@@ -58,6 +58,7 @@ export default forwardRef(function Profile({
   const [frenName, setFrenName] = useState('')
   const [cosmosUrl, setCosmosUrl] = useState('')
   const [shareLocation, setShareLocation] = useState(false)
+  const [notifyEchoPublishes, setNotifyEchoPublishes] = useState(false)
   // Don't block the whole shell if auth already has a profile — avoids Posts|_log flash.
   const [loading, setLoading] = useState(() => !contextProfile)
   const [saving, setSaving] = useState(false)
@@ -150,6 +151,7 @@ export default forwardRef(function Profile({
             setFrenName(row.frenName || '')
             setCosmosUrl(row.cosmosUrl || '')
             setShareLocation(row.shareLocation ?? false)
+            setNotifyEchoPublishes(row.notifyEchoPublishes ?? false)
           } else {
             setFrenName(authUser.email?.split('@')[0] || '')
           }
@@ -188,6 +190,7 @@ export default forwardRef(function Profile({
         setFrenName(row.frenName || '')
         setCosmosUrl(row.cosmosUrl || '')
         setShareLocation(row.shareLocation ?? false)
+        setNotifyEchoPublishes(row.notifyEchoPublishes ?? false)
       }
       await loadPostsForUser(userId)
       loadCounts()
@@ -405,6 +408,26 @@ export default forwardRef(function Profile({
       await refreshProfile()
     } catch {
       setShareLocation(!next)
+    }
+  }
+
+  async function handleToggleEchoAlerts() {
+    if (!userId) return
+
+    const next = !notifyEchoPublishes
+    setNotifyEchoPublishes(next)
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ notify_echo_publishes: next })
+        .eq('id', userId)
+      if (error) throw error
+      const updated = await fetchProfileForUser(userId, userEmail)
+      setProfile(updated)
+      await refreshProfile()
+    } catch {
+      setNotifyEchoPublishes(!next)
     }
   }
 
@@ -831,6 +854,13 @@ export default forwardRef(function Profile({
               hint="Only city level, never exact location."
               checked={shareLocation}
               onToggle={handleToggleLocation}
+            />
+
+            <SettingToggle
+              title="Echo alerts from frens"
+              hint="Off by default. When on, get a ping when a fren publishes an echo. Anonymous echoes stay nameless."
+              checked={notifyEchoPublishes}
+              onToggle={handleToggleEchoAlerts}
             />
 
             <div>

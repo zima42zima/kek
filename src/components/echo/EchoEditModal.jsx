@@ -8,7 +8,7 @@ import { OPTION_ACTIVE, OPTION_IDLE, GlobeIcon } from '../icons/UiIcons'
 export default function EchoEditModal({ echo, onSave, onDelete, onClose }) {
   const [label, setLabel] = useState(echo.label || '')
   const [visibility, setVisibility] = useState(echo.visibility || 'world')
-  const [discoverRadiusM, setDiscoverRadiusM] = useState(echo.discoverRadiusM ?? 800)
+  const [discoverRadiusM, setDiscoverRadiusM] = useState(echo.discoverRadiusM ?? 420)
   const [allowComments, setAllowComments] = useState(Boolean(echo.allowComments))
   const [browseGlobally, setBrowseGlobally] = useState(Boolean(echo.browseGlobally))
 

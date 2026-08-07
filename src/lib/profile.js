@@ -60,6 +60,7 @@ export function mapDbProfile(row, email) {
     coverUrl: row.cover_url ?? null,
     cosmosUrl: row.cosmos_url ?? null,
     shareLocation: row.share_location ?? false,
+    notifyEchoPublishes: row.notify_echo_publishes ?? false,
     isFounder: row.is_founder ?? false,
     isCofounder: row.is_cofounder ?? false,
     suspendedAt: row.suspended_at ?? null,

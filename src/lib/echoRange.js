@@ -2,14 +2,17 @@ import { distanceMeters, blurCoord } from './geo'
 import {
   ECHO_CITY_RADIUS_M,
   ECHO_DISCOVER_RADIUS_MIN_M,
-  ECHO_RANGE_PRESETS,
+  ECHO_PROXIMITY_PRESETS,
 } from './echoConstants'
 
-const PRESET_BY_METERS = new Map(ECHO_RANGE_PRESETS.map((p) => [p.meters, p]))
+const PRESET_BY_METERS = new Map(ECHO_PROXIMITY_PRESETS.map((p) => [p.meters, p]))
 
 export function clampDiscoverRadius(m) {
   const n = Number(m)
-  if (!Number.isFinite(n)) return ECHO_RANGE_PRESETS[1]?.meters ?? 800
+  if (!Number.isFinite(n)) {
+    return ECHO_PROXIMITY_PRESETS.find((p) => p.id === 'area')?.meters
+      ?? ECHO_DISCOVER_RADIUS_MIN_M
+  }
   return Math.min(ECHO_CITY_RADIUS_M, Math.max(ECHO_DISCOVER_RADIUS_MIN_M, Math.round(n)))
 }
 
@@ -17,9 +20,9 @@ export function clampSearchRadius(m) {
   return clampDiscoverRadius(m)
 }
 
-/** Per-echo discover radius set by the publisher (defaults to 800m). */
+/** Per-echo discover radius set by the publisher (defaults to Area / 420m floor). */
 export function echoDiscoverRadiusM(echo) {
-  return clampDiscoverRadius(echo?.discoverRadiusM ?? 800)
+  return clampDiscoverRadius(echo?.discoverRadiusM ?? ECHO_DISCOVER_RADIUS_MIN_M)
 }
 
 export function isCityDiscoverRadius(echo) {

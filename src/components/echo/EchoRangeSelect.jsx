@@ -1,27 +1,39 @@
-import { ECHO_RANGE_PRESETS } from '../../lib/echoConstants'
+import { ECHO_PROXIMITY_PRESETS } from '../../lib/echoConstants'
 import { OPTION_ACTIVE } from '../icons/UiIcons'
 
+function presetForMeters(meters) {
+  return (
+    ECHO_PROXIMITY_PRESETS.find((p) => p.meters === meters)
+    || ECHO_PROXIMITY_PRESETS.find((p) => p.id === 'area')
+    || ECHO_PROXIMITY_PRESETS[0]
+  )
+}
+
+/** Compact Exact · Area · City proximity chips for publish / edit. */
 export function EchoDiscoverRadiusPicker({ value, onChange, className = '' }) {
+  const activeId = presetForMeters(value)?.id
+
   return (
     <div className={`space-y-2 ${className}`}>
-      <p className="text-sm frens-body-text text-center">How close must someone be?</p>
-      <p className="text-xs frens-muted text-center -mt-1">
-        Frens discover your echo when they walk within this range. Exact pin stays hidden.
-      </p>
-      <div className="grid gap-2">
-        {ECHO_RANGE_PRESETS.map((preset) => (
-          <button
-            key={preset.id}
-            type="button"
-            onClick={() => onChange(preset.meters)}
-            className={`text-left rounded-xl border p-3 transition ${
-              value === preset.meters ? OPTION_ACTIVE : 'frens-border hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
-            }`}
-          >
-            <span className="font-medium text-sm">{preset.label}</span>
-            <p className="text-xs frens-muted mt-0.5">{preset.hint}</p>
-          </button>
-        ))}
+      <p className="text-xs frens-muted text-center">Proximity</p>
+      <div className="flex gap-1.5 justify-center flex-wrap">
+        {ECHO_PROXIMITY_PRESETS.map((preset) => {
+          const active = activeId === preset.id
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => onChange(preset.meters, preset)}
+              className={`min-w-[4.25rem] px-3.5 py-2 rounded-full border text-sm font-medium transition ${
+                active
+                  ? OPTION_ACTIVE
+                  : 'frens-border frens-muted hover:bg-black/[0.03] dark:hover:bg-white/[0.03]'
+              }`}
+            >
+              {preset.label}
+            </button>
+          )
+        })}
       </div>
     </div>
   )

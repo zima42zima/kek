@@ -12,18 +12,25 @@ export const ECHO_CITY_RADIUS_M = 2500
 /** Max scatter from your GPS when placing an echo pin */
 export const ECHO_PIN_OFFSET_MAX_M = ECHO_DISCOVER_RADIUS_MIN_M
 
-/** Preset ranges for search (map) and publish (discover radius). */
-export const ECHO_RANGE_PRESETS = [
-  { id: 'block', label: '420m', meters: 420, hint: 'One block — use with a place name to pin cafés & landmarks' },
-  { id: 'walk', label: '800m', meters: 800, hint: 'Short walk' },
-  { id: 'hood', label: '1.2km', meters: 1200, hint: 'Neighborhood' },
-  { id: 'city', label: 'City', meters: 2500, hint: 'Whole city area' },
+/**
+ * Publish proximity — where the echo lives for discovery.
+ * Exact = pin at your GPS (opt-in). Area / City = scattered pin + wider find radius.
+ * Discover meters still clamp to ≥420m in the backend (privacy floor for find-distance).
+ */
+export const ECHO_PROXIMITY_PRESETS = [
+  { id: 'exact', label: 'Exact', meters: 420, exactPin: true },
+  { id: 'area', label: 'Area', meters: 1200, exactPin: false },
+  { id: 'city', label: 'City', meters: 2500, exactPin: false },
 ]
+
+/** @deprecated use ECHO_PROXIMITY_PRESETS */
+export const ECHO_RANGE_PRESETS = ECHO_PROXIMITY_PRESETS
 
 export const ECHO_SEARCH_RADIUS_KEY = 'frens-echo-search-radius-v1'
 export const ECHO_MINE_VIEW_KEY = 'frens-echo-mine-view-v1'
 export const ECHO_DEFAULT_SEARCH_RADIUS_M = ECHO_DISCOVER_RADIUS_MIN_M
-export const ECHO_DEFAULT_DISCOVER_RADIUS_M = 800
+export const ECHO_DEFAULT_DISCOVER_RADIUS_M = ECHO_DISCOVER_RADIUS_MIN_M
+export const ECHO_DEFAULT_PROXIMITY_ID = 'area'
 export const ECHO_POSITION_REFRESH_MS = 10000
 export const ECHO_MOVE_THRESHOLD_M = 20
 

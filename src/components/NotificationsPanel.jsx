@@ -8,6 +8,7 @@ import { linkifyText } from '../lib/linkText'
 import { requestOpenPsPanel } from '../lib/psNav'
 import { requestOpenFounderConsole } from '../lib/founderNav'
 import FoldsLettersIcon from './owl/FoldsLettersIcon'
+import EchoIcon from './echo/EchoIcon'
 import { isNotificationClickable, requestPostFocus, requestEchoFocus } from '../lib/notificationNav'
 import {
   NOTIFICATION_SECTIONS,
@@ -23,8 +24,16 @@ function PreviewText({ text }) {
   return <span className="frens-muted"> — {linkifyText(text)}</span>
 }
 
+function ActorLabel({ n }) {
+  const label = n.actorName || 'a fren'
+  if (n.echoAnonymous || n.owlLetterAnonymous || !n.actorId) {
+    return <span>{label}</span>
+  }
+  return <FrenHandle inline>{label}</FrenHandle>
+}
+
 function NotifText({ n }) {
-  const name = <FrenHandle inline>{n.actorName}</FrenHandle>
+  const name = <ActorLabel n={n} />
   switch (n.type) {
     case 'follow':
       return <span>{name} started following you</span>
@@ -152,6 +161,17 @@ function NotifAvatar({ n }) {
         aria-hidden
       >
         <FoldsLettersIcon className="w-4 h-4" />
+      </div>
+    )
+  }
+
+  if (n.echoAnonymous) {
+    return (
+      <div
+        className="w-9 h-9 rounded-full border border-frens flex items-center justify-center shrink-0 bg-white dark:bg-black"
+        aria-hidden
+      >
+        <EchoIcon className="w-5 h-4" />
       </div>
     )
   }

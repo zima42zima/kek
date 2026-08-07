@@ -709,14 +709,16 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     })
 
     newlyHinted.forEach(async (e) => {
-      const name = await resolveActorName(e)
+      const anon = Boolean(e.anonymous)
+      const name = anon ? 'a fren' : await resolveActorName(e)
       pushLocal({
         type: 'echo_follow',
         echoId: e.id,
-        actorId: e.ownerId,
+        actorId: anon ? null : e.ownerId,
         actorName: name,
-        actorAvatarType: e.avatarType,
-        actorAvatarUrl: e.avatarUrl,
+        actorAvatarType: anon ? 'frog' : e.avatarType,
+        actorAvatarUrl: anon ? null : e.avatarUrl,
+        echoAnonymous: anon,
         cityLabel,
         dedupeKey: `echo-follow:${e.id}`,
       })
