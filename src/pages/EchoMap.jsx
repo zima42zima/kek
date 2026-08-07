@@ -1888,44 +1888,47 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   ])
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end">
+    <div className="space-y-3">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 min-h-[2.75rem] px-1">
+        <div className="justify-self-start">
+          <button
+            type="button"
+            onClick={() => setTab('map')}
+            aria-pressed={tab === 'map'}
+            className={`text-sm px-3 py-1.5 rounded-full transition ${
+              tab === 'map'
+                ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                : 'frens-muted hover:text-black dark:hover:text-white'
+            }`}
+          >
+            Map
+          </button>
+        </div>
+
         <button
           type="button"
           onClick={openCreateFlow}
-          className="frens-btn-primary px-3 py-2 text-sm rounded-full inline-flex items-center gap-1"
           title={userPos ? 'Drop an echo' : 'Enable location first'}
+          aria-label="Leave an echo"
+          className="w-11 h-11 rounded-full frens-btn-primary inline-flex items-center justify-center text-2xl leading-none font-medium shadow-sm"
         >
-          <span className="text-base leading-none font-medium" aria-hidden>+</span>
-          Echo
+          <span aria-hidden>+</span>
         </button>
-      </div>
 
-      <div className="flex items-center justify-between gap-2 min-h-[2.25rem]">
-        <button
-          type="button"
-          onClick={() => setTab('map')}
-          aria-pressed={tab === 'map'}
-          className={`text-sm px-3 py-1.5 rounded-full transition shrink-0 ${
-            tab === 'map'
-              ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
-              : 'frens-muted hover:text-black dark:hover:text-white'
-          }`}
-        >
-          Map
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('log')}
-          aria-pressed={tab === 'log'}
-          className={`text-sm px-3 py-1.5 rounded-full transition shrink-0 ${
-            tab === 'log'
-              ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
-              : 'frens-muted hover:text-black dark:hover:text-white'
-          }`}
-        >
-          _log
-        </button>
+        <div className="justify-self-end">
+          <button
+            type="button"
+            onClick={() => setTab('log')}
+            aria-pressed={tab === 'log'}
+            className={`text-sm px-3 py-1.5 rounded-full transition ${
+              tab === 'log'
+                ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                : 'frens-muted hover:text-black dark:hover:text-white'
+            }`}
+          >
+            _log
+          </button>
+        </div>
       </div>
 
       {tab === 'map' && (
