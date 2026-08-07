@@ -119,6 +119,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   const [userPos, setUserPos] = useState(null)
   const [cityLabel, setCityLabel] = useState('your region')
   const [tab, setTab] = useState('map')
+  /** Under _log: mine | collection | history */
+  const [logSection, setLogSection] = useState('mine')
   const [echoes, setEchoes] = useState([])
   const [backendReady, setBackendReady] = useState(false)
   const [echoesLoading, setEchoesLoading] = useState(true)
@@ -537,7 +539,12 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
       consumedFocusRef.current = focusEchoId
       onClearEchoFocus?.()
-      setTab(echo.mine ? 'mine' : 'map')
+      if (echo.mine) {
+        setTab('log')
+        setLogSection('mine')
+      } else {
+        setTab('map')
+      }
       setOpenId(focusEchoId)
       if (!echo.mine && ECHO_PUBLIC_VISIBILITIES.has(echo.visibility)) {
         setDiscovered((prev) => new Set([...prev, focusEchoId]))
@@ -1109,7 +1116,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   }), [history, liveEchoes, liveBrowseEchoes, liveExploreCityEchoes, displayCollection, historyEchoCache, ownerProfiles, avatarHydrateOpts])
 
   useEffect(() => {
-    if (tab !== 'history' || !userId || history.length === 0) return undefined
+    if (tab !== 'log' || logSection !== 'history' || !userId || history.length === 0) return undefined
 
     let cancelled = false
     ;(async () => {
@@ -1142,7 +1149,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
     })()
 
     return () => { cancelled = true }
-  }, [tab, history, userId, backendReady, echoes, browseEchoes, exploreCityEchoes, displayCollection])
+  }, [tab, logSection, history, userId, backendReady, echoes, browseEchoes, exploreCityEchoes, displayCollection])
 
   function openCreateFlow() {
     if (!window.isSecureContext && !import.meta.env.DEV) {
@@ -1333,7 +1340,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
   }
 
   useEffect(() => {
-    if (!backendReady || !userId || tab !== 'collection') return undefined
+    if (!backendReady || !userId || tab !== 'log' || logSection !== 'collection') return undefined
     if (savedCollection.length === 0) return undefined
 
     let cancelled = false
@@ -1382,7 +1389,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       }))
     })()
     return () => { cancelled = true }
-  }, [backendReady, userId, tab, savedCollection])
+  }, [backendReady, userId, tab, logSection, savedCollection])
 
   useEffect(() => {
     if (!openId || !backendReady) return
@@ -1883,10 +1890,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="frens-title-xl leading-tight">Echo</h2>
-        </div>
+      <div className="flex items-center justify-end">
         <button
           type="button"
           onClick={openCreateFlow}
@@ -1898,23 +1902,31 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         </button>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        {['map', 'mine', 'collection', 'history'].map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`text-xs px-3 py-1.5 rounded-full capitalize ${tab === t ? 'frens-btn-primary' : 'frens-btn-outline'}`}
-          >
-            {t === 'mine'
-              ? 'My Echoes'
-              : t === 'collection'
-                ? 'Collection'
-                : t === 'history'
-                  ? 'Log'
-                  : 'Map'}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-2 min-h-[2.25rem]">
+        <button
+          type="button"
+          onClick={() => setTab('map')}
+          aria-pressed={tab === 'map'}
+          className={`text-sm px-3 py-1.5 rounded-full transition shrink-0 ${
+            tab === 'map'
+              ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+              : 'frens-muted hover:text-black dark:hover:text-white'
+          }`}
+        >
+          Map
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('log')}
+          aria-pressed={tab === 'log'}
+          className={`text-sm px-3 py-1.5 rounded-full transition shrink-0 ${
+            tab === 'log'
+              ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+              : 'frens-muted hover:text-black dark:hover:text-white'
+          }`}
+        >
+          _log
+        </button>
       </div>
 
       {tab === 'map' && (
@@ -2036,122 +2048,145 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
         </>
       )}
 
-      {tab === 'mine' && (
+      {tab === 'log' && (
         <div className="space-y-3">
-          <EchoMineToolbar
-            kindFilter={mineKindFilter}
-            onKindFilterChange={setMineKindFilter}
-            view={mineView}
-            onViewChange={handleMineViewChange}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            counts={mineKindCounts}
-            hint="Private labels · tap to open"
-          />
+          <div className="flex gap-1.5 flex-wrap">
+            {[
+              { id: 'mine', label: 'My Echoes' },
+              { id: 'collection', label: 'Collection' },
+              { id: 'history', label: 'Opened' },
+            ].map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setLogSection(section.id)}
+                className={`text-xs px-3 py-1.5 rounded-full transition ${
+                  logSection === section.id ? 'frens-btn-primary' : 'frens-btn-outline'
+                }`}
+              >
+                {section.label}
+              </button>
+            ))}
+          </div>
 
-          {myEchoes.length === 0 ? (
-            <div className="border frens-border rounded-xl p-8 text-center">
-              <p className="text-sm frens-muted inline-flex items-center gap-1 justify-center">
-                No echoes yet — tap <EchoIcon className="w-4 h-3" /> Meme to leave audio or a short video.
-              </p>
-            </div>
-          ) : filteredMyEchoes.length === 0 ? (
-            <div className="border frens-border rounded-xl p-8 text-center">
-              <p className="text-sm frens-muted">No echoes match this filter.</p>
-            </div>
-          ) : (
-            <div className={
-              mineView === 'board'
-                ? 'grid grid-cols-2 gap-3'
-                : 'flex flex-col gap-2'
-            }>
-              {filteredMyEchoes.map((echo) => (
-                <EchoMineCard
-                  key={echo.id}
-                  echo={echo}
-                  layout={mineView}
-                  onShowOnMap={showEchoOnMap}
-                  onNavigateWorld={showEchoOnMap}
-                  onView={(e) => setOpenId(e.id)}
-                  onEdit={(e) => setEditEcho(e)}
-                  onDelete={(id) => setPendingDeleteEchoId(id)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'collection' && (
-        <div className="space-y-3">
-          <EchoMineToolbar
-            kindFilter={collectionKindFilter}
-            onKindFilterChange={setCollectionKindFilter}
-            view={mineView}
-            onViewChange={handleMineViewChange}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            counts={collectionKindCounts}
-            hint="Saved from frens · tap to open"
-          />
-
-          {displayCollection.length === 0 ? (
-            <div className="border frens-border rounded-xl p-8 text-center">
-              <p className="text-sm frens-muted">
-                Echoes you save from frens and discoveries show up here — open one on the map and tap Save to my collection.
-              </p>
-            </div>
-          ) : filteredCollection.length === 0 ? (
-            <div className="border frens-border rounded-xl p-8 text-center">
-              <p className="text-sm frens-muted">No echoes match this filter.</p>
-            </div>
-          ) : (
-            <div className={
-              mineView === 'board'
-                ? 'grid grid-cols-2 gap-3'
-                : 'flex flex-col gap-2'
-            }>
-              {filteredCollection.map((echo) => (
-                <EchoMineCard
-                  key={echo.id}
-                  echo={echo}
-                  variant="saved"
-                  layout={mineView}
-                  savedAt={echo.savedAt}
-                  auraMap={auraMap}
-                  backendReady={backendReady}
-                  onShowOnMap={showEchoOnMap}
-                  onNavigateWorld={showEchoOnMap}
-                  onView={(e) => setOpenId(e.id)}
-                  onUnsave={(e) => unsaveEcho(e.id)}
-                  onAuraChange={applyAuraChange}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'history' && (
-        <div className="space-y-2">
-          {heardCollection.length === 0 ? (
-            <div className="border frens-border rounded-xl p-8 text-center">
-              <p className="text-sm frens-muted">Echoes you open — meme, video, or audio — show up here.</p>
-            </div>
-          ) : (
-            heardCollection.map(({ echo, heardAt, interaction }) => (
-              <EchoCollectionCard
-                key={`${echo.id}-${heardAt}`}
-                echo={echo}
-                variant="log"
-                heardAt={heardAt}
-                logInteraction={interaction}
-                auraMap={auraMap}
-                backendReady={backendReady}
-                onView={(e) => setOpenId(e.id)}
-                onAuraChange={applyAuraChange}
+          {logSection === 'mine' && (
+            <div className="space-y-3">
+              <EchoMineToolbar
+                kindFilter={mineKindFilter}
+                onKindFilterChange={setMineKindFilter}
+                view={mineView}
+                onViewChange={handleMineViewChange}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                counts={mineKindCounts}
+                hint="Private labels · tap to open"
               />
-            ))
+
+              {myEchoes.length === 0 ? (
+                <div className="border frens-border rounded-xl p-8 text-center">
+                  <p className="text-sm frens-muted inline-flex items-center gap-1 justify-center">
+                    No echoes yet — tap <EchoIcon className="w-4 h-3" /> Meme to leave audio or a short video.
+                  </p>
+                </div>
+              ) : filteredMyEchoes.length === 0 ? (
+                <div className="border frens-border rounded-xl p-8 text-center">
+                  <p className="text-sm frens-muted">No echoes match this filter.</p>
+                </div>
+              ) : (
+                <div className={
+                  mineView === 'board'
+                    ? 'grid grid-cols-2 gap-3'
+                    : 'flex flex-col gap-2'
+                }>
+                  {filteredMyEchoes.map((echo) => (
+                    <EchoMineCard
+                      key={echo.id}
+                      echo={echo}
+                      layout={mineView}
+                      onShowOnMap={showEchoOnMap}
+                      onNavigateWorld={showEchoOnMap}
+                      onView={(e) => setOpenId(e.id)}
+                      onEdit={(e) => setEditEcho(e)}
+                      onDelete={(id) => setPendingDeleteEchoId(id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {logSection === 'collection' && (
+            <div className="space-y-3">
+              <EchoMineToolbar
+                kindFilter={collectionKindFilter}
+                onKindFilterChange={setCollectionKindFilter}
+                view={mineView}
+                onViewChange={handleMineViewChange}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                counts={collectionKindCounts}
+                hint="Saved from frens · tap to open"
+              />
+
+              {displayCollection.length === 0 ? (
+                <div className="border frens-border rounded-xl p-8 text-center">
+                  <p className="text-sm frens-muted">
+                    Echoes you save from frens and discoveries show up here — open one on the map and tap Save to my collection.
+                  </p>
+                </div>
+              ) : filteredCollection.length === 0 ? (
+                <div className="border frens-border rounded-xl p-8 text-center">
+                  <p className="text-sm frens-muted">No echoes match this filter.</p>
+                </div>
+              ) : (
+                <div className={
+                  mineView === 'board'
+                    ? 'grid grid-cols-2 gap-3'
+                    : 'flex flex-col gap-2'
+                }>
+                  {filteredCollection.map((echo) => (
+                    <EchoMineCard
+                      key={echo.id}
+                      echo={echo}
+                      variant="saved"
+                      layout={mineView}
+                      savedAt={echo.savedAt}
+                      auraMap={auraMap}
+                      backendReady={backendReady}
+                      onShowOnMap={showEchoOnMap}
+                      onNavigateWorld={showEchoOnMap}
+                      onView={(e) => setOpenId(e.id)}
+                      onUnsave={(e) => unsaveEcho(e.id)}
+                      onAuraChange={applyAuraChange}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {logSection === 'history' && (
+            <div className="space-y-2">
+              {heardCollection.length === 0 ? (
+                <div className="border frens-border rounded-xl p-8 text-center">
+                  <p className="text-sm frens-muted">Echoes you open — meme, video, or audio — show up here.</p>
+                </div>
+              ) : (
+                heardCollection.map(({ echo, heardAt, interaction }) => (
+                  <EchoCollectionCard
+                    key={`${echo.id}-${heardAt}`}
+                    echo={echo}
+                    variant="log"
+                    heardAt={heardAt}
+                    logInteraction={interaction}
+                    auraMap={auraMap}
+                    backendReady={backendReady}
+                    onView={(e) => setOpenId(e.id)}
+                    onAuraChange={applyAuraChange}
+                  />
+                ))
+              )}
+            </div>
           )}
         </div>
       )}
