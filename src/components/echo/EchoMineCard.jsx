@@ -5,14 +5,15 @@ import EchoMetaIcons from './EchoMetaIcons'
 import EchoAuraButton, { EchoAuraCount } from './EchoAuraButton'
 import EchoOwnerMenu from './EchoOwnerMenu'
 import { canBrowseGlobally } from '../../lib/echoPrivacy'
+import { GlobeIcon } from '../icons/UiIcons'
 
 function GlobalBadge({ compact = false }) {
   return (
     <span
-      className={`absolute ${compact ? 'top-1.5 left-1.5 w-5 h-5 text-[9px]' : 'top-2 left-2 w-6 h-6 text-[11px]'} rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center`}
+      className={`absolute ${compact ? 'top-1.5 left-1.5 w-5 h-5' : 'top-2 left-2 w-6 h-6'} rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white`}
       title="Browsable from anywhere"
     >
-      🌍
+      <GlobeIcon className={compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
     </span>
   )
 }

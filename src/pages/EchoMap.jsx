@@ -2012,7 +2012,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
                 <p className="text-xs frens-muted px-1 text-center">
                   {browseEchoes.length > 0
                     ? `${browseEchoes.length} world echo${browseEchoes.length === 1 ? '' : 's'} in this view — pan the map or pick a closer spot`
-                    : 'No world echoes here yet — drop one with 🌍 Browsable from anywhere'}
+                    : 'No world echoes here yet — drop one with Browse anywhere'}
                 </p>
               )}
               {!mapHidden && mapMode === 'near' && (
