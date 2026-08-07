@@ -268,26 +268,36 @@ export default function EchoMapSearch({
 
 export function EchoMapModeTabs({ mode, onChange, hasLocation, explorePlace }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between gap-2">
+    <div className="w-full space-y-1">
+      <div className="flex items-center justify-between gap-2 w-full">
         <button
           type="button"
           onClick={() => onChange('near')}
           disabled={!hasLocation}
-          className={`text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 transition ${
-            mode === 'near' ? 'frens-btn-primary' : 'frens-btn-outline disabled:opacity-40'
+          title="Area"
+          aria-label="Area"
+          aria-pressed={mode === 'near'}
+          className={`w-8 h-8 rounded-none inline-flex items-center justify-center transition ${
+            mode === 'near'
+              ? 'text-black dark:text-white'
+              : 'frens-muted opacity-50 disabled:opacity-30 hover:opacity-80'
           }`}
         >
-          <NearMeIcon className="w-3.5 h-3.5" /> Area
+          <NearMeIcon className="w-4 h-4" />
         </button>
         <button
           type="button"
           onClick={() => onChange('explore')}
-          className={`text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 transition ${
-            mode === 'explore' ? 'frens-btn-primary' : 'frens-btn-outline'
+          title="World"
+          aria-label="World"
+          aria-pressed={mode === 'explore'}
+          className={`w-8 h-8 rounded-none inline-flex items-center justify-center transition ${
+            mode === 'explore'
+              ? 'text-black dark:text-white'
+              : 'frens-muted opacity-50 hover:opacity-80'
           }`}
         >
-          <GlobeIcon className="w-3.5 h-3.5" /> World
+          <GlobeIcon className="w-4 h-4" />
         </button>
       </div>
       {explorePlace && mode === 'explore' ? (

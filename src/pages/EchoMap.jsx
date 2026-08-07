@@ -1889,59 +1889,56 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2 px-1">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <div className="justify-self-start">
-            <button
-              type="button"
-              onClick={() => setTab('map')}
-              aria-pressed={tab === 'map'}
-              className={`text-sm px-3 py-1.5 rounded-full transition ${
-                tab === 'map'
-                  ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
-                  : 'frens-muted hover:text-black dark:hover:text-white'
-              }`}
-            >
-              Map
-            </button>
-          </div>
-
-          <div className="flex items-center justify-center min-h-[2.75rem]">
-            <button
-              type="button"
-              onClick={openCreateFlow}
-              title={userPos ? 'Drop an echo' : 'Enable location first'}
-              aria-label="Leave an echo"
-              className="w-12 h-12 rounded-full frens-btn-primary inline-flex items-center justify-center text-2xl leading-none font-medium"
-            >
-              <span aria-hidden>+</span>
-            </button>
-          </div>
-
-          <div className="justify-self-end">
-            <button
-              type="button"
-              onClick={() => setTab('log')}
-              aria-pressed={tab === 'log'}
-              className={`text-sm px-3 py-1.5 rounded-full transition ${
-                tab === 'log'
-                  ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
-                  : 'frens-muted hover:text-black dark:hover:text-white'
-              }`}
-            >
-              _log
-            </button>
-          </div>
+      <div className="relative px-1 py-5">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setTab('map')}
+            aria-pressed={tab === 'map'}
+            className={`text-sm px-3 py-1.5 rounded-full transition ${
+              tab === 'map'
+                ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                : 'frens-muted hover:text-black dark:hover:text-white'
+            }`}
+          >
+            Map
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('log')}
+            aria-pressed={tab === 'log'}
+            className={`text-sm px-3 py-1.5 rounded-full transition ${
+              tab === 'log'
+                ? 'bg-black text-white dark:bg-white dark:text-black font-medium'
+                : 'frens-muted hover:text-black dark:hover:text-white'
+            }`}
+          >
+            _log
+          </button>
         </div>
 
+        <button
+          type="button"
+          onClick={openCreateFlow}
+          title={userPos ? 'Drop an echo' : 'Enable location first'}
+          aria-label="Leave an echo"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 inline-flex items-center justify-center text-[1.85rem] leading-none font-light tracking-tight text-black dark:text-white hover:opacity-60 transition"
+        >
+          <span aria-hidden>+</span>
+        </button>
+
         {tab === 'map' ? (
-          <EchoMapModeTabs
-            mode={mapMode}
-            onChange={handleMapModeChange}
-            hasLocation={status === 'located'}
-            explorePlace={explorePlace}
-          />
-        ) : null}
+          <div className="mt-5">
+            <EchoMapModeTabs
+              mode={mapMode}
+              onChange={handleMapModeChange}
+              hasLocation={status === 'located'}
+              explorePlace={explorePlace}
+            />
+          </div>
+        ) : (
+          <div className="mt-5 h-8" aria-hidden />
+        )}
       </div>
 
       {tab === 'map' && (
