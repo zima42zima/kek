@@ -100,7 +100,7 @@ export default function ProfileFolds({ userId }) {
             />
             {folds.length === 0 ? (
               <p className="text-sm frens-muted text-center py-6">
-                No published folds yet — publish from Folds in P.S.
+                No published folds yet — publish from Folds in read me
               </p>
             ) : (
               <ul className="space-y-2 max-h-[50vh] overflow-y-auto">

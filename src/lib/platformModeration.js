@@ -150,7 +150,7 @@ export function reportKindLabel(kind) {
     case 'fold': return 'Fold'
     case 'echo': return 'Echo'
     case 'echo_comment': return 'Echo comment'
-    case 'owl_letter': return 'P.S. letter'
+    case 'owl_letter': return 'read me letter'
     default: return kind || 'Report'
   }
 }

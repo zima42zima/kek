@@ -261,7 +261,7 @@ export default function LettersPanel({ onBack, onExit, onSettingsChange }) {
           <div className="space-y-0.5 border-t frens-border pt-3">
             <SettingToggle
               label="Accepting letters"
-              hint="Others can send you letters through P.S."
+              hint="Others can send you letters through read me"
               checked={settings.enabled}
               disabled={savingSettings}
               onChange={(enabled) => patchSettings({ enabled })}

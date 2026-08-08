@@ -88,7 +88,7 @@ export default function SendFoldModal({ fold, onClose, onSent }) {
         <p className="text-sm frens-muted py-6 text-center">Searching…</p>
       ) : !query.trim() ? (
         <p className="text-xs frens-muted text-center py-6">
-          Search someone to send this fold to their P.S. inbox.
+          Search someone to send this fold to their read me inbox.
         </p>
       ) : results.length === 0 ? (
         <p className="text-sm frens-muted py-6 text-center">No accounts match.</p>

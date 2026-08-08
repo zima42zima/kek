@@ -1,9 +1,9 @@
 import PsHubIcon from './PsHubIcon'
 
-/** P.S. mark — own profile (inbox) or other fren (send letter when open). */
+/** read me mark — own profile (inbox) or other fren (send letter when open). */
 export default function ProfileOwlPost({ open, badgeCount = 0, onClick }) {
-  const label = 'P.S.'
-  const title = open ? 'P.S.' : 'P.S. closed'
+  const label = 'read me'
+  const title = open ? 'read me' : 'read me closed'
 
   return (
     <button

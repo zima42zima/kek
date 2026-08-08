@@ -51,7 +51,7 @@ export default function PsHubModal({ onClose, onSettingsChange, initialSection =
 
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2"><FoldsLettersIcon className="w-5 h-5" /> P.S.</span>}
+      title={<span className="inline-flex items-center gap-2"><FoldsLettersIcon className="w-5 h-5" /> read me</span>}
       onClose={onClose}
       maxWidth="max-w-md"
     >

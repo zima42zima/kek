@@ -136,7 +136,7 @@ function NotifText({ n }) {
       )
     case 'owl_letter':
       return n.owlLetterAnonymous ? (
-        <span>A letter arrived — open P.S.</span>
+        <span>A letter arrived — open read me</span>
       ) : (
         <span>{name} sent you a letter</span>
       )

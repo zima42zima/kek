@@ -3,7 +3,7 @@
 export const COMMUNITY_RULES_TITLE = 'Community rules'
 
 export const COMMUNITY_RULES_INTRO =
-  'MISAO is a social space for real people. We want everyone — and everyone on MISAO — to feel safe. These rules apply everywhere: posts, messages, caves, echoes, P.S. letters, folds, and profiles.'
+  'MISAO is a social space for real people. We want everyone — and everyone on MISAO — to feel safe. These rules apply everywhere: posts, messages, caves, echoes, read me letters, folds, and profiles.'
 
 export const COMMUNITY_RULES_SECTIONS = [
   {
