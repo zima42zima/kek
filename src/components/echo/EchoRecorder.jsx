@@ -5,7 +5,7 @@ import {
   prepareEchoAudio,
   prepareEchoVideo,
 } from '../../lib/echoMedia'
-import { CameraIcon, WaveformIcon } from '../icons/UiIcons'
+import { VideoIcon, WaveformIcon } from '../icons/UiIcons'
 
 function fmt(secs) {
   const m = String(Math.floor(secs / 60)).padStart(2, '0')
@@ -222,7 +222,7 @@ export default function EchoRecorder({
   function reRecord() {
     clearRecorded()
     setUploadError('')
-    if (!isAudio) attachPreview()
+    if (!isAudio) requestAnimationFrame(() => attachPreview())
   }
 
   async function handleUpload(e) {
@@ -252,13 +252,7 @@ export default function EchoRecorder({
   const accept = isAudio ? 'audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm' : 'video/*'
 
   const controls = (
-    <div className={`flex items-center justify-center gap-2.5 flex-wrap ${isAudio ? '' : ''}`}>
-      {!isAudio && (
-        <span className={`text-sm font-mono ${recording ? 'text-black dark:text-white' : 'frens-muted'}`}>
-          {recording && <span className="inline-block w-2 h-2 rounded-full bg-black dark:bg-white mr-2 align-middle animate-pulse" />}
-          {fmt(seconds)}{(recording || recordedUrl || converting) ? ` / ${fmt(limit)}` : ''}
-        </span>
-      )}
+    <div className="flex items-center justify-center gap-2.5 flex-wrap">
       {!busy && !recordedUrl && (
         <>
           <button
@@ -290,60 +284,20 @@ export default function EchoRecorder({
     </div>
   )
 
-  if (isAudio) {
-    let status = `up to ${limit}s`
-    if (converting) status = 'Checking audio…'
-    else if (permission === 'prompting') status = 'Waiting for mic…'
-    else if (permission === 'insecure') status = 'Mic needs https — you can still upload'
-    else if (permission === 'denied') status = 'Mic blocked — try again or upload'
-    else if (recording) status = 'Recording…'
-    else if (recordedUrl) status = `${fmt(seconds)} · ready`
+  let status = isAudio ? `up to ${limit}s` : `up to ${limit}s · 720p`
+  if (converting) status = isAudio ? 'Checking audio…' : 'Converting to 720p…'
+  else if (permission === 'prompting') status = isAudio ? 'Waiting for mic…' : 'Waiting for camera…'
+  else if (permission === 'insecure') status = isAudio
+    ? 'Mic needs https — you can still upload'
+    : 'Camera needs https — you can still upload'
+  else if (permission === 'denied') status = isAudio
+    ? 'Mic blocked — try again or upload'
+    : 'Camera blocked — try again or upload'
+  else if (recording) status = 'Recording…'
+  else if (recordedUrl) status = `${fmt(seconds)} · ready`
 
-    return (
-      <div className="space-y-3">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={accept}
-          className="hidden"
-          onChange={handleUpload}
-        />
-
-        <div className="rounded-2xl border frens-border px-5 py-5 flex flex-col items-center text-center">
-          <WaveformIcon
-            className={`w-[5.5rem] h-9 text-black dark:text-white ${
-              recording ? 'animate-pulse' : converting ? 'opacity-40' : 'opacity-90'
-            }`}
-          />
-          <p className="mt-3 text-2xl font-mono tabular-nums tracking-tight text-black dark:text-white">
-            {fmt(seconds)}
-            <span className="text-sm frens-muted font-normal"> / {fmt(limit)}</span>
-          </p>
-          <p className="mt-1 text-[11px] frens-muted">{status}</p>
-
-          {recordedUrl && (
-            <audio src={recordedUrl} controls className="w-full mt-3 max-w-xs" />
-          )}
-
-          {permission === 'denied' && !recordedUrl && (
-            <button
-              type="button"
-              onClick={() => requestPermission()}
-              className="frens-btn-outline px-3 py-1.5 text-xs mt-2"
-            >
-              Allow mic
-            </button>
-          )}
-        </div>
-
-        {uploadError ? (
-          <p className="text-xs text-red-500 dark:text-red-400 text-center">{uploadError}</p>
-        ) : null}
-
-        {controls}
-      </div>
-    )
-  }
+  const showLivePreview = !isAudio && permission === 'granted' && !recordedUrl && !converting
+  const showPlayback = Boolean(recordedUrl) && !converting
 
   return (
     <div className="space-y-3">
@@ -355,30 +309,13 @@ export default function EchoRecorder({
         onChange={handleUpload}
       />
 
-      <div className="relative rounded-xl bg-black overflow-hidden aspect-[4/5] max-h-[48vh]">
-        {converting ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-black">
-            <p className="text-xs text-white/90 text-center">Converting to 720p…</p>
-            <p className="text-[10px] text-white/50 mt-1">Max {limit}s · HD</p>
+      <div className="rounded-2xl border frens-border px-5 py-5 flex flex-col items-center text-center">
+        {showPlayback && !isAudio ? (
+          <div className="relative w-full max-w-xs rounded-xl overflow-hidden bg-black aspect-video">
+            <video src={recordedUrl} controls playsInline className="w-full h-full object-cover" />
           </div>
-        ) : recordedUrl ? (
-          <video src={recordedUrl} controls playsInline className="w-full h-full object-cover" />
-        ) : permission === 'denied' || permission === 'insecure' ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-            <CameraIcon className="w-10 h-10 mb-2 opacity-70" />
-            <p className="text-xs frens-muted mb-3">
-              {permission === 'insecure'
-                ? 'Mic & camera need https — you can still upload a file.'
-                : 'Allow camera & mic to record, or upload a file.'}
-            </p>
-            {permission === 'denied' && (
-              <button type="button" onClick={() => requestPermission()} className="frens-btn-outline px-4 py-2 text-sm">
-                Try again
-              </button>
-            )}
-          </div>
-        ) : permission === 'granted' ? (
-          <>
+        ) : showLivePreview ? (
+          <div className="relative w-full max-w-xs rounded-xl overflow-hidden bg-black aspect-video">
             <video
               ref={sourceVideoRef}
               playsInline
@@ -389,30 +326,55 @@ export default function EchoRecorder({
               <button
                 type="button"
                 onClick={flipCamera}
-                className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-black/50 text-white text-sm"
+                className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-black/50 text-white text-sm"
                 aria-label="Flip camera"
               >
                 ⟳
               </button>
             )}
+          </div>
+        ) : isAudio ? (
+          <WaveformIcon
+            className={`w-[5.5rem] h-9 text-black dark:text-white ${
+              recording ? 'animate-pulse' : converting ? 'opacity-40' : 'opacity-90'
+            }`}
+          />
+        ) : (
+          <VideoIcon
+            className={`w-9 h-9 opacity-70 ${recording ? 'animate-pulse' : converting ? 'opacity-40' : ''}`}
+          />
+        )}
+
+        {!showPlayback || isAudio ? (
+          <>
+            <p className="mt-3 text-2xl font-mono tabular-nums tracking-tight text-black dark:text-white">
+              {fmt(seconds)}
+              <span className="text-sm frens-muted font-normal"> / {fmt(limit)}</span>
+            </p>
+            <p className="mt-1 text-[11px] frens-muted">{status}</p>
           </>
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-            <CameraIcon className="w-10 h-10 mb-2 opacity-70" />
-            <p className="text-xs frens-muted">
-              {permission === 'prompting' ? 'Waiting for camera…' : `Record up to ${limit}s, or upload`}
-            </p>
-          </div>
+          <p className="mt-2 text-[11px] frens-muted">{status}</p>
+        )}
+
+        {showPlayback && isAudio && (
+          <audio src={recordedUrl} controls className="w-full mt-3 max-w-xs" />
+        )}
+
+        {permission === 'denied' && !recordedUrl && (
+          <button
+            type="button"
+            onClick={() => requestPermission()}
+            className="frens-btn-outline px-3 py-1.5 text-xs mt-2"
+          >
+            {isAudio ? 'Allow mic' : 'Allow camera'}
+          </button>
         )}
       </div>
 
       {uploadError ? (
         <p className="text-xs text-red-500 dark:text-red-400 text-center">{uploadError}</p>
-      ) : (
-        <p className="text-[10px] frens-muted text-center">
-          Video · max {limit}s · converts to 720p
-        </p>
-      )}
+      ) : null}
 
       {controls}
     </div>

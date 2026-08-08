@@ -1957,7 +1957,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           onClick={openCreateFlow}
           title={userPos ? 'Drop an echo' : 'Enable location first'}
           aria-label="Leave an echo"
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 inline-flex items-center justify-center text-[1.85rem] leading-none font-light tracking-tight text-black dark:text-white hover:opacity-60 transition"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 inline-flex items-center justify-center text-[3.7rem] leading-none font-light tracking-tight text-black dark:text-white hover:opacity-60 transition"
         >
           <span aria-hidden>+</span>
         </button>

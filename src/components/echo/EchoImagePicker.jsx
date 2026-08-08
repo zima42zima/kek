@@ -84,13 +84,13 @@ export default function EchoImagePicker({
     const capText = caption?.text || ''
     const capStyle = caption?.style || 'outline'
     return (
-      <div className={compact ? 'space-y-2' : 'space-y-3'}>
-        <div className="relative">
+      <div className="space-y-3">
+        <div className="relative rounded-2xl border frens-border overflow-hidden">
           <MemeCaptionPreview
             src={value.url}
             text={showCaption ? capText : ''}
             style={capStyle}
-            className={`rounded-xl border frens-border bg-black/5 ${compact ? 'aspect-[4/3]' : 'aspect-[4/5] max-h-[48vh]'}`}
+            className={`bg-black/5 ${compact ? 'aspect-[4/3] max-h-[28vh]' : 'aspect-[4/3] max-h-[32vh]'}`}
           />
           {showCaption ? (
             <button
@@ -119,11 +119,11 @@ export default function EchoImagePicker({
           />
         ) : null}
 
-        <div className="flex gap-2">
-          <button type="button" onClick={clear} className="frens-btn-outline flex-1 py-2 text-sm">
+        <div className="flex items-center justify-center gap-2.5 flex-wrap">
+          <button type="button" onClick={clear} className="frens-btn-outline px-4 py-2 text-sm rounded-full">
             Remove
           </button>
-          <label className="frens-btn-outline flex-1 py-2 text-sm text-center relative overflow-hidden cursor-pointer">
+          <label className="frens-btn-outline px-4 py-2 text-sm rounded-full text-center relative overflow-hidden cursor-pointer">
             Replace
             <input
               ref={fileRef}
@@ -143,18 +143,19 @@ export default function EchoImagePicker({
   }
 
   return (
-    <div className={compact ? 'space-y-2' : 'space-y-3'}>
-      <div className={`rounded-xl border frens-border flex flex-col items-center justify-center text-center px-4 ${compact ? 'py-6' : 'aspect-[4/5] max-h-[48vh] py-10'}`}>
-        <ImageIcon className="w-8 h-8 mb-2 opacity-60" />
-        <p className="text-sm font-medium">{title}</p>
-        {hint ? <p className="text-[11px] frens-muted mt-1 max-w-[220px]">{hint}</p> : null}
+    <div className="space-y-3">
+      <div className={`rounded-2xl border frens-border px-5 flex flex-col items-center justify-center text-center ${compact ? 'py-4' : 'py-5'}`}>
+        <ImageIcon className={`${compact ? 'w-7 h-7' : 'w-9 h-9'} opacity-70`} />
+        <p className="mt-2.5 text-sm font-medium">{title}</p>
+        {hint ? <p className="mt-1 text-[11px] frens-muted max-w-[220px]">{hint}</p> : null}
+        {busy ? <p className="mt-1 text-[11px] frens-muted">Preparing…</p> : null}
       </div>
 
       {error ? <p className="text-xs text-red-500 dark:text-red-400 text-center">{error}</p> : null}
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex items-center justify-center gap-2.5 flex-wrap">
         <label
-          className={`frens-btn-outline py-2.5 text-sm inline-flex items-center justify-center gap-1.5 relative overflow-hidden cursor-pointer touch-manipulation ${
+          className={`frens-btn-primary px-4 py-2 text-sm rounded-full inline-flex items-center justify-center gap-1.5 relative overflow-hidden cursor-pointer touch-manipulation ${
             busy ? 'opacity-40 pointer-events-none' : ''
           }`}
         >
@@ -174,12 +175,12 @@ export default function EchoImagePicker({
           />
         </label>
         <label
-          className={`frens-btn-outline py-2.5 text-sm inline-flex items-center justify-center gap-1.5 relative overflow-hidden cursor-pointer touch-manipulation ${
+          className={`frens-btn-outline px-4 py-2 text-sm rounded-full inline-flex items-center justify-center gap-1.5 relative overflow-hidden cursor-pointer touch-manipulation ${
             busy ? 'opacity-40 pointer-events-none' : ''
           }`}
         >
           <ImageIcon className="w-4 h-4 shrink-0" />
-          <span>{busy ? '…' : 'Upload photo'}</span>
+          <span>{busy ? '…' : 'Upload'}</span>
           <input
             ref={fileRef}
             type="file"

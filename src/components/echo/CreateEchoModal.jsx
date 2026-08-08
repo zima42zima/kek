@@ -12,10 +12,7 @@ import {
   ECHO_DEFAULT_PROXIMITY_ID,
   ECHO_SAFETY_KEY,
 } from '../../lib/echoConstants'
-import {
-  EchoTypeIcon,
-  EchoVisibilityIcon,
-} from './EchoMeta'
+import { EchoVisibilityIcon } from './EchoMeta'
 import { bakeMemeCaption } from '../../lib/memeText'
 import { OPTION_ACTIVE, GlobeIcon } from '../icons/UiIcons'
 
@@ -256,12 +253,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             />
           ) : (
             <>
-              {!isAudio && (
-                <p className="text-xs frens-muted text-center inline-flex items-center justify-center gap-1 flex-wrap">
-                  <EchoTypeIcon kind={echoType} className="w-3.5 h-3.5" />
-                  {typeMeta?.label}
-                </p>
-              )}
               <EchoRecorder
                 kind={echoType}
                 maxSeconds={typeMeta?.maxSec}
