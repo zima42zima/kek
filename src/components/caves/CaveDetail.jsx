@@ -606,11 +606,24 @@ function ChatMessage({
     <ModHideButton onHide={onHide} />
   ) : null
 
-  const sideControls = reactionControls || modHide ? (
+  const reportControl = !mine && user?.id && canReact ? (
+    <ReportContentButton
+      kind="cave_message"
+      refId={message.id}
+      reportedUserId={message.authorId}
+      preview={message.text || message.image}
+      subjectLabel="this message"
+      variant="flag"
+      className="w-6 h-6 opacity-70 hover:opacity-100"
+    />
+  ) : null
+
+  const sideControls = reactionControls || modHide || reportControl ? (
     <div
       className={`chat-msg-hover-controls flex items-center gap-1 shrink-0 ${mine ? 'flex-row-reverse' : ''}`}
     >
       {reactionControls}
+      {reportControl}
       {modHide}
     </div>
   ) : null
@@ -690,17 +703,6 @@ function ChatMessage({
             onReact={onReact}
             chipsOnly
           />
-          {!mine && user?.id && canReact ? (
-            <ReportContentButton
-              kind="cave_message"
-              refId={message.id}
-              reportedUserId={message.authorId}
-              preview={message.text || message.image}
-              subjectLabel="this message"
-              className="text-[10px] frens-muted hover:underline"
-              label="Report"
-            />
-          ) : null}
         </div>
       </div>
     </div>
