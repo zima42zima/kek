@@ -5,7 +5,7 @@ import {
   prepareEchoAudio,
   prepareEchoVideo,
 } from '../../lib/echoMedia'
-import { CameraIcon, HeadphonesIcon, MicIcon } from '../icons/UiIcons'
+import { CameraIcon, WaveformIcon } from '../icons/UiIcons'
 
 function fmt(secs) {
   const m = String(Math.floor(secs / 60)).padStart(2, '0')
@@ -18,7 +18,8 @@ export default function EchoRecorder({
   maxSeconds,
   onRecorded,
 }) {
-  const limit = maxSeconds ?? (kind === 'video' ? ECHO_VIDEO_MAX_SEC : ECHO_AUDIO_MAX_SEC)
+  const isAudio = kind === 'audio'
+  const limit = maxSeconds ?? (isAudio ? ECHO_AUDIO_MAX_SEC : ECHO_VIDEO_MAX_SEC)
   const [permission, setPermission] = useState('idle')
   const [recording, setRecording] = useState(false)
   const [converting, setConverting] = useState(false)
@@ -69,8 +70,9 @@ export default function EchoRecorder({
     setPermission('prompting')
     stopStream()
     try {
-      const constraints = kind === 'video'
-        ? {
+      const constraints = isAudio
+        ? { audio: true }
+        : {
             audio: true,
             video: {
               facingMode: { ideal: mode },
@@ -78,11 +80,9 @@ export default function EchoRecorder({
               height: { ideal: 720 },
             },
           }
-        : { audio: true }
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
       streamRef.current = stream
       setPermission('granted')
-      // Preview element mounts after granted; attach on next paint.
       requestAnimationFrame(() => attachPreview())
       return true
     } catch {
@@ -106,15 +106,14 @@ export default function EchoRecorder({
   }, [kind])
 
   useEffect(() => {
-    if (permission === 'granted') attachPreview()
-  }, [permission])
+    if (permission === 'granted' && !isAudio) attachPreview()
+  }, [permission, isAudio])
 
-  // Re-open camera only when flipping while already granted (not on first grant).
   const prevFacingRef = useRef(facingMode)
   useEffect(() => {
     const prev = prevFacingRef.current
     prevFacingRef.current = facingMode
-    if (kind !== 'video' || permission !== 'granted') return
+    if (isAudio || permission !== 'granted') return
     if (prev === facingMode) return
     let cancelled = false
     ;(async () => {
@@ -140,10 +139,10 @@ export default function EchoRecorder({
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facingMode, permission, kind])
+  }, [facingMode, permission, isAudio])
 
   function flipCamera() {
-    if (kind !== 'video' || recording || converting) return
+    if (isAudio || recording || converting) return
     setFacingMode((m) => (m === 'environment' ? 'user' : 'environment'))
   }
 
@@ -171,15 +170,15 @@ export default function EchoRecorder({
     secondsRef.current = 0
     setSeconds(0)
 
-    const mime = kind === 'video'
-      ? (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm')
-      : (MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm')
+    const mime = isAudio
+      ? (MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm')
+      : (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm')
 
     let recorder
     try {
-      recorder = kind === 'video'
-        ? new MediaRecorder(streamRef.current, echoVideoRecorderOptions(mime))
-        : new MediaRecorder(streamRef.current, { mimeType: mime })
+      recorder = isAudio
+        ? new MediaRecorder(streamRef.current, { mimeType: mime })
+        : new MediaRecorder(streamRef.current, echoVideoRecorderOptions(mime))
     } catch {
       try {
         recorder = new MediaRecorder(streamRef.current, { mimeType: mime })
@@ -223,7 +222,7 @@ export default function EchoRecorder({
   function reRecord() {
     clearRecorded()
     setUploadError('')
-    attachPreview()
+    if (!isAudio) attachPreview()
   }
 
   async function handleUpload(e) {
@@ -235,11 +234,11 @@ export default function EchoRecorder({
     clearRecorded()
     setConverting(true)
     try {
-      if (kind === 'video') {
-        const { blob, duration } = await prepareEchoVideo(file, { maxSeconds: limit })
+      if (isAudio) {
+        const { blob, duration } = await prepareEchoAudio(file, { maxSeconds: limit })
         finalizeRecording(blob, duration)
       } else {
-        const { blob, duration } = await prepareEchoAudio(file, { maxSeconds: limit })
+        const { blob, duration } = await prepareEchoVideo(file, { maxSeconds: limit })
         finalizeRecording(blob, duration)
       }
     } catch (err) {
@@ -250,7 +249,101 @@ export default function EchoRecorder({
   }
 
   const busy = recording || converting
-  const accept = kind === 'video' ? 'video/*' : 'audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm'
+  const accept = isAudio ? 'audio/*,.mp3,.m4a,.aac,.wav,.ogg,.webm' : 'video/*'
+
+  const controls = (
+    <div className={`flex items-center justify-center gap-2.5 flex-wrap ${isAudio ? '' : ''}`}>
+      {!isAudio && (
+        <span className={`text-sm font-mono ${recording ? 'text-black dark:text-white' : 'frens-muted'}`}>
+          {recording && <span className="inline-block w-2 h-2 rounded-full bg-black dark:bg-white mr-2 align-middle animate-pulse" />}
+          {fmt(seconds)}{(recording || recordedUrl || converting) ? ` / ${fmt(limit)}` : ''}
+        </span>
+      )}
+      {!busy && !recordedUrl && (
+        <>
+          <button
+            type="button"
+            onClick={onRecordClick}
+            className="frens-btn-primary px-5 py-2 text-sm rounded-full"
+          >
+            ● Record
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="frens-btn-outline px-4 py-2 text-sm rounded-full"
+          >
+            Upload
+          </button>
+        </>
+      )}
+      {recording && (
+        <button type="button" onClick={stopRecording} className="frens-btn-outline px-5 py-2 text-sm rounded-full">
+          ■ Stop
+        </button>
+      )}
+      {recordedUrl && !busy && (
+        <button type="button" onClick={reRecord} className="frens-btn-outline px-4 py-2 text-sm rounded-full">
+          Re-record
+        </button>
+      )}
+    </div>
+  )
+
+  if (isAudio) {
+    let status = `up to ${limit}s`
+    if (converting) status = 'Checking audio…'
+    else if (permission === 'prompting') status = 'Waiting for mic…'
+    else if (permission === 'insecure') status = 'Mic needs https — you can still upload'
+    else if (permission === 'denied') status = 'Mic blocked — try again or upload'
+    else if (recording) status = 'Recording…'
+    else if (recordedUrl) status = `${fmt(seconds)} · ready`
+
+    return (
+      <div className="space-y-3">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={handleUpload}
+        />
+
+        <div className="rounded-2xl border frens-border px-5 py-5 flex flex-col items-center text-center">
+          <WaveformIcon
+            className={`w-[5.5rem] h-9 text-black dark:text-white ${
+              recording ? 'animate-pulse' : converting ? 'opacity-40' : 'opacity-90'
+            }`}
+          />
+          <p className="mt-3 text-2xl font-mono tabular-nums tracking-tight text-black dark:text-white">
+            {fmt(seconds)}
+            <span className="text-sm frens-muted font-normal"> / {fmt(limit)}</span>
+          </p>
+          <p className="mt-1 text-[11px] frens-muted">{status}</p>
+
+          {recordedUrl && (
+            <audio src={recordedUrl} controls className="w-full mt-3 max-w-xs" />
+          )}
+
+          {permission === 'denied' && !recordedUrl && (
+            <button
+              type="button"
+              onClick={() => requestPermission()}
+              className="frens-btn-outline px-3 py-1.5 text-xs mt-2"
+            >
+              Allow mic
+            </button>
+          )}
+        </div>
+
+        {uploadError ? (
+          <p className="text-xs text-red-500 dark:text-red-400 text-center">{uploadError}</p>
+        ) : null}
+
+        {controls}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3">
@@ -265,33 +358,18 @@ export default function EchoRecorder({
       <div className="relative rounded-xl bg-black overflow-hidden aspect-[4/5] max-h-[48vh]">
         {converting ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-black">
-            <p className="text-xs text-white/90 text-center">
-              {kind === 'video' ? 'Converting to 720p…' : 'Checking audio…'}
-            </p>
-            <p className="text-[10px] text-white/50 mt-1">
-              {kind === 'video' ? `Max ${limit}s · HD` : `Max ${limit}s`}
-            </p>
+            <p className="text-xs text-white/90 text-center">Converting to 720p…</p>
+            <p className="text-[10px] text-white/50 mt-1">Max {limit}s · HD</p>
           </div>
         ) : recordedUrl ? (
-          kind === 'video' ? (
-            <video src={recordedUrl} controls playsInline className="w-full h-full object-cover" />
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
-              <HeadphonesIcon className="w-10 h-10 mb-3 opacity-70" />
-              <audio src={recordedUrl} controls className="w-full" />
-            </div>
-          )
+          <video src={recordedUrl} controls playsInline className="w-full h-full object-cover" />
         ) : permission === 'denied' || permission === 'insecure' ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-            {kind === 'video' ? (
-              <CameraIcon className="w-10 h-10 mb-2 opacity-70" />
-            ) : (
-              <MicIcon className="w-10 h-10 mb-2 opacity-70" />
-            )}
+            <CameraIcon className="w-10 h-10 mb-2 opacity-70" />
             <p className="text-xs frens-muted mb-3">
               {permission === 'insecure'
                 ? 'Mic & camera need https — you can still upload a file.'
-                : `Allow ${kind === 'video' ? 'camera & mic' : 'microphone'} to record, or upload a file.`}
+                : 'Allow camera & mic to record, or upload a file.'}
             </p>
             {permission === 'denied' && (
               <button type="button" onClick={() => requestPermission()} className="frens-btn-outline px-4 py-2 text-sm">
@@ -299,7 +377,7 @@ export default function EchoRecorder({
               </button>
             )}
           </div>
-        ) : kind === 'video' && permission === 'granted' ? (
+        ) : permission === 'granted' ? (
           <>
             <video
               ref={sourceVideoRef}
@@ -318,22 +396,11 @@ export default function EchoRecorder({
               </button>
             )}
           </>
-        ) : kind === 'video' ? (
+        ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
             <CameraIcon className="w-10 h-10 mb-2 opacity-70" />
             <p className="text-xs frens-muted">
               {permission === 'prompting' ? 'Waiting for camera…' : `Record up to ${limit}s, or upload`}
-            </p>
-          </div>
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <MicIcon className={`w-12 h-12 mb-2 opacity-70 ${recording ? 'animate-pulse' : ''}`} />
-            <p className="text-xs frens-muted">
-              {permission === 'prompting'
-                ? 'Waiting for mic…'
-                : recording
-                  ? 'Recording…'
-                  : `Record up to ${limit}s, or upload`}
             </p>
           </div>
         )}
@@ -343,44 +410,11 @@ export default function EchoRecorder({
         <p className="text-xs text-red-500 dark:text-red-400 text-center">{uploadError}</p>
       ) : (
         <p className="text-[10px] frens-muted text-center">
-          {kind === 'video' ? `Video · max ${limit}s · converts to 720p` : `Audio · max ${limit}s`}
+          Video · max {limit}s · converts to 720p
         </p>
       )}
 
-      <div className="flex items-center justify-center gap-3 flex-wrap">
-        <span className={`text-sm font-mono ${recording ? 'text-black dark:text-white' : 'frens-muted'}`}>
-          {recording && <span className="inline-block w-2 h-2 rounded-full bg-black dark:bg-white mr-2 align-middle animate-pulse" />}
-          {fmt(seconds)}{(recording || recordedUrl || converting) ? ` / ${fmt(limit)}` : ''}
-        </span>
-        {!busy && !recordedUrl && (
-          <>
-            <button
-              type="button"
-              onClick={onRecordClick}
-              className="frens-btn-primary px-5 py-2 text-sm rounded-full"
-            >
-              ● Record
-            </button>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="frens-btn-outline px-4 py-2 text-sm rounded-full"
-            >
-              Upload
-            </button>
-          </>
-        )}
-        {recording && (
-          <button type="button" onClick={stopRecording} className="frens-btn-outline px-5 py-2 text-sm rounded-full">
-            ■ Stop
-          </button>
-        )}
-        {recordedUrl && !busy && (
-          <button type="button" onClick={reRecord} className="frens-btn-outline px-4 py-2 text-sm rounded-full">
-            Re-record
-          </button>
-        )}
-      </div>
+      {controls}
     </div>
   )
 }

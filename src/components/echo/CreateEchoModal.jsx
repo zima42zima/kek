@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from '../Modal'
 import EchoRecorder from './EchoRecorder'
 import EchoImagePicker from './EchoImagePicker'
-import EchoIcon from './EchoIcon'
 import { randomOffsetInRadius } from '../../lib/geo'
 import {
   ECHO_TYPES,
@@ -223,7 +222,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
 
   return (
     <Modal
-      title={<span className="inline-flex items-center gap-2">Leave an echo <EchoIcon className="w-5 h-4" /></span>}
+      title={<span className="inline-flex items-center gap-1.5">echo <span className="opacity-70">+</span></span>}
       onClose={onClose}
       maxWidth="max-w-sm"
     >
@@ -257,18 +256,20 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             />
           ) : (
             <>
-              <p className="text-xs frens-muted text-center inline-flex items-center justify-center gap-1 flex-wrap">
-                <EchoTypeIcon kind={echoType} className="w-3.5 h-3.5" />
-                {typeMeta?.label}
-              </p>
+              {!isAudio && (
+                <p className="text-xs frens-muted text-center inline-flex items-center justify-center gap-1 flex-wrap">
+                  <EchoTypeIcon kind={echoType} className="w-3.5 h-3.5" />
+                  {typeMeta?.label}
+                </p>
+              )}
               <EchoRecorder
                 kind={echoType}
                 maxSeconds={typeMeta?.maxSec}
                 onRecorded={setRecording}
               />
               {isAudio && recording ? (
-                <div className="space-y-2 border-t frens-border pt-3">
-                  <p className="text-xs font-medium text-center">Cover (optional)</p>
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[11px] frens-muted text-center">Cover (optional)</p>
                   <EchoImagePicker
                     compact
                     value={audioCover}

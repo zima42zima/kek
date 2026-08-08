@@ -303,6 +303,25 @@ export function MicIcon({ className = 'w-4 h-4' }) {
   )
 }
 
+/** Filled 5-bar diamond waveform for voice / echo audio. */
+export function WaveformIcon({ className = 'w-16 h-10' }) {
+  return (
+    <svg
+      viewBox="0 0 120 78"
+      className={`inline-block align-middle ${className}`}
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M0 37.5h120v3H0z" />
+      <path d="M2 39 11 24 20 39 11 54z" />
+      <path d="M22 39 34.5 16 47 39 34.5 62z" />
+      <path d="M48 39 60 2 72 39 60 76z" />
+      <path d="M73 39 85.5 16 98 39 85.5 62z" />
+      <path d="M100 39 109 24 118 39 109 54z" />
+    </svg>
+  )
+}
+
 export function PlayIcon({ className = 'w-4 h-4' }) {
   return (
     <svg {...base} className={`inline-block align-middle ${className}`}>
