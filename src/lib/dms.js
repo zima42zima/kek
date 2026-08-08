@@ -156,4 +156,15 @@ export async function markDmRead(conversationId) {
   }
 }
 
+/** Hide a DM from your inbox (other fren keeps it). Needs hide_dm_conversation RPC. */
+export async function hideDmConversationRemote(conversationId) {
+  const { error } = await supabase.rpc('hide_dm_conversation', {
+    p_conversation_id: conversationId,
+  })
+  if (error) {
+    throwIfNotInstalled(error)
+    throw error
+  }
+}
+
 export { formatTs as formatDmTs }

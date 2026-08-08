@@ -8,6 +8,7 @@ import {
   markDmRead,
   toggleDmMessageReaction,
   deleteDmMessageRemote,
+  hideDmConversationRemote,
   DmsNotInstalledError,
 } from '../lib/dms'
 import { applyEmojiReactionToggle } from '../lib/emojiReactions'
@@ -175,6 +176,29 @@ export function DmsProvider({ children }) {
     }
   }
 
+  async function hideDmThread(conversationId) {
+    if (!conversationId) return
+    let snapshot = null
+    setThreads((prev) => {
+      snapshot = prev
+      return prev.filter((t) => t.id !== conversationId)
+    })
+    setMessagesByConvo((prev) => {
+      const next = { ...prev }
+      delete next[conversationId]
+      return next
+    })
+    if (!remote) return
+    try {
+      await hideDmConversationRemote(conversationId)
+    } catch (err) {
+      if (snapshot) setThreads(snapshot)
+      if (err instanceof DmsNotInstalledError) setRemote(false)
+      else console.error('Could not delete DM thread:', err.message)
+      throw err
+    }
+  }
+
   async function deleteDmMessage(conversationId, messageId) {
     if (messageId == null || !conversationId) return
     const id = String(messageId)
@@ -254,6 +278,7 @@ export function DmsProvider({ children }) {
     openConversationWithUser,
     sendDmMessage,
     deleteDmMessage,
+    hideDmThread,
     reactToDmMessage,
     clearPendingOpen,
   }

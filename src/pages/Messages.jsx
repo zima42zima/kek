@@ -6,19 +6,20 @@ import { searchProfiles } from '../lib/social'
 import { relativeTime } from '../lib/notifications'
 import DmThread from '../components/dms/DmThread'
 import FrenHandle from '../components/FrenHandle'
+import ConfirmDialog from '../components/ConfirmDialog'
 
-function ThreadRow({ thread, onOpen }) {
+function ThreadRow({ thread, onOpen, onDelete }) {
   const profile = {
     frenName: thread.otherName,
     avatarType: thread.otherAvatarType,
     avatarUrl: thread.otherAvatarUrl,
   }
   return (
-    <li>
+    <li className="border frens-border rounded-xl p-3 flex items-start gap-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition">
       <button
         type="button"
         onClick={() => onOpen(thread.id)}
-        className="w-full text-left border frens-border rounded-xl p-3 flex items-center gap-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition"
+        className="min-w-0 flex-1 text-left flex items-center gap-3"
       >
         <div className="relative shrink-0">
           <ProfileAvatar profile={profile} className="w-11 h-11" logoClassName="w-6 h-auto" />
@@ -29,17 +30,29 @@ function ThreadRow({ thread, onOpen }) {
           )}
         </div>
         <span className="min-w-0 flex-1">
-          <span className="flex items-center justify-between gap-2">
-            <FrenHandle>{thread.otherName}</FrenHandle>
-            {thread.lastAt && (
-              <span className="text-[10px] frens-muted shrink-0 tracking-wide">{relativeTime(thread.lastAt)}</span>
-            )}
-          </span>
+          <FrenHandle>{thread.otherName}</FrenHandle>
           <span className={`block text-xs truncate mt-0.5 font-light ${thread.unread ? 'frens-body-text' : 'frens-muted'}`}>
             {thread.preview}
           </span>
         </span>
       </button>
+      <div className="shrink-0 flex flex-col items-end gap-0.5 pt-0.5">
+        {thread.lastAt ? (
+          <span className="text-[10px] frens-muted tracking-wide">{relativeTime(thread.lastAt)}</span>
+        ) : (
+          <span className="text-[10px] frens-muted tracking-wide opacity-0" aria-hidden>·</span>
+        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete?.(thread)
+          }}
+          className="text-[10px] frens-muted tracking-wide hover:underline"
+        >
+          delete
+        </button>
+      </div>
     </li>
   )
 }
@@ -51,10 +64,10 @@ export default function Messages({ conversationId: urlConversationId = null, onC
     messagesByConvo,
     pendingOpenId,
     clearPendingOpen,
-    openConversation,
     openConversationWithUser,
     sendDmMessage,
     loadMessages,
+    hideDmThread,
     remote,
   } = useDms()
 
@@ -62,6 +75,7 @@ export default function Messages({ conversationId: urlConversationId = null, onC
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   useEffect(() => {
     setSelectedId(urlConversationId || null)
@@ -176,10 +190,38 @@ export default function Messages({ conversationId: urlConversationId = null, onC
       ) : (
         <ul className="space-y-2">
           {threads.map((t) => (
-            <ThreadRow key={t.id} thread={t} onOpen={selectConversation} />
+            <ThreadRow
+              key={t.id}
+              thread={t}
+              onOpen={selectConversation}
+              onDelete={setPendingDelete}
+            />
           ))}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete conversation?"
+        message={
+          pendingDelete
+            ? `Remove your chat with ${pendingDelete.otherName} from Messages. They keep their copy.`
+            : ''
+        }
+        confirmLabel="Delete"
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          const thread = pendingDelete
+          setPendingDelete(null)
+          if (!thread?.id) return
+          try {
+            await hideDmThread(thread.id)
+            if (selectedId === thread.id) selectConversation(null)
+          } catch {
+            /* keep list; error logged in context */
+          }
+        }}
+      />
     </div>
   )
 }
