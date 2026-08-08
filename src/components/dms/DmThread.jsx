@@ -14,6 +14,7 @@ import RichText from '../RichText'
 import FrenHandle from '../FrenHandle'
 import { SharedImage, SharedVideo, textBubbleClass } from '../SharedMedia'
 import ReportContentButton from '../ReportContentButton'
+import { hasRichEmbeds } from '../../lib/urls'
 
 const MAX_VIDEO_MB = 25
 
@@ -45,7 +46,8 @@ function DmDaySep({ label }) {
   )
 }
 
-function DmBubble({ message, avatarProfile, mine, canReact, onReact, canReport = false }) {
+function DmBubble({ message, avatarProfile, mine, canReact, onReact }) {
+  const { user } = useAuth()
   const hasText = Boolean(message.text?.trim())
   const hasImage = Boolean(message.image && !message.video)
   const hasVideo = Boolean(message.video)
@@ -61,8 +63,16 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact, canReport =
     />
   ) : null
 
+  const sideControls = reactionControls ? (
+    <div
+      className={`chat-msg-hover-controls flex items-center gap-1 shrink-0 ${mine ? 'flex-row-reverse' : ''}`}
+    >
+      {reactionControls}
+    </div>
+  ) : null
+
   return (
-    <div className={`group flex gap-2.5 min-w-0 items-start ${mine ? 'flex-row-reverse' : ''}`}>
+    <div className={`chat-msg-row group flex gap-2.5 min-w-0 items-start ${mine ? 'flex-row-reverse' : ''}`}>
       <ProfileAvatar
         profile={avatarProfile || message}
         className="w-8 h-8 shrink-0 mt-0.5"
@@ -77,9 +87,9 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact, canReport =
               <div className={`max-w-full ${hasText ? 'mb-1' : ''}`}>
                 {hasVideo && <SharedVideo src={message.video} variant="chat" />}
                 {hasImage && <SharedImage src={message.image} variant="chat" />}
-                {!hasText && (reactionControls || canReport) ? (
-                  <div className={`flex items-center gap-2 mt-0.5 ${mine ? 'justify-end flex-row-reverse' : 'justify-start'}`}>
-                    {reactionControls}
+                {!hasText && sideControls ? (
+                  <div className={`flex mt-0.5 ${mine ? 'justify-end' : 'justify-start'}`}>
+                    {sideControls}
                   </div>
                 ) : null}
               </div>
@@ -87,15 +97,25 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact, canReport =
             {hasText ? (
               <div className={`flex items-start gap-1.5 max-w-full ${mine ? 'flex-row-reverse' : ''}`}>
                 <div className="min-w-0 max-w-full">
-                  <div className={textBubbleClass(mine)}>
-                    <RichText text={message.text} className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words" />
-                  </div>
+                  {hasRichEmbeds(message.text) ? (
+                    <RichText
+                      text={message.text}
+                      className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words"
+                    />
+                  ) : (
+                    <div className={textBubbleClass(mine)}>
+                      <RichText
+                        text={message.text}
+                        className="min-w-0 max-w-full [overflow-wrap:anywhere] break-words"
+                      />
+                    </div>
+                  )}
                 </div>
-                {reactionControls}
+                {sideControls}
               </div>
-            ) : !hasMedia && reactionControls ? (
+            ) : !hasMedia && sideControls ? (
               <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                {reactionControls}
+                {sideControls}
               </div>
             ) : null}
           </>
@@ -107,7 +127,17 @@ function DmBubble({ message, avatarProfile, mine, canReact, onReact, canReport =
           onReact={onReact}
           chipsOnly
         />
-        {canReport}
+        {!mine && user?.id && canReact ? (
+          <ReportContentButton
+            kind="dm"
+            refId={message.id}
+            reportedUserId={message.senderId}
+            preview={message.text || message.image || message.video}
+            subjectLabel="this message"
+            className="text-[10px] frens-muted hover:underline"
+            label="Report"
+          />
+        ) : null}
       </div>
     </div>
   )
@@ -309,18 +339,6 @@ export default function DmThread({ thread, messages, currentUserId, onSend, onBa
                     mine={m.senderId === currentUserId}
                     canReact={m.id != null && !String(m.id).startsWith('tmp-')}
                     onReact={(emoji) => reactToDmMessage(thread.id, m.id, emoji)}
-                    canReport={
-                      m.senderId !== currentUserId && currentUserId && m.id && !String(m.id).startsWith('tmp-') ? (
-                        <ReportContentButton
-                          kind="dm"
-                          refId={m.id}
-                          reportedUserId={m.senderId}
-                          preview={m.text || m.image || m.video}
-                          subjectLabel="this message"
-                          className="text-[10px] frens-muted hover:underline"
-                        />
-                      ) : null
-                    }
                   />
                 </div>
               )
