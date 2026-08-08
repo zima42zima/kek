@@ -15,43 +15,49 @@ function ThreadRow({ thread, onOpen, onDelete }) {
     avatarUrl: thread.otherAvatarUrl,
   }
   return (
-    <li className="border frens-border rounded-xl p-3 flex items-start gap-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition">
+    <li className="border frens-border rounded-xl p-3 flex items-center gap-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition">
       <button
         type="button"
         onClick={() => onOpen(thread.id)}
-        className="min-w-0 flex-1 text-left flex items-center gap-3"
+        className="relative shrink-0"
+        aria-label={`Open chat with ${thread.otherName}`}
       >
-        <div className="relative shrink-0">
-          <ProfileAvatar profile={profile} className="w-11 h-11" logoClassName="w-6 h-auto" />
-          {thread.unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-black text-white dark:bg-white dark:text-black text-[10px] frens-badge-count flex items-center justify-center">
-              {thread.unread > 9 ? '9+' : thread.unread}
-            </span>
-          )}
-        </div>
-        <span className="min-w-0 flex-1">
-          <FrenHandle>{thread.otherName}</FrenHandle>
-          <span className={`block text-xs truncate mt-0.5 font-light ${thread.unread ? 'frens-body-text' : 'frens-muted'}`}>
-            {thread.preview}
+        <ProfileAvatar profile={profile} className="w-11 h-11" logoClassName="w-6 h-auto" />
+        {thread.unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-black text-white dark:bg-white dark:text-black text-[10px] frens-badge-count flex items-center justify-center">
+            {thread.unread > 9 ? '9+' : thread.unread}
           </span>
-        </span>
-      </button>
-      <div className="shrink-0 flex flex-col items-end gap-0.5 pt-0.5">
-        {thread.lastAt ? (
-          <span className="text-[10px] frens-muted tracking-wide">{relativeTime(thread.lastAt)}</span>
-        ) : (
-          <span className="text-[10px] frens-muted tracking-wide opacity-0" aria-hidden>·</span>
         )}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete?.(thread)
-          }}
-          className="text-[10px] frens-muted tracking-wide hover:underline"
-        >
-          delete
-        </button>
+      </button>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => onOpen(thread.id)}
+            className="min-w-0 text-left"
+          >
+            <FrenHandle>{thread.otherName}</FrenHandle>
+          </button>
+          {thread.lastAt ? (
+            <span className="text-[10px] frens-muted shrink-0 tracking-wide">{relativeTime(thread.lastAt)}</span>
+          ) : null}
+        </div>
+        <div className="flex items-center justify-between gap-2 mt-0.5">
+          <button
+            type="button"
+            onClick={() => onOpen(thread.id)}
+            className={`min-w-0 text-left text-xs truncate font-light ${thread.unread ? 'frens-body-text' : 'frens-muted'}`}
+          >
+            {thread.preview}
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete?.(thread)}
+            className="text-[10px] frens-muted shrink-0 tracking-wide hover:underline"
+          >
+            delete
+          </button>
+        </div>
       </div>
     </li>
   )
