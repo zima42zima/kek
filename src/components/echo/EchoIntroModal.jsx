@@ -14,7 +14,7 @@ export default function EchoIntroModal({ onClose, onStart }) {
         <ol className="text-left text-xs frens-muted space-y-2 list-decimal list-inside">
           <li>Enable location — we scatter pins up to {ECHO_PIN_OFFSET_MAX_M}m from your spot</li>
           <li>Drop a meme or photo — the main way to leave an echo</li>
-          <li>Optionally leave voice or short glitchy video instead</li>
+          <li>Optionally leave audio or a short video instead</li>
           <li>Choose who can find it and how close they must be (420m – city)</li>
           <li>Scroll the in-range gallery when you walk into discoverable echoes</li>
           <li>Bats show approximate areas — nobody knows the exact spot</li>

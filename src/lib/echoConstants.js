@@ -58,14 +58,14 @@ export const ECHO_TYPES = [
   },
   {
     id: 'audio',
-    label: 'Voice',
-    hint: 'Short audio, optional cover',
+    label: 'Audio',
+    hint: 'Short voice note, optional cover',
     maxSec: ECHO_AUDIO_MAX_SEC,
   },
   {
     id: 'video',
-    label: 'Short video',
-    hint: `Up to ${ECHO_VIDEO_MAX_SEC}s, glitchy`,
+    label: 'Video',
+    hint: `Up to ${ECHO_VIDEO_MAX_SEC}s`,
     maxSec: ECHO_VIDEO_MAX_SEC,
   },
 ]

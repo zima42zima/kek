@@ -1193,7 +1193,7 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
 
   async function publishEcho({
     kind, mediaUrl, mediaBlob, coverUrl, coverBlob,
-    visibility, allowComments, voiceFilter, senseFilter, spatial, pinPosition,
+    visibility, allowComments, spatial, pinPosition,
     discoverRadiusM, placeLabel, browseGlobally, expiresAt, title, anonymous,
   }) {
     const handle = profile?.frenName?.trim() || 'you'
@@ -1221,8 +1221,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           coverPath,
           lat: spot.lat,
           lon: spot.lon,
-          voiceFilter: kind === 'audio' ? (voiceFilter ?? 'normal') : null,
-          senseFilter: kind === 'video' ? (senseFilter ?? 'clear') : null,
+          voiceFilter: null,
+          senseFilter: null,
           allowComments,
           shareOnProfile,
           label: '',
@@ -1253,8 +1253,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
           visibility: vis,
           shareOnProfile,
           allowComments: Boolean(allowComments),
-          voiceFilter: kind === 'audio' ? (voiceFilter ?? 'normal') : null,
-          senseFilter: kind === 'video' ? (senseFilter ?? 'clear') : null,
+          voiceFilter: null,
+          senseFilter: null,
           spatial: spatial ?? null,
           discoverRadiusM: discoverR,
           placeLabel: placeLabel || null,
@@ -1299,8 +1299,8 @@ export default function EchoMap({ focusEchoId = null, onOpenProfile, onClearEcho
       visibility: vis,
       shareOnProfile,
       allowComments: Boolean(allowComments),
-      voiceFilter: kind === 'audio' ? (voiceFilter ?? 'normal') : null,
-      senseFilter: kind === 'video' ? (senseFilter ?? 'clear') : null,
+      voiceFilter: null,
+      senseFilter: null,
       spatial: spatial ?? null,
       discoverRadiusM: discoverR,
       placeLabel: placeLabel || null,

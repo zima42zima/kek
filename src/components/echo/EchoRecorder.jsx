@@ -1,8 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { ECHO_AUDIO_MAX_SEC, ECHO_GLITCH_FILTERS, ECHO_VIDEO_MAX_SEC } from '../../lib/echoConstants'
-import { applySenseFilter, isSenseFilterActive } from '../../lib/senseFilters'
-import { bakeGlitchFilterIntoVideo } from '../../lib/echoVideoFx'
-import EchoIcon from './EchoIcon'
+import { useEffect, useRef, useState } from 'react'
+import { ECHO_AUDIO_MAX_SEC, ECHO_VIDEO_MAX_SEC } from '../../lib/echoConstants'
 import { CameraIcon, HeadphonesIcon, MicIcon } from '../icons/UiIcons'
 
 function fmt(secs) {
@@ -13,14 +10,12 @@ function fmt(secs) {
 
 export default function EchoRecorder({
   kind = 'video',
-  senseFilter = 'clear',
   maxSeconds,
   onRecorded,
 }) {
   const limit = maxSeconds ?? (kind === 'video' ? ECHO_VIDEO_MAX_SEC : ECHO_AUDIO_MAX_SEC)
   const [permission, setPermission] = useState('idle')
   const [recording, setRecording] = useState(false)
-  const [baking, setBaking] = useState(false)
   const [seconds, setSeconds] = useState(0)
   const [recordedUrl, setRecordedUrl] = useState(null)
   const [facingMode, setFacingMode] = useState('environment')
@@ -30,36 +25,6 @@ export default function EchoRecorder({
   const chunksRef = useRef([])
   const timerRef = useRef(null)
   const sourceVideoRef = useRef(null)
-  const canvasRef = useRef(null)
-  const rafRef = useRef(null)
-  const recordedDurationRef = useRef(0)
-  const recordStartRef = useRef(0)
-  const facingModeRef = useRef(facingMode)
-
-  const useFx = kind === 'video' && isSenseFilterActive(senseFilter)
-  const fxHint = ECHO_GLITCH_FILTERS.find((f) => f.id === senseFilter)?.hint
-
-  facingModeRef.current = facingMode
-
-  const paintFxFrame = useCallback(() => {
-    const video = sourceVideoRef.current
-    const canvas = canvasRef.current
-    if (!video || !canvas || video.readyState < 2) {
-      rafRef.current = requestAnimationFrame(paintFxFrame)
-      return
-    }
-    const w = video.videoWidth || 720
-    const h = video.videoHeight || 1280
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w
-      canvas.height = h
-    }
-    const ctx = canvas.getContext('2d')
-    if (ctx) {
-      applySenseFilter(ctx, video, w, h, senseFilter, facingMode === 'user', performance.now())
-    }
-    rafRef.current = requestAnimationFrame(paintFxFrame)
-  }, [senseFilter, facingMode])
 
   function stopStream() {
     streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -101,33 +66,12 @@ export default function EchoRecorder({
   }
 
   useEffect(() => {
-    if (!useFx || permission !== 'granted') return undefined
-    const video = sourceVideoRef.current
-    if (!video || !streamRef.current) return undefined
-    video.srcObject = streamRef.current
-    video.muted = true
-    video.play().catch(() => {})
-    const onReady = () => {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(paintFxFrame)
-    }
-    video.addEventListener('loadedmetadata', onReady)
-    if (video.readyState >= 1) onReady()
-    return () => {
-      video.removeEventListener('loadedmetadata', onReady)
-      cancelAnimationFrame(rafRef.current)
-    }
-  }, [useFx, permission, senseFilter, facingMode, paintFxFrame])
-
-  useEffect(() => {
     setRecordedUrl(null)
     setSeconds(0)
-    setBaking(false)
     onRecorded?.(null)
     requestPermission(facingMode)
     return () => {
       clearInterval(timerRef.current)
-      cancelAnimationFrame(rafRef.current)
       stopStream()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,32 +82,13 @@ export default function EchoRecorder({
     setFacingMode((m) => (m === 'environment' ? 'user' : 'environment'))
   }
 
-  async function finalizeRecording(rawBlob, mime) {
-    const type = mime.split(';')[0] || 'video/webm'
-    let finalBlob = rawBlob
-
-    if (useFx) {
-      setBaking(true)
-      try {
-        finalBlob = await bakeGlitchFilterIntoVideo(rawBlob, senseFilter, {
-          facingUser: facingModeRef.current === 'user',
-          knownDurationSec: recordedDurationRef.current,
-        })
-      } catch (err) {
-        console.error('FX bake failed, keeping raw recording', err)
-        finalBlob = rawBlob
-      } finally {
-        setBaking(false)
-      }
-    }
-
-    const url = URL.createObjectURL(finalBlob)
+  function finalizeRecording(rawBlob) {
+    const url = URL.createObjectURL(rawBlob)
     setRecordedUrl(url)
     onRecorded?.({
-      blob: finalBlob,
+      blob: rawBlob,
       url,
       kind,
-      senseFilter: useFx ? senseFilter : 'clear',
     })
   }
 
@@ -174,7 +99,6 @@ export default function EchoRecorder({
     }
     setRecordedUrl(null)
     chunksRef.current = []
-    recordedDurationRef.current = 0
 
     const mime = kind === 'video'
       ? (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm')
@@ -191,17 +115,15 @@ export default function EchoRecorder({
     recorder.onstop = () => {
       const outMime = recorder.mimeType || mime
       const rawBlob = new Blob(chunksRef.current, { type: outMime.split(';')[0] })
-      finalizeRecording(rawBlob, outMime)
+      finalizeRecording(rawBlob)
     }
     recorder.start(250)
     recorderRef.current = recorder
-    recordStartRef.current = performance.now()
     setRecording(true)
     setSeconds(0)
     timerRef.current = setInterval(() => {
       setSeconds((s) => {
         const next = s + 1
-        recordedDurationRef.current = next
         if (next >= limit) stopRecording()
         return next
       })
@@ -210,7 +132,6 @@ export default function EchoRecorder({
 
   function stopRecording() {
     clearInterval(timerRef.current)
-    recordedDurationRef.current = Math.max(0.5, (performance.now() - recordStartRef.current) / 1000)
     setRecording(false)
     if (recorderRef.current?.state !== 'inactive') recorderRef.current.stop()
   }
@@ -219,26 +140,17 @@ export default function EchoRecorder({
     if (recordedUrl) URL.revokeObjectURL(recordedUrl)
     setRecordedUrl(null)
     setSeconds(0)
-    setBaking(false)
     onRecorded?.(null)
-    if (kind === 'video' && useFx && sourceVideoRef.current && streamRef.current) {
+    if (kind === 'video' && sourceVideoRef.current && streamRef.current) {
       sourceVideoRef.current.srcObject = streamRef.current
       sourceVideoRef.current.play().catch(() => {})
     }
   }
 
-  const busy = recording || baking
-
   return (
     <div className="space-y-3">
       <div className="relative rounded-xl bg-black overflow-hidden aspect-[4/5] max-h-[48vh]">
-        {baking ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-black">
-            <EchoIcon className="w-8 h-6 mb-3 animate-pulse opacity-80" />
-            <p className="text-xs text-white/90 text-center">Baking glitch into your echo…</p>
-            <p className="text-[10px] text-white/50 mt-1">Saved video will match the preview</p>
-          </div>
-        ) : recordedUrl ? (
+        {recordedUrl ? (
           kind === 'video' ? (
             <video src={recordedUrl} controls playsInline className="w-full h-full object-cover" />
           ) : (
@@ -271,25 +183,14 @@ export default function EchoRecorder({
               ref={sourceVideoRef}
               playsInline
               muted
-              className={`w-full h-full object-cover ${useFx ? 'hidden' : ''}`}
+              className="w-full h-full object-cover"
             />
-            {useFx ? <canvas ref={canvasRef} className="w-full h-full object-cover absolute inset-0" /> : null}
-            {useFx && permission === 'granted' && !busy && (
-              <div className="absolute top-3 left-3 z-10 pointer-events-none">
-                <span className="echo-fx-badge">Glitch FX</span>
-              </div>
-            )}
-            {recording && useFx && (
-              <div className="absolute top-3 left-3 z-10 pointer-events-none">
-                <span className="echo-fx-badge">Recording…</span>
-              </div>
-            )}
             {permission === 'prompting' && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                 <p className="text-xs text-white/90">Waiting for camera…</p>
               </div>
             )}
-            {permission === 'granted' && !busy && (
+            {permission === 'granted' && !recording && (
               <button
                 type="button"
                 onClick={flipCamera}
@@ -310,16 +211,12 @@ export default function EchoRecorder({
         )}
       </div>
 
-      {useFx && permission === 'granted' && !recordedUrl && !baking && fxHint ? (
-        <p className="text-[10px] frens-muted text-center px-2">{fxHint}</p>
-      ) : null}
-
       <div className="flex items-center justify-center gap-3 flex-wrap">
         <span className={`text-sm font-mono ${recording ? 'text-black dark:text-white' : 'frens-muted'}`}>
           {recording && <span className="inline-block w-2 h-2 rounded-full bg-black dark:bg-white mr-2 align-middle animate-pulse" />}
-          {fmt(seconds)}{(recording || recordedUrl || baking) ? ` / ${fmt(limit)}` : ''}
+          {fmt(seconds)}{(recording || recordedUrl) ? ` / ${fmt(limit)}` : ''}
         </span>
-        {permission === 'granted' && !busy && !recordedUrl && (
+        {permission === 'granted' && !recording && !recordedUrl && (
           <button type="button" onClick={startRecording} className="frens-btn-primary px-5 py-2 text-sm rounded-full">
             ● Record
           </button>
@@ -329,7 +226,7 @@ export default function EchoRecorder({
             ■ Stop
           </button>
         )}
-        {recordedUrl && !busy && (
+        {recordedUrl && !recording && (
           <button type="button" onClick={reRecord} className="frens-btn-outline px-4 py-2 text-sm rounded-full">
             Re-record
           </button>

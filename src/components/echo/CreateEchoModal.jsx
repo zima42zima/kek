@@ -3,13 +3,10 @@ import Modal from '../Modal'
 import EchoRecorder from './EchoRecorder'
 import EchoImagePicker from './EchoImagePicker'
 import EchoIcon from './EchoIcon'
-import { senseFilterLabel } from '../../lib/senseFilters'
 import { randomOffsetInRadius } from '../../lib/geo'
 import {
   ECHO_TYPES,
   ECHO_VISIBILITY,
-  ECHO_VOICE_FILTERS,
-  ECHO_GLITCH_FILTERS,
   ECHO_PIN_OFFSET_MAX_M,
   ECHO_PUBLIC_VISIBILITIES,
   ECHO_PROXIMITY_PRESETS,
@@ -97,8 +94,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
   const [visibility, setVisibility] = useState('world')
   const [anonymous, setAnonymous] = useState(false)
   const [proximityId, setProximityId] = useState(ECHO_DEFAULT_PROXIMITY_ID)
-  const [voiceFilter, setVoiceFilter] = useState('normal')
-  const [senseFilter, setSenseFilter] = useState('clear')
   const [allowComments, setAllowComments] = useState(false)
   const [recording, setRecording] = useState(null)
   const [imagePick, setImagePick] = useState(null)
@@ -115,12 +110,7 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
   const proximity = ECHO_PROXIMITY_PRESETS.find((p) => p.id === proximityId) || ECHO_PROXIMITY_PRESETS[1]
   const typeMeta = ECHO_TYPES.find((t) => t.id === echoType)
 
-  const steps = useMemo(() => {
-    const list = ['type', 'content']
-    if (!isImage) list.splice(1, 0, 'filters')
-    list.push('settings')
-    return list
-  }, [isImage])
+  const steps = useMemo(() => ['type', 'content', 'settings'], [])
 
   useEffect(() => {
     if (!steps.includes(step)) setStep(steps[0])
@@ -153,8 +143,8 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
       visibility: anonymous ? 'world' : visibility,
       allowComments,
       anonymous,
-      voiceFilter: extra.voiceFilter,
-      senseFilter: extra.senseFilter,
+      voiceFilter: null,
+      senseFilter: null,
       spatial: null,
       pinPosition: resolvePin(),
       discoverRadiusM: needsPin ? proximity.meters : null,
@@ -196,8 +186,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
           mediaBlob,
           coverUrl: null,
           coverBlob: null,
-          voiceFilter: null,
-          senseFilter: null,
         })
       } catch (err) {
         setPublishError(err.message || 'Could not publish echo.')
@@ -215,8 +203,6 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
         mediaBlob: recording.blob,
         coverUrl: isAudio ? audioCover?.url : null,
         coverBlob: isAudio ? audioCover?.blob : null,
-        voiceFilter: recording.kind === 'audio' ? voiceFilter : null,
-        senseFilter: recording.kind === 'video' ? (recording.senseFilter || senseFilter) : null,
       })
     } catch (err) {
       setPublishError(err.message || 'Could not publish echo.')
@@ -249,48 +235,9 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
             value={echoType}
             onChange={(id) => {
               setEchoType(id)
-              setStep(id === 'image' ? 'content' : 'filters')
+              setStep('content')
             }}
           />
-        </div>
-      )}
-
-      {step === 'filters' && (
-        <div className="space-y-3">
-          {echoType === 'video' ? (
-            <>
-              <p className="text-sm frens-body-text text-center">Glitch (optional)</p>
-              <div className="flex gap-1.5 justify-center flex-wrap max-h-[36vh] overflow-y-auto">
-                {ECHO_GLITCH_FILTERS.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setSenseFilter(f.id)}
-                    className={`px-3 py-1.5 rounded-full border text-xs transition ${
-                      senseFilter === f.id ? OPTION_ACTIVE : 'frens-border frens-muted'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm frens-body-text text-center">Voice (optional)</p>
-              <ChipRow
-                options={ECHO_VOICE_FILTERS}
-                value={voiceFilter}
-                onChange={setVoiceFilter}
-              />
-            </>
-          )}
-          <div className="flex gap-2">
-            <button type="button" onClick={back} className="frens-btn-outline flex-1 py-2.5 text-sm">Back</button>
-            <button type="button" onClick={next} className="frens-btn-primary flex-1 py-2.5 text-sm">
-              {echoType === 'video' ? 'Record' : 'Record audio'}
-            </button>
-          </div>
         </div>
       )}
 
@@ -313,11 +260,9 @@ export default function CreateEchoModal({ userPos, onPublish, onClose }) {
               <p className="text-xs frens-muted text-center inline-flex items-center justify-center gap-1 flex-wrap">
                 <EchoTypeIcon kind={echoType} className="w-3.5 h-3.5" />
                 {typeMeta?.label}
-                {echoType === 'video' && senseFilter !== 'clear' ? ` · ${senseFilterLabel(senseFilter)}` : ''}
               </p>
               <EchoRecorder
                 kind={echoType}
-                senseFilter={echoType === 'video' ? senseFilter : 'clear'}
                 maxSeconds={typeMeta?.maxSec}
                 onRecorded={setRecording}
               />
